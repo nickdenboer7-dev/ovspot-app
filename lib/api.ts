@@ -1,0 +1,68 @@
+import Constants from "expo-constants";
+import type { Dichtbij, Filter, Halte, Rit, RitRef, StoringenAntwoord, Zoek } from "./types";
+
+const extra = (Constants.expoConfig?.extra ?? {}) as { apiBase?: string };
+export const API_BASE = (extra.apiBase || "https://ovspot.nl/app/v1").replace(/\/$/, "");
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+// Antwoord per URL met ETag bewaren: bij 304 geven we het vorige antwoord terug (bijna 0 bytes dataverkeer).
+const etagCache = new Map<string, { etag: string; data: unknown }>();
+
+async function get<T>(path: string, timeoutMs = 12000): Promise<T> {
+  const url = API_BASE + path;
+  const previous = etagCache.get(url);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { Accept: "application/json", ...(previous ? { "If-None-Match": previous.etag } : {}) },
+      signal: controller.signal
+    });
+  } catch {
+    throw new ApiError("Geen verbinding", 0);
+  } finally {
+    clearTimeout(timer);
+  }
+  if (res.status === 304 && previous) return previous.data as T;
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+  if (!res.ok || !body) {
+    throw new ApiError(body?.fout || (res.status >= 500 ? "Gegevens tijdelijk niet beschikbaar" : "Er ging iets mis"), res.status);
+  }
+  const etag = res.headers.get("ETag");
+  if (etag) {
+    if (etagCache.size > 150) etagCache.delete(etagCache.keys().next().value as string);
+    etagCache.set(url, { etag, data: body });
+  }
+  return body as T;
+}
+
+export function ritParams(ref: RitRef): string {
+  const q = new URLSearchParams();
+  if (ref.trip) q.set("trip", ref.trip);
+  if (ref.datum) q.set("datum", ref.datum);
+  if (ref.voertuig) q.set("voertuig", ref.voertuig);
+  return q.toString();
+}
+
+export const api = {
+  dichtbij: (lat: number, lon: number, straal: number) =>
+    get<Dichtbij>(`/dichtbij?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}&straal=${Math.round(straal)}&max=8`),
+  halte: (id: string, modus: Filter = "alles", max = 30) =>
+    get<Halte>(`/halte/${encodeURIComponent(id)}?modus=${modus}&max=${max}`),
+  rit: (ref: RitRef) => get<Rit>(`/rit?${ritParams(ref)}`),
+  storingen: (ids: string[]) => get<StoringenAntwoord>(`/storingen?haltes=${ids.map(encodeURIComponent).join(",")}`),
+  zoek: (q: string) => get<Zoek>(`/zoek?q=${encodeURIComponent(q)}`, 8000)
+};

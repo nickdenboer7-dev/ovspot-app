@@ -1,0 +1,95 @@
+export type Palette = {
+  header: string;
+  headerText: string;
+  headerSub: string;
+  accent: string;
+  onAccent: string;
+  background: string;
+  surface: string;
+  surface2: string;
+  text: string;
+  sub: string;
+  muted: string;
+  border: string;
+  divider: string;
+  live: string;
+  liveGlow: string;
+  delay: string;
+  red: string;
+  redBg: string;
+  busBadge: string;
+  trainBadge: string;
+  badgeText: string;
+  warnBg: string;
+  warnBorder: string;
+  warnText: string;
+  infoBg: string;
+  infoText: string;
+  rail: string;
+  star: string;
+  tabInactive: string;
+};
+
+export const light: Palette = {
+  header: "#185c98",
+  headerText: "#ffffff",
+  headerSub: "rgba(255,255,255,0.88)",
+  accent: "#185c98",
+  onAccent: "#ffffff",
+  background: "#f4f6f9",
+  surface: "#ffffff",
+  surface2: "#eef1f5",
+  text: "#13202e",
+  sub: "#5b6875",
+  muted: "#8a95a1",
+  border: "#e3e7ec",
+  divider: "#eef1f4",
+  live: "#1d6f42",
+  liveGlow: "rgba(29,111,66,0.2)",
+  delay: "#b45309",
+  red: "#b42318",
+  redBg: "#fdecea",
+  busBadge: "#185c98",
+  trainBadge: "#2a3746",
+  badgeText: "#ffffff",
+  warnBg: "#fff4e5",
+  warnBorder: "#f5d6a8",
+  warnText: "#7a3a06",
+  infoBg: "#e8f0f8",
+  infoText: "#185c98",
+  rail: "#b5bec8",
+  star: "#f2b705",
+  tabInactive: "#5b6875"
+};
+
+export const dark: Palette = {
+  header: "#123f68",
+  headerText: "#ffffff",
+  headerSub: "rgba(255,255,255,0.82)",
+  accent: "#7db4ea",
+  onAccent: "#0e141b",
+  background: "#0e141b",
+  surface: "#18212b",
+  surface2: "#222d39",
+  text: "#e8edf2",
+  sub: "#a3afbb",
+  muted: "#7d8a97",
+  border: "#2a3644",
+  divider: "#222d39",
+  live: "#4cc38a",
+  liveGlow: "rgba(76,195,138,0.22)",
+  delay: "#f0a35a",
+  red: "#f27a6e",
+  redBg: "#3d1c1a",
+  busBadge: "#1f6fb5",
+  trainBadge: "#4a5a6c",
+  badgeText: "#ffffff",
+  warnBg: "#33240f",
+  warnBorder: "#6b4a1f",
+  warnText: "#f3cf9c",
+  infoBg: "#1b3048",
+  infoText: "#9cc7f0",
+  rail: "#4a5665",
+  star: "#f2b705",
+  tabInactive: "#a3afbb"
+};
