@@ -215,7 +215,12 @@ class ApiTest(unittest.TestCase):
         self.assertTrue(body["live"])
         self.assertEqual(body["vervoerder"], "Qbuzz")
         st = [s["status"] for s in body["haltes"]]
-        self.assertEqual(st, ["geweest", "geweest", "geweest", "komt", "komt", "komt"])
+        # The third stop is exactly one minute old. Depending on the
+        # wall-clock boundary it may be past or upcoming, but NEVER current.
+        self.assertEqual(st[:2], ["geweest", "geweest"])
+        self.assertIn(st[2], ("geweest", "komt"))
+        self.assertEqual(st[3:], ["komt", "komt", "komt"])
+        self.assertNotIn("huidig", st)
         # The simulated Qbuzz journey has no stop GPS coordinates.
         # Fresh telemetry by itself must not claim an exact current stop.
         self.assertIsNone(body["nu_hier"])

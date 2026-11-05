@@ -21,7 +21,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from zoneinfo import ZoneInfo
 
-VERSION = "1.1.3-position-qa"
+VERSION = "1.1.3-position-preview"
 OVBORD = os.environ.get("OVSPOT_APP_OVBORD", "http://127.0.0.1:8095").rstrip("/")
 HOST = os.environ.get("OVSPOT_APP_HOST", "127.0.0.1")
 PORT = int(os.environ.get("OVSPOT_APP_PORT", "8110"))
