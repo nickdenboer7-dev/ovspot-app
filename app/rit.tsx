@@ -1,15 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useRef } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isTab, OnderBalk } from "../components/OnderBalk";
-import { StoringKaart } from "../components/StoringKaart";
 import { Kaart, Laden, Leeg, LiveStip } from "../components/ui";
 import { useApp } from "../context/AppProvider";
 import type { Palette } from "../constants/theme";
 import { api } from "../lib/api";
-import { isTrein, klokSec, ritNummer } from "../lib/format";
+import { isTrein, ritNummer } from "../lib/format";
 import { usePolling } from "../lib/hooks";
 import type { Rit, RitHalte } from "../lib/types";
 
@@ -182,7 +181,13 @@ export default function Ritverloop() {
     );
   }
 
-  const ververst = poll.laatsteOk ? klokSec(poll.laatsteOk) : "";
+  // Icoontje draait één keer rond bij elke geslaagde verversing.
+  const draai = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!poll.laatsteOk) return;
+    draai.setValue(0);
+    Animated.timing(draai, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [poll.laatsteOk, draai]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -225,9 +230,11 @@ export default function Ritverloop() {
             )}
             <View style={[s.streepje, { backgroundColor: colors.border }]} />
             <View style={s.ververst}>
-              <Ionicons name={poll.fout ? "cloud-offline-outline" : "sync"} size={15} color={poll.fout ? colors.red : colors.sub} />
+              <Animated.View style={{ transform: [{ rotate: draai.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] }}>
+                <Ionicons name={poll.fout ? "cloud-offline-outline" : "sync"} size={15} color={poll.fout ? colors.red : colors.sub} />
+              </Animated.View>
               <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
-                {poll.fout ? "Verbinding kwijt · probeert opnieuw" : `Ververst vanzelf · ${ververst}`}
+                {poll.fout ? "Verbinding kwijt · probeert opnieuw" : "Ververst vanzelf"}
               </Text>
             </View>
           </View>
@@ -235,8 +242,6 @@ export default function Ritverloop() {
       ) : null}
 
       <ScrollView ref={scrollRef} contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
-        {rit?.storingen.filter((st) => st.label !== "Halte vervalt").map((st) => <StoringKaart key={st.id} st={st} />)}
-
         {poll.laden && !rit ? <Laden /> : null}
         {!rit && poll.fout && !poll.laden ? (
           <Leeg icoon="git-commit-outline" titel="Rit niet gevonden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />
