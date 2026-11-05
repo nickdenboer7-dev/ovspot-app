@@ -21,6 +21,13 @@
         "buildType": "app-bundle"
       },
       "channel": "production"
+    },
+    "v11-preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal",
+      "channel": "v11-preview"
     }
   }
 }
