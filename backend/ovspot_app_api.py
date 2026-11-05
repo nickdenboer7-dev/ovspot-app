@@ -8,6 +8,7 @@ Schrijft niets weg en raakt OVspot (:5000) en OVbord (:8095) niet aan.
 import gzip
 import hashlib
 import json
+import math
 import os
 import re
 import threading
@@ -20,7 +21,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from zoneinfo import ZoneInfo
 
-VERSION = "1.1.2-kv8-preview"
+VERSION = "1.1.3-position-qa"
 OVBORD = os.environ.get("OVSPOT_APP_OVBORD", "http://127.0.0.1:8095").rstrip("/")
 HOST = os.environ.get("OVSPOT_APP_HOST", "127.0.0.1")
 PORT = int(os.environ.get("OVSPOT_APP_PORT", "8110"))
@@ -540,11 +541,28 @@ def ebs_kv8_stop(s, mapped):
     return mapped
 
 
-def rit_positie(stops, live, gps_age, now_ms):
-    """Geef uitsluitend een live-positie terug als GPS *en* huidige halte plausibel zijn.
+def _afstand_voertuig_halte_m(vehicle, stop):
+    """Measured GPS-to-stop proximity, never inferred from timetable alone."""
+    try:
+        lat1, lon1 = float(vehicle["lat"]), float(vehicle["lon"])
+        lat2, lon2 = float(stop["lat"]), float(stop["lon"])
+        if not (-90 <= lat1 <= 90 and -90 <= lat2 <= 90
+                and -180 <= lon1 <= 180 and -180 <= lon2 <= 180):
+            return None
+    except (TypeError, ValueError, KeyError):
+        return None
+    a = math.sin(math.radians(lat2 - lat1) / 2) ** 2
+    a += (math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+          * math.sin(math.radians(lon2 - lon1) / 2) ** 2)
+    return 2 * 6371000 * math.asin(min(1, math.sqrt(max(0, a))))
 
-    OVbord kan een lusrit op dezelfde GTFS-trip leveren, met oude state=current uit
-    de heenweg terwijl de bus al op de terugweg is. GPS-versheid alléén is niet genoeg.
+
+def rit_positie(stops, live, gps_age, now_ms, vehicle=None, raw_stops=None):
+    """Show 'Nu hier' only when the actual GPS fix is near that stop.
+
+    Fresh GPS + a scheduled time near 'now' does not mean the bus is
+    physically at that stop. Otherwise render an in-between position marker.
+    Missing or implausibly distant coordinates yield no confirmed position.
     """
     if not stops:
         return None
@@ -556,29 +574,30 @@ def rit_positie(stops, live, gps_age, now_ms):
     valid_age = 0 <= age <= 120
     scheduled_ms = stops[cur].get("tijd_ms") if cur is not None else None
     valid_time = isinstance(scheduled_ms, (int, float)) and abs(now_ms - scheduled_ms) <= 6 * 60_000
-    if not (live and cur is not None and valid_age and valid_time):
+    distance = None
+    if cur is not None and isinstance(raw_stops, list) and cur < len(raw_stops):
+        distance = _afstand_voertuig_halte_m(vehicle or {}, raw_stops[cur] or {})
+    valid_distance = distance is not None and distance <= 2000
+    if not (live and cur is not None and valid_age and valid_time and valid_distance):
         for stop in stops:
             stop["status"] = "geweest" if stop["tijd_ms"] and stop["tijd_ms"] < now_ms - 60_000 else "komt"
         return None
 
-    at_stop = scheduled_ms >= now_ms - 20_000
+    # <=80 m: geographically near the stop. Beyond this: approaching it.
+    at_stop = distance <= 80
     for i, stop in enumerate(stops):
-        stop["status"] = "geweest" if i < cur or (i == cur and not at_stop) else "huidig" if i == cur else "komt"
-    nxt = cur if at_stop else cur + 1
-    if nxt >= len(stops):
-        # Rit is voorbij: geen "Nu hier" op een verouderde eindhalte laten staan.
-        for stop in stops:
-            stop["status"] = "geweest"
-        return None
-    next_stop = stops[nxt]
+        stop["status"] = "geweest" if i < cur else "huidig" if i == cur and at_stop else "komt"
+
+    next_stop = stops[cur]
     over = max(0, int(round((next_stop["tijd_ms"] - now_ms) / 60000.0))) if next_stop["tijd_ms"] else None
     return {
         "bij_halte": at_stop,
-        "na_index": cur - 1 if at_stop else cur,
-        "volgende_index": nxt,
+        "na_index": cur - 1,
+        "volgende_index": cur,
         "volgende_naam": next_stop["naam"],
         "over_min": over,
         "gps_leeftijd_s": int(age),
+        "afstand_tot_halte_m": round(distance),
     }
 
 
@@ -650,7 +669,8 @@ def rit(trip="", datum="", voertuig="", ritid="", instap_halte="", instap_naam="
         delay_s = int(round(float(raw.get("delay") or 0)))
     except (TypeError, ValueError):
         delay_s = 0
-    nu_hier = rit_positie(stops, live, raw.get("gps_age_seconds"), int(time.time() * 1000))
+    nu_hier = rit_positie(stops, live, raw.get("gps_age_seconds"), int(time.time() * 1000),
+                            vehicle=raw.get("vehicle"), raw_stops=raw.get("stops"))
     # Een verse GPS-melding mag niet zelfstandig het label 'Live' bevestigen.
     # Geldige positie of echte live tijden uit de bron zijn hiervoor noodzakelijk.
     positie_betrouwbaar = nu_hier is not None

@@ -121,7 +121,7 @@ export default function Ritverloop() {
                   </View>
                 </View>
                 <View style={s.naamKol}>
-                  <Text style={[s.nuTitel, { color: colors.live }]}>Nu hier</Text>
+                  <Text style={[s.nuTitel, { color: colors.live }]}>Onderweg</Text>
                   <Text style={[s.nuSub, { color: colors.sub }]} numberOfLines={2}>
                     Volgende: {nh?.volgende_naam}
                     {over}
@@ -134,7 +134,7 @@ export default function Ritverloop() {
           const geweest = h.status === "geweest";
           const huidig = h.status === "huidig";
           const vertraagd = h.vertraging_min > 0;
-          const tijdKleur = geweest || h.vervalt ? colors.muted : vertraagd ? colors.delay : rit.live && h.live_tijd ? colors.live : colors.text;
+          const tijdKleur = geweest || h.vervalt ? colors.muted : vertraagd ? colors.delay : h.live_tijd ? colors.live : colors.text;
           // Op tijd = groene tijd, geen extra tekst. Bij vertraging de geplande tijd doorgestreept eronder.
           const sub = vertraagd ? h.gepland : "";
           // Aankomst/vertrek alleen als het voertuig er echt even staat (2 min of meer).
@@ -249,7 +249,7 @@ export default function Ritverloop() {
               </View>
             ) : (
               <Text style={[s.liveText, { color: colors.sub }]}>
-                {rit.kv8_komende_haltes ? "Gepland · KV8 later" : "Dienstregeling"}
+                {rit.tijden_bron === "dienstregeling" ? "Tijden gepland" : "Dienstregeling"}
               </Text>
             )}
             <View style={[s.streepje, { backgroundColor: colors.border }]} />

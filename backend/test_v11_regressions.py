@@ -59,7 +59,11 @@ class V11Test(unittest.TestCase):
             {"naam": "Huidige", "status": "huidig", "tijd_ms": now},
             {"naam": "Volgende", "status": "komt", "tijd_ms": now+120_000},
         ]
-        p = api.rit_positie(stops, True, 6, now)
+        p = api.rit_positie(
+            stops, True, 6, now,
+            vehicle={"lat": 52.43003, "lon": 4.864031},
+            raw_stops=[{}, {"lat": 52.43003, "lon": 4.864031}, {}],
+        )
         self.assertIsNotNone(p)
         self.assertTrue(p["bij_halte"])
         self.assertEqual(p["volgende_naam"], "Huidige")

@@ -216,9 +216,10 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(body["vervoerder"], "Qbuzz")
         st = [s["status"] for s in body["haltes"]]
         self.assertEqual(st, ["geweest", "geweest", "geweest", "komt", "komt", "komt"])
-        nh = body["nu_hier"]
-        self.assertEqual((nh["na_index"], nh["volgende_index"], nh["volgende_naam"]), (2, 3, "Oostergoplein"))
-        self.assertIn(nh["over_min"], (1, 2))
+        # The simulated Qbuzz journey has no stop GPS coordinates.
+        # Fresh telemetry by itself must not claim an exact current stop.
+        self.assertIsNone(body["nu_hier"])
+        self.assertFalse(body["positie_betrouwbaar"])
         self.assertTrue(body["haltes"][4]["vervalt"])
         self.assertEqual(body["haltes"][5]["naam"], "Busstation")
         self.assertEqual(body["haltes"][5]["plaats"], "Grou")

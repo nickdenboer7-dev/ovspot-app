@@ -90,6 +90,7 @@ export type NuHier = {
   volgende_naam: string;
   over_min: number | null;
   gps_leeftijd_s: number | null;
+  afstand_tot_halte_m?: number | null;
 };
 
 export type Rit = {
