@@ -1,0 +1,25 @@
+[Unit]
+Description=OVspot Android V1.1 separate preview API (no production API replacement)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/ovspot-v11-review-20261105/backend
+Environment=OVSPOT_APP_HOST=127.0.0.1
+Environment=OVSPOT_APP_PORT=18111
+Environment=OVSPOT_APP_OVBORD=http://127.0.0.1:8095
+ExecStart=/usr/bin/python3 -u /home/ubuntu/ovspot-v11-review-20261105/backend/ovspot_app_api.py
+Restart=on-failure
+RestartSec=4
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+MemoryMax=256M
+CPUQuota=35%
+
+[Install]
+WantedBy=multi-user.target
