@@ -178,7 +178,7 @@ export default function Ritverloop() {
                 <View style={s.naamRij}>
                   <Text
                     style={[s.naam, { color: geweest || h.vervalt ? colors.muted : colors.text, textDecorationLine: h.vervalt ? "line-through" : "none" }]}
-                    numberOfLines={1}
+                    numberOfLines={2}
                   >
                     {h.naam}
                   </Text>
@@ -228,7 +228,7 @@ export default function Ritverloop() {
           </View>
         ) : null}
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[s.kopTitel, { color: colors.headerText }]} numberOfLines={1} accessibilityRole="header">
+          <Text style={[s.kopTitel, { color: colors.headerText }]} numberOfLines={2} accessibilityRole="header">
             {bestemming}
           </Text>
           {kopSub ? (
@@ -263,7 +263,7 @@ export default function Ritverloop() {
               <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
                 {poll.fout ? "Verbinding kwijt" : rit.positie_betrouwbaar && rit.nu_hier?.gps_leeftijd_s != null
                   ? `GPS ${rit.nu_hier.gps_leeftijd_s}s oud`
-                  : "Positie niet bevestigd"}
+                  : "Positie onbekend"}
               </Text>
             </View>
           </View>
@@ -295,7 +295,7 @@ const s = StyleSheet.create({
   kopKnop: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   lijnVak: { minWidth: 46, height: 40, paddingHorizontal: 9, borderWidth: 2, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   lijnVakText: { fontSize: 20, fontWeight: "800" },
-  kopTitel: { fontSize: 23, fontWeight: "800", letterSpacing: -0.3 },
+  kopTitel: { fontSize: 21, lineHeight: 25, fontWeight: "800", letterSpacing: -0.3 },
   kopSub: { fontSize: 14, marginTop: 1 },
   inhoud: { padding: 10, gap: 12, paddingBottom: 24 },
   liveBalk: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, paddingHorizontal: 14, minHeight: 46 },
