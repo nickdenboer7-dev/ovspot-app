@@ -76,6 +76,7 @@ export type RitHalte = {
   vertrek: string;
   vertraging_min: number;
   live_tijd: boolean;
+  bron_tijd?: "KV8" | "dienstregeling";
   spoor: string;
   spoor_gewijzigd: { van: string; naar: string } | null;
   status: "geweest" | "huidig" | "komt";
@@ -101,6 +102,7 @@ export type Rit = {
   vervoerder: string;
   datum: string;
   live: boolean;
+  tijden_bron?: "KV8" | "dienstregeling" | "overig";
   vertraging_min: number;
   vervallen: boolean;
   nu_hier: NuHier | null;

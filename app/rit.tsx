@@ -247,9 +247,9 @@ export default function Ritverloop() {
             ) : rit.live ? (
               <View style={s.liveLinks}>
                 <LiveStip kleur={colors.live} />
-                <Text style={[s.liveText, { color: colors.live }]}>Live</Text>
+                <Text style={[s.liveText, { color: colors.live }]}>{rit.tijden_bron === "KV8" ? "KV8" : "Live"}</Text>
                 <Text style={[s.liveText, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>
-                  {rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : rit.positie_betrouwbaar ? "Op tijd" : "Tijden"}
+                  {rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : rit.tijden_bron === "KV8" ? "actueel" : rit.positie_betrouwbaar ? "Op tijd" : "Tijden"}
                 </Text>
               </View>
             ) : (

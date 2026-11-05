@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from zoneinfo import ZoneInfo
 
-VERSION = "1.1.0-staging"
+VERSION = "1.1.1-kv8-preview"
 OVBORD = os.environ.get("OVSPOT_APP_OVBORD", "http://127.0.0.1:8095").rstrip("/")
 HOST = os.environ.get("OVSPOT_APP_HOST", "127.0.0.1")
 PORT = int(os.environ.get("OVSPOT_APP_PORT", "8110"))
@@ -403,7 +403,7 @@ def sanitize_arrival_departure(arr, dep):
     return arr, dep
 
 
-def map_stop(s, skipped_ids):
+def map_stop(s, skipped_ids, *, prefer_kv8=False):
     planned = s.get("planned_departure_time") if s.get("planned_departure_time") not in (None, "—") else s.get("planned_arrival_time")
     planned = planned if planned not in (None, "—") else ""
     shown = s.get("departure_time") if s.get("departure_time") not in (None, "—") else s.get("arrival_time")
@@ -450,7 +450,7 @@ def map_stop(s, skipped_ids):
     arr, dep = checked_arr, checked_dep
     change = s.get("platform_change") or None
     sid = str(s.get("id") or "")
-    return {
+    mapped = {
         "id": sid,
         "naam": naam,
         "plaats": plaats,
@@ -466,6 +466,78 @@ def map_stop(s, skipped_ids):
         "status": {"passed": "geweest", "current": "huidig"}.get(str(s.get("state") or ""), "komt"),
         "vervalt": sid in skipped_ids,
     }
+    return ebs_kv8_stop(s, mapped) if prefer_kv8 else mapped
+
+
+def ebs_kv8_stop(s, mapped):
+    """Use a *single* source for EBS stop events: confirmed KV8 or timetable.
+
+    OVbord's arrival_time can still be GTFS planned when departure_time was
+    updated by KV8. Mixing these fields creates fake 2-5 minute dwell times.
+    Rebuild both stop times from the paired KV8 ISO timestamps instead.
+    """
+    scheduled_arrival = parse_iso(s.get("planned_arrival_at"))
+    scheduled_departure = parse_iso(s.get("planned_departure_at"))
+    reference = scheduled_departure or scheduled_arrival
+    # Planned-only is the safe default; unknown realtime must never look live.
+    mapped.update(
+        gepland=hhmm(reference) if reference else mapped["gepland"],
+        verwacht=hhmm(reference) if reference else mapped["gepland"],
+        tijd_ms=epoch_ms(reference) if reference else None,
+        aankomst=hhmm(scheduled_arrival) if scheduled_arrival else "",
+        vertrek=hhmm(scheduled_departure) if scheduled_departure else "",
+        vertraging_min=0,
+        live_tijd=False,
+        bron_tijd="dienstregeling",
+    )
+    if not (s.get("kv8_fresh") and s.get("timing_source") == "kv8_expected"):
+        return mapped
+
+    age = s.get("rt_feed_age_seconds")
+    if age is not None:
+        try:
+            age = float(age)
+            if age < 0 or age > 300:
+                return mapped
+        except (ValueError, TypeError):
+            return mapped
+
+    arrival = parse_iso(s.get("estimated_arrival_at") or s.get("rt_arrival_at"))
+    departure = parse_iso(s.get("estimated_departure_at") or s.get("rt_departure_at"))
+    if not arrival and not departure:
+        return mapped
+
+    # Do not publish predictions beyond the KV8 matching window.
+    for prediction, scheduled in ((arrival, scheduled_arrival), (departure, scheduled_departure)):
+        if prediction and scheduled and abs((prediction - scheduled).total_seconds()) > 1800:
+            return mapped
+
+    # Do not tell travellers that a bus departs ahead of timetable.
+    # Clamp both events together so no artificial dwell time is introduced.
+    if departure and scheduled_departure and departure < scheduled_departure:
+        departure = scheduled_departure
+    if arrival and scheduled_arrival and arrival < scheduled_arrival:
+        arrival = scheduled_arrival
+
+    if arrival and departure:
+        dwell = (departure - arrival).total_seconds()
+        if dwell < 0 or dwell > 15 * 60:
+            return mapped
+
+    event = departure or arrival
+    if not event:
+        return mapped
+    delta_seconds = (event - reference).total_seconds() if reference else 0
+    mapped.update(
+        verwacht=hhmm(event),
+        tijd_ms=epoch_ms(event),
+        aankomst=hhmm(arrival) if arrival else "",
+        vertrek=hhmm(departure) if departure else "",
+        vertraging_min=max(0, int(round(delta_seconds / 60.0))),
+        live_tijd=True,
+        bron_tijd="KV8",
+    )
+    return mapped
 
 
 def rit_positie(stops, live, gps_age, now_ms):
@@ -538,7 +610,8 @@ def rit(trip="", datum="", voertuig="", ritid="", instap_halte="", instap_naam="
     raw = CACHE.get("rit:" + path, TTL_RIT, lambda: ovbord(path))
     notices = [map_notice(n) for n in raw.get("disruptions") or []]
     skipped = {sid for n in notices if n["_skip"] for sid in n["halte_ids"]}
-    stops = [map_stop(s, skipped) for s in raw.get("stops") or []]
+    ebs = str(raw.get("carrier") or "").strip().casefold() == "ebs"
+    stops = [map_stop(s, skipped, prefer_kv8=ebs) for s in raw.get("stops") or []]
     stops, instap_gevonden = select_boarding_segment(stops, instap_halte, instap_naam, instap_ms)
     live = bool(raw.get("live"))
     mode = str(raw.get("mode") or "bus").lower()
@@ -550,7 +623,13 @@ def rit(trip="", datum="", voertuig="", ritid="", instap_halte="", instap_naam="
     # Een verse GPS-melding mag niet zelfstandig het label 'Live' bevestigen.
     # Geldige positie of echte live tijden uit de bron zijn hiervoor noodzakelijk.
     positie_betrouwbaar = nu_hier is not None
-    live = live and (positie_betrouwbaar or any(h["live_tijd"] for h in stops))
+    confirmed_kv8 = [h for h in stops if h.get("bron_tijd") == "KV8" and h["live_tijd"]]
+    # A recent vehicle position confirms location, not stop-time predictions.
+    live = bool(confirmed_kv8) if ebs else live and (positie_betrouwbaar or any(h["live_tijd"] for h in stops))
+    nearest_kv8 = next((h for h in confirmed_kv8
+                        if isinstance(h.get("tijd_ms"), (int, float))
+                        and h["tijd_ms"] >= int(time.time() * 1000) - 60_000), None)
+    summary_delay_min = (nearest_kv8["vertraging_min"] if nearest_kv8 else 0) if ebs else (int(round(delay_s / 60.0)) if live and delay_s >= 60 else 0)
     line = str(raw.get("line") or "").strip()
     return {
         "id": str(raw.get("journey_id") or ""),
@@ -561,7 +640,8 @@ def rit(trip="", datum="", voertuig="", ritid="", instap_halte="", instap_naam="
         "vervoerder": carrier_name(raw.get("carrier")),
         "datum": str(raw.get("service_date") or ""),
         "live": live,
-        "vertraging_min": int(round(delay_s / 60.0)) if live and delay_s >= 60 else 0,
+        "vertraging_min": summary_delay_min,
+        "tijden_bron": "KV8" if confirmed_kv8 else "dienstregeling" if ebs else "overig",
         "vervallen": bool(raw.get("cancelled")),
         "nu_hier": nu_hier,
         "positie_betrouwbaar": positie_betrouwbaar,
