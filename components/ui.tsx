@@ -89,8 +89,42 @@ export function KopKnop({ icoon, label, onPress, kleur }: { icoon: keyof typeof 
   );
 }
 
-export function Chips<T extends string>({ opties, waarde, onKies }: { opties: { key: T; label: string; icoon?: keyof typeof Ionicons.glyphMap }[]; waarde: T; onKies: (k: T) => void }) {
+export function Chips<T extends string>({
+  opties,
+  waarde,
+  onKies,
+  vol
+}: {
+  opties: { key: T; label: string; icoon?: keyof typeof Ionicons.glyphMap }[];
+  waarde: T;
+  onKies: (k: T) => void;
+  /** vol = één rij over de hele breedte, alle knoppen even breed (Instellingen). */
+  vol?: boolean;
+}) {
   const { colors } = useApp();
+  if (vol) {
+    return (
+      <View style={[s.segment, { backgroundColor: colors.surface2 }]} accessibilityRole="tablist">
+        {opties.map((o) => {
+          const aan = o.key === waarde;
+          return (
+            <Pressable
+              key={o.key}
+              onPress={() => onKies(o.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: aan }}
+              style={[s.segmentKnop, aan && { backgroundColor: colors.accent }]}
+            >
+              {o.icoon ? <Ionicons name={o.icoon} size={16} color={aan ? colors.onAccent : colors.text} /> : null}
+              <Text style={[s.segmentText, { color: aan ? colors.onAccent : colors.text, fontWeight: aan ? "700" : "500" }]} numberOfLines={1}>
+                {o.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
   return (
     <View style={s.chips} accessibilityRole="tablist">
       {opties.map((o) => {
@@ -168,6 +202,9 @@ const s = StyleSheet.create({
   chips: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   chip: { height: 38, paddingHorizontal: 16, borderRadius: 19, flexDirection: "row", alignItems: "center", gap: 6 },
   chipText: { fontSize: 15 },
+  segment: { flexDirection: "row", borderRadius: 22, padding: 3, gap: 3 },
+  segmentKnop: { flex: 1, minHeight: 40, borderRadius: 19, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 4 },
+  segmentText: { fontSize: 14 },
   kaart: { borderRadius: 16, borderWidth: StyleSheet.hairlineWidth * 2, overflow: "hidden" },
   leeg: { alignItems: "center", justifyContent: "center", padding: 32, gap: 10 },
   leegTitel: { fontSize: 17, fontWeight: "700", textAlign: "center" },

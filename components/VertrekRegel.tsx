@@ -31,7 +31,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
               compact ? s.bestemmingCompact : s.bestemming,
               { color: v.vervallen ? colors.muted : colors.text, textDecorationLine: v.vervallen ? "line-through" : "none" }
             ]}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {v.bestemming}
           </Text>
@@ -50,7 +50,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
       <StatusLabel v={v} compact={compact} />
       <View style={s.rechts}>
         <Text style={[s.minuten, { color: v.vervallen ? colors.muted : colors.text }]}>{minuten}</Text>
-        {!compact ? (
+        {!compact && v.gepland !== minuten ? (
           <Text style={[s.gepland, { color: colors.sub, textDecorationLine: v.vervallen ? "line-through" : "none" }]}>{v.gepland}</Text>
         ) : null}
       </View>
@@ -66,12 +66,12 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
 }
 
 const s = StyleSheet.create({
-  rijCompact: { flexDirection: "row", alignItems: "center", gap: 12, height: 44 },
+  rijCompact: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 44, paddingVertical: 6 },
   rijVol: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
   bestemmingRij: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bestemming: { fontSize: 16, fontWeight: "700", flexShrink: 1 },
-  bestemmingCompact: { fontSize: 16, flexShrink: 1 },
+  bestemming: { fontSize: 16, fontWeight: "700", flexShrink: 1, lineHeight: 20 },
+  bestemmingCompact: { fontSize: 16, flexShrink: 1, lineHeight: 20 },
   info: { fontSize: 13 },
   rechts: { width: 58, alignItems: "flex-end" },
   minuten: { fontSize: 16, fontWeight: "700" },

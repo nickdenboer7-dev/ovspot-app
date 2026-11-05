@@ -15,6 +15,18 @@ import type { Rit, RitHalte } from "../lib/types";
 
 type Rij = { soort: "halte"; h: RitHalte; i: number } | { soort: "nu" };
 
+/** Minuten tussen twee "HH:MM"-tijden (over middernacht heen). 0 als een van beide ontbreekt. */
+function minutenTussen(a: string, b: string): number {
+  const m = (t: string) => {
+    const r = /^(\d{1,2}):(\d{2})$/.exec(t || "");
+    return r ? Number(r[1]) * 60 + Number(r[2]) : null;
+  };
+  const x = m(a);
+  const y = m(b);
+  if (x == null || y == null) return 0;
+  return (y - x + 1440) % 1440;
+}
+
 function railKleuren(rit: Rit, c: Palette) {
   const voorbij = c.rail;
   const komend = rit.live ? c.live : c.accent;
@@ -103,9 +115,12 @@ export default function Ritverloop() {
           const huidig = h.status === "huidig";
           const vertraagd = h.vertraging_min > 0;
           const tijdKleur = geweest || h.vervalt ? colors.muted : vertraagd ? colors.delay : rit.live && h.live_tijd ? colors.live : colors.text;
-          const sub = vertraagd ? h.gepland : rit.live && h.live_tijd && !geweest && !h.vervalt ? "Op tijd" : "";
-          const aanVertrek = h.aankomst && h.vertrek && h.aankomst !== h.vertrek ? `aankomst ${h.aankomst} · vertrek ${h.vertrek}` : "";
-          const onderregel = [h.plaats, aanVertrek].filter(Boolean).join(" · ");
+          // Op tijd = groene tijd, geen extra tekst. Bij vertraging de geplande tijd doorgestreept eronder.
+          const sub = vertraagd ? h.gepland : "";
+          // Aankomst/vertrek alleen als het voertuig er echt even staat (2 min of meer).
+          const wacht = minutenTussen(h.aankomst, h.vertrek);
+          const aanVertrek = wacht >= 2 && !geweest ? `aankomst ${h.aankomst} · vertrek ${h.vertrek}` : "";
+          const onderregel = h.plaats;
           return (
             <View
               key={`${h.id}-${i}`}
@@ -153,6 +168,11 @@ export default function Ritverloop() {
                     {onderregel}
                   </Text>
                 ) : null}
+                {aanVertrek ? (
+                  <Text style={[s.wacht, { color: colors.sub }]} numberOfLines={1}>
+                    {aanVertrek}
+                  </Text>
+                ) : null}
               </View>
               {h.spoor && trein ? <Text style={[s.spoor, { color: colors.sub }]}>Spoor {h.spoor}</Text> : null}
             </View>
@@ -189,8 +209,8 @@ export default function Ritverloop() {
         </View>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
-        {rit ? (
+      {rit ? (
+        <View style={s.liveVast}>
           <View style={[s.liveBalk, { backgroundColor: colors.surface2 }]}>
             {rit.vervallen ? (
               <Text style={[s.liveText, { color: colors.red }]}>Deze rit vervalt</Text>
@@ -211,8 +231,10 @@ export default function Ritverloop() {
               </Text>
             </View>
           </View>
-        ) : null}
+        </View>
+      ) : null}
 
+      <ScrollView ref={scrollRef} contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
         {rit?.storingen.filter((st) => st.label !== "Halte vervalt").map((st) => <StoringKaart key={st.id} st={st} />)}
 
         {poll.laden && !rit ? <Laden /> : null}
@@ -262,6 +284,8 @@ const s = StyleSheet.create({
   naamRij: { flexDirection: "row", alignItems: "center", gap: 8 },
   naam: { fontSize: 17, fontWeight: "700", flexShrink: 1 },
   plaats: { fontSize: 14, marginTop: 2 },
+  wacht: { fontSize: 13, marginTop: 1 },
+  liveVast: { paddingHorizontal: 10, paddingTop: 10 },
   spoor: { fontSize: 13, alignSelf: "center", paddingLeft: 6 },
   nuTitel: { fontSize: 17, fontWeight: "800" },
   nuTitelKlein: { fontSize: 13, fontWeight: "700", marginTop: 1 },

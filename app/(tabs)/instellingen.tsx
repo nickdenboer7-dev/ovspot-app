@@ -61,6 +61,7 @@ export default function Instellingen() {
                 { key: "licht", label: "Licht", icoon: "sunny-outline" },
                 { key: "donker", label: "Donker", icoon: "moon-outline" }
               ]}
+              vol
               waarde={instellingen.thema}
               onKies={(thema) => zetInstellingen({ thema })}
             />
@@ -75,6 +76,7 @@ export default function Instellingen() {
                 { key: "trein", label: "Trein", icoon: "train-outline" },
                 { key: "bus", label: "Bus", icoon: "bus-outline" }
               ]}
+              vol
               waarde={instellingen.filter}
               onKies={(filter) => zetInstellingen({ filter })}
             />
@@ -85,6 +87,7 @@ export default function Instellingen() {
           <Regel label="Afstand voor Dichtbij" uitleg={`Haltes tot ${afstand(instellingen.straal)} van je locatie.`}>
             <Chips<string>
               opties={[500, 1000, 1500, 3000].map((m) => ({ key: String(m), label: afstand(m) }))}
+              vol
               waarde={String(instellingen.straal)}
               onKies={(m) => zetInstellingen({ straal: Number(m) })}
             />
