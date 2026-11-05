@@ -33,7 +33,11 @@ export default function Haltebord() {
     if (!v.rit) return;
     router.push({
       pathname: "/rit",
-      params: { ...v.rit, van, lijn: v.lijn, bestemming: v.bestemming, vervoerder: v.vervoerder, modus: v.modus }
+      params: {
+        ...v.rit, van, lijn: v.lijn, bestemming: v.bestemming, vervoerder: v.vervoerder, modus: v.modus,
+        instap_halte: id, instap_naam: naam, instap_ms: v.vertrek_ms ? String(v.vertrek_ms) : "",
+        richting: v.bestemming
+      }
     });
   };
 

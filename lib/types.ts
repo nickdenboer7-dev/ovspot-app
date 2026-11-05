@@ -1,6 +1,9 @@
 export type Modus = "train" | "bus" | "tram" | "metro" | "ferry" | string;
 
-export type RitRef = { trip?: string; datum?: string; voertuig?: string };
+export type RitRef = {
+  trip?: string; datum?: string; voertuig?: string;
+  instap_halte?: string; instap_naam?: string; instap_ms?: number; richting?: string;
+};
 
 export type Vertrek = {
   lijn: string;
@@ -101,12 +104,14 @@ export type Rit = {
   vertraging_min: number;
   vervallen: boolean;
   nu_hier: NuHier | null;
+  positie_betrouwbaar?: boolean;
+  gps_leeftijd_s?: number | null;
   haltes: RitHalte[];
   storingen: Storing[];
   bijgewerkt: string;
 };
 
-export type StoringenAntwoord = { ok: boolean; bijgewerkt: string; aantal: number; storingen: Storing[]; niet_geladen: number };
+export type StoringenAntwoord = { ok: boolean; bijgewerkt: string; aantal: number; storingen: Storing[]; niet_geladen: number; gevraagd?: number; gecontroleerd?: number };
 
 export type ZoekResultaat = {
   id: string;

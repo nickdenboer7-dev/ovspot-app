@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isTab, OnderBalk } from "../components/OnderBalk";
@@ -47,15 +47,27 @@ function railKleuren(rit: Rit, c: Palette) {
 }
 
 export default function Ritverloop() {
-  const p = useLocalSearchParams<{ trip?: string; datum?: string; voertuig?: string; van?: string; lijn?: string; bestemming?: string; vervoerder?: string; modus?: string }>();
+  const p = useLocalSearchParams<{
+    trip?: string; datum?: string; voertuig?: string; van?: string; lijn?: string; bestemming?: string;
+    vervoerder?: string; modus?: string; instap_halte?: string; instap_naam?: string; instap_ms?: string; richting?: string;
+  }>();
   const van = isTab(p.van) ? p.van : "index";
-  const ref = { trip: p.trip ? String(p.trip) : undefined, datum: p.datum ? String(p.datum) : undefined, voertuig: p.voertuig ? String(p.voertuig) : undefined };
+  const ref = {
+    trip: p.trip ? String(p.trip) : undefined,
+    datum: p.datum ? String(p.datum) : undefined,
+    voertuig: p.voertuig ? String(p.voertuig) : undefined,
+    instap_halte: p.instap_halte ? String(p.instap_halte) : undefined,
+    instap_naam: p.instap_naam ? String(p.instap_naam) : undefined,
+    instap_ms: p.instap_ms && Number.isFinite(Number(p.instap_ms)) ? Number(p.instap_ms) : undefined,
+    richting: p.richting ? String(p.richting) : undefined
+  };
+  const [toonGepasseerd, setToonGepasseerd] = useState(false);
   const { colors } = useApp();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const gescrold = useRef(false);
 
-  const poll = usePolling(`rit:${ref.trip}:${ref.datum}:${ref.voertuig}`, () => api.rit(ref), (d) => (d?.live ? 5_000 : 30_000));
+  const poll = usePolling(`rit:${ref.trip}:${ref.datum}:${ref.voertuig}:${ref.instap_halte}:${ref.instap_ms}:${ref.richting}`, () => api.rit(ref), (d) => (d?.live ? 5_000 : 30_000));
   const rit = poll.data;
 
   const lijn = rit?.lijn || String(p.lijn || "");
@@ -76,7 +88,11 @@ export default function Ritverloop() {
     const kl = railKleuren(rit, colors);
     const nh = rit.nu_hier;
     const rijen: Rij[] = [];
+    const voorbijAantal = rit.haltes.findIndex((h) => h.status !== "geweest");
+    const voorbij = voorbijAantal < 0 ? rit.haltes.length : voorbijAantal;
+    const toonVanaf = voorbij > 4 && !toonGepasseerd ? voorbij - 2 : 0;
     rit.haltes.forEach((h, i) => {
+      if (i < toonVanaf) return;
       rijen.push({ soort: "halte", h, i });
       if (nh && !nh.bij_halte && i === nh.na_index) rijen.push({ soort: "nu" });
     });
@@ -85,6 +101,15 @@ export default function Ritverloop() {
 
     tijdlijn = (
       <Kaart style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
+        {voorbij > 4 ? (
+          <Pressable onPress={() => setToonGepasseerd((v) => !v)}
+            accessibilityRole="button" style={s.passeerKnop}>
+            <Text style={[s.passeerText, { color: colors.accent }]}>
+              {toonGepasseerd ? "Verberg gepasseerde haltes" : `Toon ${voorbij - 2} eerdere haltes`}
+            </Text>
+            <Ionicons name={toonGepasseerd ? "chevron-up" : "chevron-down"} size={18} color={colors.accent} />
+          </Pressable>
+        ) : null}
         {rijen.map((r, k) => {
           const scheiding = k < rijen.length - 1 ? { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 } : null;
           if (r.soort === "nu") {
@@ -118,7 +143,7 @@ export default function Ritverloop() {
           const sub = vertraagd ? h.gepland : "";
           // Aankomst/vertrek alleen als het voertuig er echt even staat (2 min of meer).
           const wacht = minutenTussen(h.aankomst, h.vertrek);
-          const aanVertrek = wacht >= 2 && !geweest ? `aankomst ${h.aankomst} · vertrek ${h.vertrek}` : "";
+          const aanVertrek = wacht >= 2 && wacht <= 15 && !geweest ? `aankomst ${h.aankomst} · vertrek ${h.vertrek}` : "";
           const onderregel = h.plaats;
           return (
             <View
@@ -223,7 +248,9 @@ export default function Ritverloop() {
               <View style={s.liveLinks}>
                 <LiveStip kleur={colors.live} />
                 <Text style={[s.liveText, { color: colors.live }]}>Live</Text>
-                <Text style={[s.liveText, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>{rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : "Op tijd"}</Text>
+                <Text style={[s.liveText, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>
+                  {rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : rit.positie_betrouwbaar ? "Op tijd" : "Tijden"}
+                </Text>
               </View>
             ) : (
               <Text style={[s.liveText, { color: colors.sub }]}>Dienstregeling</Text>
@@ -234,7 +261,9 @@ export default function Ritverloop() {
                 <Ionicons name={poll.fout ? "cloud-offline-outline" : "sync"} size={15} color={poll.fout ? colors.red : colors.sub} />
               </Animated.View>
               <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
-                {poll.fout ? "Verbinding kwijt · probeert opnieuw" : "Ververst vanzelf"}
+                {poll.fout ? "Verbinding kwijt" : rit.positie_betrouwbaar && rit.nu_hier?.gps_leeftijd_s != null
+                  ? `GPS ${rit.nu_hier.gps_leeftijd_s}s oud`
+                  : "Positie niet bevestigd"}
               </Text>
             </View>
           </View>
@@ -275,7 +304,7 @@ const s = StyleSheet.create({
   streepje: { width: 1, height: 22 },
   ververst: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 },
   ververstText: { fontSize: 13, flexShrink: 1 },
-  rij: { flexDirection: "row", alignItems: "stretch", minHeight: 64 },
+  rij: { flexDirection: "row", alignItems: "stretch", minHeight: 57 },
   tijdKol: { width: 62, justifyContent: "center", paddingLeft: 4 },
   tijd: { fontSize: 17, fontWeight: "700" },
   tijdSub: { fontSize: 13, fontWeight: "500", marginTop: 1 },
@@ -285,7 +314,7 @@ const s = StyleSheet.create({
   vinkBol: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   open: { width: 18, height: 18, borderRadius: 9, borderWidth: 3 },
   nuBol: { width: 32, height: 32, borderRadius: 16, borderWidth: 5, alignItems: "center", justifyContent: "center" },
-  naamKol: { flex: 1, minWidth: 0, justifyContent: "center", paddingLeft: 12, paddingVertical: 8 },
+  naamKol: { flex: 1, minWidth: 0, justifyContent: "center", paddingLeft: 10, paddingVertical: 7 },
   naamRij: { flexDirection: "row", alignItems: "center", gap: 8 },
   naam: { fontSize: 17, fontWeight: "700", flexShrink: 1 },
   plaats: { fontSize: 14, marginTop: 2 },
@@ -295,6 +324,8 @@ const s = StyleSheet.create({
   nuTitel: { fontSize: 17, fontWeight: "800" },
   nuTitelKlein: { fontSize: 13, fontWeight: "700", marginTop: 1 },
   nuSub: { fontSize: 13, marginTop: 1 },
+  passeerKnop: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  passeerText: { fontSize: 13, fontWeight: "700" },
   label: { paddingHorizontal: 8, height: 22, borderRadius: 6, justifyContent: "center" },
   labelText: { fontSize: 12, fontWeight: "700" }
 });

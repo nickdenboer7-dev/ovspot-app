@@ -54,6 +54,10 @@ export function ritParams(ref: RitRef): string {
   if (ref.trip) q.set("trip", ref.trip);
   if (ref.datum) q.set("datum", ref.datum);
   if (ref.voertuig) q.set("voertuig", ref.voertuig);
+  if (ref.instap_halte) q.set("instap_halte", ref.instap_halte);
+  if (ref.instap_naam) q.set("instap_naam", ref.instap_naam);
+  if (ref.instap_ms) q.set("instap_ms", String(Math.round(ref.instap_ms)));
+  if (ref.richting) q.set("richting", ref.richting);
   return q.toString();
 }
 

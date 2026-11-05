@@ -21,6 +21,8 @@ export default function Storingen() {
   const key = `${bereik}:${ids.join(",")}`;
   const poll = usePolling(key, () => (ids.length ? api.storingen(ids) : Promise.resolve(null)), 60_000);
   const lijst = poll.data?.storingen ?? [];
+  const mislukt = poll.data?.niet_geladen ?? 0;
+  const gecontroleerd = poll.data?.gecontroleerd ?? Math.max(0, ids.length - mislukt);
 
   let inhoud: React.ReactNode;
   if (!ids.length) {
@@ -34,8 +36,21 @@ export default function Storingen() {
     inhoud = <Laden />;
   } else if (!poll.data && poll.fout) {
     inhoud = <Leeg icoon="cloud-offline-outline" titel="Kan storingen niet laden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />;
+  } else if (!lijst.length && poll.fout) {
+    inhoud = (
+      <Leeg icoon="cloud-offline-outline" titel="Storingsstatus niet bevestigd"
+        tekst="De nieuwste controle is mislukt. Eerdere resultaten kunnen verouderd zijn."
+        knop={{ label: "Opnieuw controleren", onPress: () => void poll.verversen() }} />
+    );
+  } else if (!lijst.length && mislukt > 0) {
+    inhoud = (
+      <Leeg icoon="alert-circle-outline" titel="Storingsoverzicht onvolledig"
+        tekst={`Gecontroleerd: ${gecontroleerd} van ${ids.length} haltes. Een deel van de storingsbron is niet bereikbaar.`}
+        knop={{ label: "Opnieuw controleren", onPress: () => void poll.verversen() }} />
+    );
   } else if (!lijst.length) {
-    inhoud = <Leeg icoon="checkmark-circle-outline" titel="Geen storingen" tekst={bereik === "mijn" ? "Bij je favoriete haltes rijdt alles volgens plan." : "Bij je favorieten en haltes dichtbij rijdt alles volgens plan."} />;
+    inhoud = <Leeg icoon="checkmark-circle-outline" titel="Geen gemelde storingen"
+      tekst={`Geen meldingen gevonden voor ${gecontroleerd} gecontroleerde halte${gecontroleerd === 1 ? "" : "s"}. Dit betekent niet automatisch dat alle ritten op tijd rijden.`} />;
   } else {
     inhoud = lijst.map((st) => <StoringKaart key={st.id} st={st} />);
   }
@@ -55,6 +70,9 @@ export default function Storingen() {
       </View>
       <ScrollView contentContainerStyle={s.lijst} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
         {poll.fout && poll.data ? <FoutBalk tekst={poll.fout} /> : null}
+        {mislukt > 0 && lijst.length > 0 ? (
+          <FoutBalk tekst={`Storingen onvolledig: ${mislukt} van ${ids.length} haltes niet gecontroleerd`} />
+        ) : null}
         {inhoud}
       </ScrollView>
     </View>

@@ -41,13 +41,15 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
             </View>
           ) : null}
         </View>
-        {!compact && info ? (
-          <Text style={[s.info, { color: colors.sub }]} numberOfLines={1}>
-            {info}
-          </Text>
-        ) : null}
+        <View style={s.detailRij}>
+          {!compact && info ? (
+            <Text style={[s.info, { color: colors.sub }]} numberOfLines={1}>
+              {info}
+            </Text>
+          ) : null}
+          <StatusLabel v={v} compact />
+        </View>
       </View>
-      <StatusLabel v={v} compact={compact} />
       <View style={s.rechts}>
         <Text style={[s.minuten, { color: v.vervallen ? colors.muted : colors.text }]}>{minuten}</Text>
         {!compact && v.gepland !== minuten ? (
@@ -66,14 +68,15 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
 }
 
 const s = StyleSheet.create({
-  rijCompact: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 44, paddingVertical: 6 },
-  rijVol: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10 },
+  rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 52, paddingVertical: 5 },
+  rijVol: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 72, paddingHorizontal: 12, paddingVertical: 9 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
   bestemmingRij: { flexDirection: "row", alignItems: "center", gap: 8 },
   bestemming: { fontSize: 16, fontWeight: "700", flexShrink: 1, lineHeight: 20 },
   bestemmingCompact: { fontSize: 16, flexShrink: 1, lineHeight: 20 },
   info: { fontSize: 13 },
-  rechts: { width: 58, alignItems: "flex-end" },
+  detailRij: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, minHeight: 18 },
+  rechts: { minWidth: 54, maxWidth: 67, alignItems: "flex-end" },
   minuten: { fontSize: 16, fontWeight: "700" },
   gepland: { fontSize: 12, marginTop: 1 },
   vervaltLabel: { paddingHorizontal: 7, height: 22, borderRadius: 6, justifyContent: "center" },

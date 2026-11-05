@@ -61,7 +61,7 @@ export function HalteKaart({
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.sub} />
         </View>
-        {vertrekken.map((v, i) => (
+        {vertrekken.slice(0, 2).map((v, i) => (
           <VertrekRegel key={`${v.lijn}-${v.vertrek_ms}-${i}`} v={v} nu={nu} compact eerste={false} />
         ))}
         {!vertrekken.length ? (
