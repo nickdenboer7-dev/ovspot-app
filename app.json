@@ -43,6 +43,8 @@
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
@@ -59,6 +61,9 @@
       "eas": {
         "projectId": "302a6122-8425-4bea-aca3-81bb5088a308"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/302a6122-8425-4bea-aca3-81bb5088a308"
     }
   }
 }
