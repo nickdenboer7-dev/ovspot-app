@@ -413,18 +413,40 @@ def map_stop(s, skipped_ids):
         delay_min = int(round(float(delay) / 60.0)) if delay is not None and float(delay) >= 60 else 0
     except (TypeError, ValueError):
         delay_min = 0
+    # De routebron kan een vervroegde vertrekvoorspelling laten zien terwijl het
+    # haltebord terecht niet eerder aftelt dan de geplande vertrektijd.
+    # Gebruik voor die situatie de geplande ISO-tijd, NOOIT de effectieve epoch.
+    planned_at = parse_iso(s.get("planned_departure_at")) or parse_iso(s.get("planned_arrival_at"))
+    scheduled_ms = epoch_ms(planned_at)
+    early = False
+    for name in ("departure_delay_seconds", "delay_seconds"):
+        raw_delay = s.get(name)
+        try:
+            if raw_delay is not None and float(raw_delay) < 0:
+                early = True
+        except (TypeError, ValueError):
+            pass
     if delay_min == 0:
         shown = planned or shown  # vroeg of op tijd: geplande tijd tonen
     naam, plaats = split_name(s.get("name"))
     arr = s.get("arrival_time") if s.get("arrival_time") not in (None, "—") else ""
     dep = s.get("departure_time") if s.get("departure_time") not in (None, "—") else ""
+    timeline_ms = s.get("epoch")
+    if early:
+        arr = s.get("planned_arrival_time") or ""
+        dep = s.get("planned_departure_time") or ""
+        timeline_ms = scheduled_ms or timeline_ms
     checked_arr, checked_dep = sanitize_arrival_departure(arr, dep)
     if arr and dep and not checked_arr and not checked_dep:
-        # De ene bronwaarde kan vóór aankomst liggen. Geen onmogelijke tijden tonen.
-        # De epoch is aan de dienstregelingsdag gekoppeld en daarom veiliger dan HH:MM.
-        epoch = s.get("epoch")
-        if isinstance(epoch, (int, float)) and epoch > 0:
-            planned = shown = datetime.fromtimestamp(epoch / 1000, TZ).strftime("%H:%M")
+        # Mismatch in een bronpayload: laat geen vertrek vóór aankomst zien.
+        # De geplande volledige datum/tijd is dan het betrouwbare anker.
+        if scheduled_ms:
+            timeline_ms = scheduled_ms
+            planned = shown = hhmm(planned_at)
+        elif not early and isinstance(timeline_ms, (int, float)) and timeline_ms > 0:
+            planned = shown = hhmm(datetime.fromtimestamp(timeline_ms / 1000, TZ))
+        elif planned:
+            shown = planned
     arr, dep = checked_arr, checked_dep
     change = s.get("platform_change") or None
     sid = str(s.get("id") or "")
@@ -434,7 +456,7 @@ def map_stop(s, skipped_ids):
         "plaats": plaats,
         "gepland": planned,
         "verwacht": shown,
-        "tijd_ms": s.get("epoch"),
+        "tijd_ms": timeline_ms,
         "aankomst": arr,
         "vertrek": dep,
         "vertraging_min": delay_min,

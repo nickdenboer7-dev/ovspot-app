@@ -10,6 +10,25 @@ class V11Test(unittest.TestCase):
     def test_hhmm_invalid_departure_before_arrival(self):
         self.assertEqual(api.sanitize_arrival_departure("03:14", "03:11"), ("", ""))
 
+    def test_early_kv8_prediction_not_shown_as_early_departure(self):
+        planned = "2026-11-05T04:18:00+01:00"
+        early_epoch = int(datetime.fromisoformat("2026-11-05T04:13:34+01:00").timestamp() * 1000)
+        record = {
+            "id": "4161401", "name": "Het Schouw, Splitsing",
+            "planned_arrival_at": planned, "planned_departure_at": planned,
+            "planned_arrival_time": "04:18", "planned_departure_time": "04:18",
+            "arrival_time": "04:18", "departure_time": "04:13",
+            "epoch": early_epoch, "delay_seconds": -266,
+            "departure_delay_seconds": -266, "timing_live": True,
+        }
+        result = api.map_stop(record, set())
+        self.assertEqual(result["gepland"], "04:18")
+        self.assertEqual(result["verwacht"], "04:18")
+        self.assertEqual(result["aankomst"], "04:18")
+        self.assertEqual(result["vertrek"], "04:18")
+        self.assertEqual(result["tijd_ms"],
+                         int(datetime.fromisoformat(planned).timestamp() * 1000))
+
     def test_hhmm_midnight_short_stop(self):
         self.assertEqual(api.sanitize_arrival_departure("23:59", "00:01"), ("23:59", "00:01"))
 
