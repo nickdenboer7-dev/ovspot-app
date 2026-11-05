@@ -61,11 +61,10 @@ export default function Ritverloop() {
     instap_ms: p.instap_ms && Number.isFinite(Number(p.instap_ms)) ? Number(p.instap_ms) : undefined,
     richting: p.richting ? String(p.richting) : undefined
   };
-  const [toonGepasseerd, setToonGepasseerd] = useState(false);
+  // All stops are visible on opening. Folding is optional, not automatic.
+  const [toonGepasseerd, setToonGepasseerd] = useState(true);
   const { colors } = useApp();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
-  const gescrold = useRef(false);
 
   const poll = usePolling(`rit:${ref.trip}:${ref.datum}:${ref.voertuig}:${ref.instap_halte}:${ref.instap_ms}:${ref.richting}`, () => api.rit(ref), (d) => (d?.live ? 5_000 : 30_000));
   const rit = poll.data;
@@ -76,12 +75,6 @@ export default function Ritverloop() {
   const trein = isTrein(rit?.modus || String(p.modus || ""));
   const ritnr = rit ? ritNummer(rit.id) : "";
   const kopSub = [vervoerder, rit?.lijn_naam && rit.lijn_naam !== lijn ? rit.lijn_naam : "", ritnr].filter(Boolean).join(" · ");
-
-  const scrollNaar = (y: number) => {
-    if (gescrold.current) return;
-    gescrold.current = true;
-    if (y > 260) setTimeout(() => scrollRef.current?.scrollTo({ y: y - 160, animated: false }), 50);
-  };
 
   let tijdlijn: React.ReactNode = null;
   if (rit) {
@@ -101,6 +94,9 @@ export default function Ritverloop() {
 
     tijdlijn = (
       <Kaart style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
+        <Text style={[s.heleRit, { color: colors.sub }]}>
+          Volledige rit · {rit.haltes.length} haltes
+        </Text>
         {voorbij > 4 ? (
           <Pressable onPress={() => setToonGepasseerd((v) => !v)}
             accessibilityRole="button" style={s.passeerKnop}>
@@ -115,7 +111,7 @@ export default function Ritverloop() {
           if (r.soort === "nu") {
             const over = nh?.over_min == null ? "" : nh.over_min <= 0 ? " · nu" : ` over ${nh.over_min} min`;
             return (
-              <View key="nu" style={[s.rij, { minHeight: 72 }, scheiding]} onLayout={(e) => scrollNaar(e.nativeEvent.layout.y)} accessible accessibilityLabel={`Nu hier. Volgende halte ${nh?.volgende_naam}${over}`}>
+              <View key="nu" style={[s.rij, { minHeight: 72 }, scheiding]} accessible accessibilityLabel={`Nu hier. Volgende halte ${nh?.volgende_naam}${over}`}>
                 <View style={s.tijdKol} />
                 <View style={s.rail}>
                   <View style={[s.lijnBoven, { backgroundColor: kl.voorbij }]} />
@@ -149,7 +145,6 @@ export default function Ritverloop() {
             <View
               key={`${h.id}-${i}`}
               style={[s.rij, scheiding]}
-              onLayout={huidig ? (e) => scrollNaar(e.nativeEvent.layout.y) : undefined}
               accessible
               accessibilityLabel={`${h.naam}${h.plaats ? `, ${h.plaats}` : ""}, ${h.vervalt ? "vervalt" : h.verwacht}${vertraagd ? `, gepland ${h.gepland}` : ""}${geweest ? ", geweest" : ""}${huidig ? ", nu hier" : ""}`}
             >
@@ -253,7 +248,9 @@ export default function Ritverloop() {
                 </Text>
               </View>
             ) : (
-              <Text style={[s.liveText, { color: colors.sub }]}>Dienstregeling</Text>
+              <Text style={[s.liveText, { color: colors.sub }]}>
+                {rit.kv8_komende_haltes ? "Gepland · KV8 later" : "Dienstregeling"}
+              </Text>
             )}
             <View style={[s.streepje, { backgroundColor: colors.border }]} />
             <View style={s.ververst}>
@@ -270,7 +267,7 @@ export default function Ritverloop() {
         </View>
       ) : null}
 
-      <ScrollView ref={scrollRef} contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
+      <ScrollView contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
         {poll.laden && !rit ? <Laden /> : null}
         {!rit && poll.fout && !poll.laden ? (
           <Leeg icoon="git-commit-outline" titel="Rit niet gevonden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />
@@ -324,6 +321,7 @@ const s = StyleSheet.create({
   nuTitel: { fontSize: 17, fontWeight: "800" },
   nuTitelKlein: { fontSize: 13, fontWeight: "700", marginTop: 1 },
   nuSub: { fontSize: 13, marginTop: 1 },
+  heleRit: { fontSize: 13, fontWeight: "600", paddingTop: 12, paddingBottom: 3, paddingLeft: 10 },
   passeerKnop: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   passeerText: { fontSize: 13, fontWeight: "700" },
   label: { paddingHorizontal: 8, height: 22, borderRadius: 6, justifyContent: "center" },

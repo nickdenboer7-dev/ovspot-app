@@ -103,11 +103,15 @@ export type Rit = {
   datum: string;
   live: boolean;
   tijden_bron?: "KV8" | "dienstregeling" | "overig";
+  kv8_komende_haltes?: number | null;
+  komende_haltes?: number | null;
   vertraging_min: number;
   vervallen: boolean;
   nu_hier: NuHier | null;
   positie_betrouwbaar?: boolean;
   gps_leeftijd_s?: number | null;
+  instap_index?: number | null;
+  haltes_totaal?: number;
   haltes: RitHalte[];
   storingen: Storing[];
   bijgewerkt: string;

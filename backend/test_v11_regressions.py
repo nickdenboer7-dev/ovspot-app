@@ -76,15 +76,29 @@ class V11Test(unittest.TestCase):
         stops += [{"id": str(i), "naam": "X", "tijd_ms": t-(42-i)*60_000} for i in range(1, 42)]
         stops += [{"id": "4161401", "naam": "Splitsing", "tijd_ms": t}]
         stops += [{"id": "last", "naam": "Centraal Station", "tijd_ms": t+8*60_000}]
-        clipped, found = api.select_boarding_segment(stops, "4161400", "Splitsing", t)
+        full, found, index = api.select_boarding_segment(stops, "4161400", "Splitsing", t)
         self.assertTrue(found)
-        self.assertEqual(clipped[-2]["id"], "4161401")
-        self.assertEqual(clipped[0]["id"], "37")
-        self.assertLess(len(clipped), len(stops))
+        self.assertEqual(index, 42)  # second passage despite different ID
+        self.assertEqual(full[-2]["id"], "4161401")
+        self.assertEqual(full[0]["id"], "4161400")
+        self.assertEqual(len(full), len(stops))
 
     def test_no_segment_without_confirmed_passage(self):
         stops=[{"id":"x","naam":"X","tijd_ms":1000}]
-        self.assertEqual(api.select_boarding_segment(stops,"other","Y",1000),(stops,False))
+        self.assertEqual(api.select_boarding_segment(stops,"other","Y",1000),(stops,False,None))
+
+    def test_full_route_preserved_for_late_boarding(self):
+        now = 1_793_845_080_000
+        stops = [
+            {"id": str(i), "naam": f"Stop {i}", "tijd_ms": now + i * 60_000}
+            for i in range(36)
+        ]
+        result, found, index = api.select_boarding_segment(stops, "30", "Stop 30", now + 30 * 60_000)
+        self.assertTrue(found)
+        self.assertEqual(index, 30)
+        self.assertEqual(len(result), 36)
+        self.assertEqual(result[0]["naam"], "Stop 0")
+        self.assertEqual(result[-1]["naam"], "Stop 35")
 
     def test_stale_halte_demotes_live(self):
         raw = {"name": "Test, Halte", "stale": True, "departures": [{

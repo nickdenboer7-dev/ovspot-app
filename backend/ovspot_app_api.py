@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from zoneinfo import ZoneInfo
 
-VERSION = "1.1.1-kv8-preview"
+VERSION = "1.1.2-kv8-preview"
 OVBORD = os.environ.get("OVSPOT_APP_OVBORD", "http://127.0.0.1:8095").rstrip("/")
 HOST = os.environ.get("OVSPOT_APP_HOST", "127.0.0.1")
 PORT = int(os.environ.get("OVSPOT_APP_PORT", "8110"))
@@ -583,9 +583,13 @@ def rit_positie(stops, live, gps_age, now_ms):
 
 
 def select_boarding_segment(stops, stop_id, stop_name, departure_ms):
-    """Kies de juiste passage bij lusritten; ook bij afwijkende perronhalte-ID."""
+    """Identify the correct boarding passage without truncating the route.
+
+    A loop can visit the same named stop twice. Keep all stops and return the
+    matching index to identify the right passage while preserving the first half.
+    """
     if not departure_ms or not (stop_id or stop_name):
-        return stops, False
+        return stops, False, None
     named = (stop_name or "").strip().casefold()
     candidates = []
     for i, stop in enumerate(stops):
@@ -599,10 +603,37 @@ def select_boarding_segment(stops, stop_id, stop_name, departure_ms):
         if delta <= 15 * 60_000:
             candidates.append((delta, 0 if same_id else 1, i))
     if not candidates:
-        return stops, False
+        return stops, False, None
     _, _, match_idx = min(candidates)
-    # Minimaal vijf vorige haltes voor context, maar geen eerste uur van de lus.
-    return stops[max(0, match_idx - 5):], True
+    return stops, True, match_idx
+
+
+def kv8_rit_overzicht(stops, now_ms):
+    """Show KV8 status only if the *next relevant stop* has fresh KV8.
+
+    A past stop with fresh feed metadata must not mark the full trip as KV8 live.
+    Later KV8-predicted stops remain individually labelled/colored, but their
+    delay must not be attributed to the next planned-only stop.
+    """
+    future = [
+        stop for stop in stops
+        if not stop.get("vervalt") and stop.get("status") != "geweest"
+        and isinstance(stop.get("tijd_ms"), (int, float))
+        and stop["tijd_ms"] >= now_ms - 60_000
+    ]
+    future_kv8 = [
+        stop for stop in future
+        if stop.get("bron_tijd") == "KV8" and stop.get("live_tijd")
+    ]
+    nxt = future[0] if future else None
+    next_kv8 = bool(nxt and nxt.get("bron_tijd") == "KV8" and nxt.get("live_tijd"))
+    return {
+        "live": next_kv8,
+        "tijden_bron": "KV8" if next_kv8 else "dienstregeling",
+        "vertraging_min": max(0, int(nxt.get("vertraging_min") or 0)) if next_kv8 else 0,
+        "kv8_komende_haltes": len(future_kv8),
+        "komende_haltes": len(future),
+    }
 
 
 def rit(trip="", datum="", voertuig="", ritid="", instap_halte="", instap_naam="", instap_ms=0, richting=""):
@@ -612,7 +643,7 @@ def rit(trip="", datum="", voertuig="", ritid="", instap_halte="", instap_naam="
     skipped = {sid for n in notices if n["_skip"] for sid in n["halte_ids"]}
     ebs = str(raw.get("carrier") or "").strip().casefold() == "ebs"
     stops = [map_stop(s, skipped, prefer_kv8=ebs) for s in raw.get("stops") or []]
-    stops, instap_gevonden = select_boarding_segment(stops, instap_halte, instap_naam, instap_ms)
+    stops, instap_gevonden, instap_index = select_boarding_segment(stops, instap_halte, instap_naam, instap_ms)
     live = bool(raw.get("live"))
     mode = str(raw.get("mode") or "bus").lower()
     try:
@@ -623,13 +654,10 @@ def rit(trip="", datum="", voertuig="", ritid="", instap_halte="", instap_naam="
     # Een verse GPS-melding mag niet zelfstandig het label 'Live' bevestigen.
     # Geldige positie of echte live tijden uit de bron zijn hiervoor noodzakelijk.
     positie_betrouwbaar = nu_hier is not None
-    confirmed_kv8 = [h for h in stops if h.get("bron_tijd") == "KV8" and h["live_tijd"]]
+    kv8_summary = kv8_rit_overzicht(stops, int(time.time() * 1000)) if ebs else None
     # A recent vehicle position confirms location, not stop-time predictions.
-    live = bool(confirmed_kv8) if ebs else live and (positie_betrouwbaar or any(h["live_tijd"] for h in stops))
-    nearest_kv8 = next((h for h in confirmed_kv8
-                        if isinstance(h.get("tijd_ms"), (int, float))
-                        and h["tijd_ms"] >= int(time.time() * 1000) - 60_000), None)
-    summary_delay_min = (nearest_kv8["vertraging_min"] if nearest_kv8 else 0) if ebs else (int(round(delay_s / 60.0)) if live and delay_s >= 60 else 0)
+    live = kv8_summary["live"] if ebs else live and (positie_betrouwbaar or any(h["live_tijd"] for h in stops))
+    summary_delay_min = kv8_summary["vertraging_min"] if ebs else (int(round(delay_s / 60.0)) if live and delay_s >= 60 else 0)
     line = str(raw.get("line") or "").strip()
     return {
         "id": str(raw.get("journey_id") or ""),
@@ -641,11 +669,15 @@ def rit(trip="", datum="", voertuig="", ritid="", instap_halte="", instap_naam="
         "datum": str(raw.get("service_date") or ""),
         "live": live,
         "vertraging_min": summary_delay_min,
-        "tijden_bron": "KV8" if confirmed_kv8 else "dienstregeling" if ebs else "overig",
+        "tijden_bron": kv8_summary["tijden_bron"] if ebs else "overig",
+        "kv8_komende_haltes": kv8_summary["kv8_komende_haltes"] if ebs else None,
+        "komende_haltes": kv8_summary["komende_haltes"] if ebs else None,
         "vervallen": bool(raw.get("cancelled")),
         "nu_hier": nu_hier,
         "positie_betrouwbaar": positie_betrouwbaar,
         "gps_leeftijd_s": raw.get("gps_age_seconds"),
+        "instap_index": instap_index,
+        "haltes_totaal": len(stops),
         "haltes": stops,
         "storingen": [public_notice(n) for n in notices],
         "bijgewerkt": now_iso(),
