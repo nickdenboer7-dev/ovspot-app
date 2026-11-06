@@ -68,5 +68,5 @@ export const api = {
     get<Halte>(`/halte/${encodeURIComponent(id)}?modus=${modus}&max=${max}`),
   rit: (ref: RitRef) => get<Rit>(`/rit?${ritParams(ref)}`),
   storingen: (ids: string[]) => get<StoringenAntwoord>(`/storingen?haltes=${ids.map(encodeURIComponent).join(",")}`),
-  zoek: (q: string) => get<Zoek>(`/zoek?q=${encodeURIComponent(q)}`, 8000)
+  zoek: (q: string) => get<Zoek>(`/zoek?q=${encodeURIComponent(q)}&lijnen=1`, 8000)
 };

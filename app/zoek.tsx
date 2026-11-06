@@ -9,6 +9,7 @@ import { useApp } from "../context/AppProvider";
 import { halteIcoon, halteKleur, lijnKleur } from "../constants/wayfinding";
 import { api } from "../lib/api";
 import type { Vertrek, ZoekResultaat } from "../lib/types";
+import { geldigeLijnen, rangschikZoekresultaten } from "../lib/wayfindingV2";
 
 type LijnVoorbeeld = Pick<Vertrek, "lijn" | "modus" | "vervoerder">;
 type Voorbeelden = Record<string, LijnVoorbeeld[]>;
@@ -68,11 +69,13 @@ export default function Zoek() {
       try {
         const r = await api.zoek(term);
         if (mijn !== volgnr.current) return;
-        setResultaten(r.resultaten);
+        const gerangschikt = rangschikZoekresultaten(r.resultaten, term);
+        setResultaten(gerangschikt);
         // Maximaal vier aanvullende bordqueries, pas ná de zoekresultaten.
         // Zo blijft zoeken snel en blijven de badges echte vertreklijnen.
         if (!voorThuis && term.length >= 5 && r.resultaten.length <= 8) {
-          for (const item of r.resultaten.slice(0, 4)) {
+          for (const item of gerangschikt.slice(0, 4)) {
+            if (geldigeLijnen(item.lijnen).length) continue;
             if (mijn !== volgnr.current) break;
             void api.halte(item.id, "alles", 40).then(h => {
               if (mijn === volgnr.current) {
@@ -100,11 +103,15 @@ export default function Zoek() {
     }
     router.replace({
       pathname: "/halte/[id]",
-      params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats, groep: groepLabel(r) }
+      params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats, groep: groepLabel(r),
+        lijnen: JSON.stringify(geldigeLijnen(r.lijnen)) }
     });
   };
 
   const hasResults = resultaten.length > 0;
+  const meestNaam = resultaten[0]?.naam;
+  const relevantAantal = resultaten.filter(x => x.naam === meestNaam).length;
+  const overige = relevantAantal > 1 && relevantAantal < resultaten.length;
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={[s.kop, { backgroundColor: colors.header, paddingTop: insets.top + 8 }]}>
@@ -138,7 +145,7 @@ export default function Zoek() {
         contentContainerStyle={s.resultaten}
         ListHeaderComponent={hasResults ? (
           <View style={s.sectiekop}>
-            <Text style={[s.sectietitel, { color: colors.sub }]}>ZOEKRESULTATEN</Text>
+            <Text style={[s.sectietitel, { color: colors.sub }]}>{overige ? "MEEST RELEVANT" : "ZOEKRESULTATEN"}</Text>
             <Text style={[s.sectieaantal, { color: colors.sub }]}>
               {resultaten.length} {resultaten.length === 1 ? "haltegroep" : "haltegroepen"}
             </Text>
@@ -155,13 +162,19 @@ export default function Zoek() {
             <Leeg icoon="help-circle-outline" titel="Niets gevonden" tekst={`Geen haltes voor "${q.trim()}". Probeer een andere naam of plaats.`} />
           )
         }
-        renderItem={({ item }) => {
-          const lijst = voorbeelden[item.id];
+        renderItem={({ item, index }) => {
+          const catalogus = geldigeLijnen(item.lijnen);
+          const lijst = catalogus.length ? catalogus : voorbeelden[item.id];
+          const zichtbaar = lijst?.slice(0, 4);
           const vervoerder = lijst?.find(x => x.vervoerder)?.vervoerder;
           const palet = halteKleur(item.modi, vervoerder);
           const icon = halteIcoon(item.modi);
-          const rest = Math.max(0, (item.lijnen_aantal || 0) - (lijst?.length || 0));
+          const rest = Math.max(0, (item.lijnen_aantal || 0) - (zichtbaar?.length || 0));
           return (
+            <>
+            {overige && index === relevantAantal ? (
+              <Text style={[s.sectietitel, s.tussenkop, { color: colors.sub }]}>ANDERE RESULTATEN</Text>
+            ) : null}
             <Pressable
               onPress={() => kies(item)}
               style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -180,9 +193,9 @@ export default function Zoek() {
                 </Text>
               </View>
               <View style={s.rechts}>
-                {lijst?.length ? (
+                {zichtbaar?.length ? (
                   <View style={s.badges}>
-                    {lijst.map(x => {
+                    {zichtbaar.map(x => {
                       const k = lijnKleur(x.lijn, x.modus, x.vervoerder);
                       return (
                         <View key={x.modus + x.lijn + x.vervoerder} style={[s.badge, { backgroundColor: k.bg }]}>
@@ -202,6 +215,7 @@ export default function Zoek() {
                 <Ionicons name={voorThuis ? "home-outline" : "chevron-forward"} size={18} color={colors.sub} />
               </View>
             </Pressable>
+            </>
           );
         }}
       />
@@ -221,6 +235,7 @@ const s = StyleSheet.create({
   sectiekop: { paddingHorizontal: 5, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 10 },
   sectietitel: { fontSize: 12, fontWeight: "800", letterSpacing: 0.8 },
   sectieaantal: { fontSize: 12, fontWeight: "500" },
+  tussenkop: { marginHorizontal: 5, marginTop: 15, marginBottom: 10 },
   laden: { alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10, marginTop: 25 },
   kaart: { flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 12, paddingVertical: 12, minHeight: 86, borderRadius: 14, borderWidth: 1, marginBottom: 10, elevation: 2, shadowColor: "#172b4d", shadowOpacity: 0.06, shadowRadius: 5, shadowOffset: { width: 0, height: 2 } },
   icoon: { width: 48, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center" },

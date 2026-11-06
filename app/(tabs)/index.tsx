@@ -4,14 +4,20 @@ import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { HalteKaart } from "../../components/HalteKaart";
-import { FoutBalk, Kop, KopKnop, Leeg, Laden } from "../../components/ui";
+import { DichtbijSkeleton } from "../../components/DichtbijSkeleton";
+import { FoutBalk, Kop, KopKnop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
 import { afstand } from "../../lib/format";
 import { useNu, usePolling } from "../../lib/hooks";
+import type { Dichtbij as DichtbijData } from "../../lib/types";
 
 type Positie = { lat: number; lon: number; bron: "gps" | "thuis" };
 type LocFout = "geweigerd" | "geweigerd-blijvend" | "uit" | "fout";
+
+// Een korte geheugen-cache voorkomt een leeg scherm bij terugkeer of themawisseling.
+// Alleen tonen voor exact dezelfde GPS-gebiedssleutel en straal.
+let vorigeHaltes: { key: string; data: DichtbijData; ts: number } | null = null;
 
 export default function Dichtbij() {
   const { colors, instellingen, zetDichtbijIds } = useApp();
@@ -57,7 +63,14 @@ export default function Dichtbij() {
 
   const key = pos ? `${pos.lat.toFixed(3)}:${pos.lon.toFixed(3)}:${instellingen.straal}` : "geen";
   const poll = usePolling(key, () => (pos ? api.dichtbij(pos.lat, pos.lon, instellingen.straal) : Promise.resolve(null)), 20_000);
-  const haltes = poll.data?.haltes ?? [];
+  const oudeData = vorigeHaltes && vorigeHaltes.key === key && Date.now() - vorigeHaltes.ts < 90_000
+    ? vorigeHaltes.data : null;
+  const gegevens = poll.data ?? oudeData;
+  const haltes = gegevens?.haltes ?? [];
+
+  useEffect(() => {
+    if (poll.data && key !== "geen") vorigeHaltes = { key, data: poll.data, ts: Date.now() };
+  }, [key, poll.data]);
 
   useEffect(() => {
     if (haltes.length) zetDichtbijIds(haltes.map((h) => h.id));
@@ -82,9 +95,9 @@ export default function Dichtbij() {
         }
       />
     );
-  } else if (!pos || (poll.laden && !poll.data)) {
-    inhoud = <Laden />;
-  } else if (!haltes.length && poll.data) {
+  } else if (!pos || (poll.laden && !gegevens)) {
+    inhoud = <DichtbijSkeleton locatie={!!pos} />;
+  } else if (!haltes.length && gegevens) {
     inhoud = (
       <Leeg
         icoon="bus-outline"
@@ -93,7 +106,7 @@ export default function Dichtbij() {
         knop={{ label: "Naar instellingen", onPress: () => router.navigate("/instellingen") }}
       />
     );
-  } else if (!poll.data && poll.fout) {
+  } else if (!gegevens && poll.fout) {
     inhoud = <Leeg icoon="cloud-offline-outline" titel="Kan vertrektijden niet laden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />;
   } else {
     inhoud = haltes.map((h) => (
@@ -150,7 +163,7 @@ export default function Dichtbij() {
             </Text>
           ) : null}
         </View>
-        {poll.fout && poll.data ? <FoutBalk tekst={poll.fout} /> : null}
+        {poll.fout && gegevens ? <FoutBalk tekst={poll.fout} /> : null}
         {inhoud}
       </ScrollView>
     </View>
