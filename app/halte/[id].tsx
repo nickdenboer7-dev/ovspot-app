@@ -13,7 +13,7 @@ import { useNu, usePolling } from "../../lib/hooks";
 import type { Filter, Vertrek } from "../../lib/types";
 
 export default function Haltebord() {
-  const p = useLocalSearchParams<{ id: string; van?: string; naam?: string; plaats?: string }>();
+  const p = useLocalSearchParams<{ id: string; van?: string; naam?: string; plaats?: string; groep?: string }>();
   const id = String(p.id || "");
   const van = isTab(p.van) ? p.van : "index";
   const { colors, instellingen, isFavoriet, wisselFavoriet } = useApp();
@@ -24,10 +24,12 @@ export default function Haltebord() {
   const poll = usePolling(`halte:${id}:${filter}`, () => api.halte(id, filter, 40), 15_000);
   const h = poll.data;
   const naam = h?.naam || String(p.naam || "Halte");
-  const plaats = h?.plaats ?? String(p.plaats || "");
+  const plaats = h?.plaats || String(p.plaats || "");
   const fav = isFavoriet(id);
   const beideModi = !!h && h.modi.includes("train") && h.modi.some((m) => m !== "train");
-  const titel = plaats && !naam.startsWith("Station") ? `${plaats}, ${naam}` : naam;
+  const titel = naam;
+  const haltegroep = String(p.groep || "").trim();
+  const groepSub = [plaats && !naam.toLowerCase().includes(plaats.toLowerCase()) ? plaats : "", haltegroep].filter(Boolean).join(" · ");
 
   const openRit = (v: Vertrek) => {
     if (!v.rit) return;
@@ -63,6 +65,7 @@ export default function Haltebord() {
       <Kop
         terug
         titel={titel}
+        detail={groepSub || undefined}
         sub={h ? `${h.verouderd ? "Verouderd · " : ""}Bijgewerkt ${klok(h.bijgewerkt)}` : "Laden…"}
         rechts={
           <KopKnop

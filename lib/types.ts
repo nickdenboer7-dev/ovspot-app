@@ -120,6 +120,7 @@ export type ZoekResultaat = {
   plaats: string;
   modi: Modus[];
   lijnen_aantal: number | null;
+  sub?: string;
   lat: number | null;
   lon: number | null;
 };

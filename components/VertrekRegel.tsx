@@ -20,10 +20,11 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
       style={[
         compact ? s.rijCompact : s.rijVol,
         { borderTopColor: colors.divider, borderTopWidth: compact && !eerste ? StyleSheet.hairlineWidth * 2 : 0 },
-        !compact && { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 }
+        !compact && { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 },
+        !compact && v.live && !v.vervallen && { backgroundColor: colors.liveGlow }
       ]}
     >
-      <LijnBadge lijn={v.lijn} modus={v.modus} vervallen={v.vervallen} />
+      <LijnBadge lijn={v.lijn} modus={v.modus} vervoerder={v.vervoerder} vervallen={v.vervallen} />
       <View style={s.midden}>
         <View style={s.bestemmingRij}>
           <Text
@@ -69,15 +70,15 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
 
 const s = StyleSheet.create({
   rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 52, paddingVertical: 5 },
-  rijVol: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 72, paddingHorizontal: 12, paddingVertical: 9 },
+  rijVol: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 78, paddingHorizontal: 12, paddingVertical: 11 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
   bestemmingRij: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bestemming: { fontSize: 16, fontWeight: "700", flexShrink: 1, lineHeight: 20 },
+  bestemming: { fontSize: 16, fontWeight: "800", flexShrink: 1, lineHeight: 21 },
   bestemmingCompact: { fontSize: 16, flexShrink: 1, lineHeight: 20 },
   info: { fontSize: 13 },
   detailRij: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, minHeight: 18 },
   rechts: { minWidth: 54, maxWidth: 67, alignItems: "flex-end" },
-  minuten: { fontSize: 16, fontWeight: "700" },
+  minuten: { fontSize: 17, fontWeight: "800" },
   gepland: { fontSize: 12, marginTop: 1 },
   vervaltLabel: { paddingHorizontal: 7, height: 22, borderRadius: 6, justifyContent: "center" },
   vervaltText: { fontSize: 12, fontWeight: "700" }

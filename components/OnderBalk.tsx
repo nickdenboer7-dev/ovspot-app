@@ -37,7 +37,7 @@ export function OnderBalk({ actief, onKies }: { actief: TabKey; onKies?: (k: Tab
             accessibilityLabel={t.key === "storingen" && storingenMijn ? `${t.label}, ${storingenMijn} bij je favorieten` : t.label}
             onPress={() => (onKies ? onKies(t.key) : router.navigate(t.pad as any))}
           >
-            <View>
+            <View style={[s.actiefIcoon, aan && { backgroundColor: colors.infoBg }]}>
               <Ionicons name={aan ? t.aan : t.uit} size={24} color={kleur} />
               {t.key === "storingen" && storingenMijn > 0 ? (
                 <View style={[s.bolletje, { backgroundColor: colors.red, borderColor: colors.surface }]}>
@@ -46,8 +46,7 @@ export function OnderBalk({ actief, onKies }: { actief: TabKey; onKies?: (k: Tab
               ) : null}
             </View>
             <Text style={[s.label, { color: kleur, fontWeight: aan ? "700" : "500" }]}>{t.label}</Text>
-            {aan ? <View style={[s.streep, { backgroundColor: colors.accent }]} /> : null}
-          </Pressable>
+           </Pressable>
         );
       })}
     </View>
@@ -56,9 +55,9 @@ export function OnderBalk({ actief, onKies }: { actief: TabKey; onKies?: (k: Tab
 
 const s = StyleSheet.create({
   balk: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth * 2 },
-  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 3, paddingTop: 6 },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2, paddingTop: 4 },
+  actiefIcoon: { width: 58, height: 33, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   label: { fontSize: 12 },
-  streep: { position: "absolute", bottom: 0, width: 48, height: 3, borderRadius: 2 },
   bolletje: { position: "absolute", top: -5, right: -11, minWidth: 18, height: 18, borderRadius: 9, borderWidth: 2, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
   bolletjeText: { color: "#fff", fontSize: 10, fontWeight: "800" }
 });
