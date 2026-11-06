@@ -28,6 +28,19 @@ function enkeleLijnen(vertrekken: Vertrek[]): LijnVoorbeeld[] {
   return [...diverse, ...alle.filter(x => !diverse.includes(x))].slice(0, 3);
 }
 
+function groepLabel(r: ZoekResultaat): string {
+  const modi = r.modi || [];
+  // Stationsperrons centraal herkennen; andere modaliteiten hebben eigen kaarten.
+  if (modi.includes("train")) return "Treinen · spoorperrons";
+  if (modi.length >= 3) {
+    const termen = (["metro", "tram", "bus", "ferry"] as const)
+      .filter(m => modi.includes(m))
+      .map(m => ({ metro: "Metro", tram: "tram", bus: "bus", ferry: "pont" }[m]));
+    if (termen.length >= 3) return termen.slice(0, -1).join(", ") + " en " + termen[termen.length - 1];
+  }
+  return (r.sub || modi.join(" en ")).replace("Tram en Bus", "Tram en bus").replace("Veer", "pont");
+}
+
 export default function Zoek() {
   const { colors, zetInstellingen } = useApp();
   const { doel } = useLocalSearchParams<{ doel?: string }>();
@@ -87,7 +100,7 @@ export default function Zoek() {
     }
     router.replace({
       pathname: "/halte/[id]",
-      params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats, groep: r.sub || "" }
+      params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats, groep: groepLabel(r) }
     });
   };
 
@@ -154,7 +167,7 @@ export default function Zoek() {
               style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}
               android_ripple={{ color: colors.divider }}
               accessibilityRole="button"
-              accessibilityLabel={`${item.naam}, ${item.sub || item.modi.join(" en ")}, ${item.plaats}, ${item.lijnen_aantal || 0} lijnen`}
+              accessibilityLabel={`${item.naam}, ${groepLabel(item)}, ${item.plaats}, ${item.lijnen_aantal || 0} lijnen`}
             >
               <View style={[s.icoon, { backgroundColor: palet.bg }]}>
                 <Ionicons name={icon} size={24} color={palet.fg} />
@@ -163,7 +176,7 @@ export default function Zoek() {
                 <Text style={[s.naam, { color: colors.text }]} numberOfLines={1}>{item.naam}</Text>
                 {!!item.plaats && <Text style={[s.plaats, { color: colors.sub }]} numberOfLines={1}>{item.plaats}</Text>}
                 <Text style={[s.sub, { color: colors.sub }]} numberOfLines={2}>
-                  {item.sub || (item.modi.includes("train") ? "Treinen · perrons" : item.modi.join(" en "))}
+                  {groepLabel(item)}
                 </Text>
               </View>
               <View style={s.rechts}>
@@ -202,7 +215,7 @@ const s = StyleSheet.create({
   kopRij: { flexDirection: "row", alignItems: "center", gap: 4 },
   kopTitel: { fontSize: 23, fontWeight: "800", letterSpacing: -0.5 },
   terug: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  veld: { flex: 1, height: 49, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14 },
+  veld: { width: "100%", height: 49, flexShrink: 0, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14 },
   input: { flex: 1, fontSize: 17, paddingVertical: 0 },
   resultaten: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 24, flexGrow: 1 },
   sectiekop: { paddingHorizontal: 5, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 10 },

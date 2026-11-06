@@ -20,8 +20,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
       style={[
         compact ? s.rijCompact : s.rijVol,
         { borderTopColor: colors.divider, borderTopWidth: compact && !eerste ? StyleSheet.hairlineWidth * 2 : 0 },
-        !compact && { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 },
-        !compact && v.live && !v.vervallen && { backgroundColor: colors.liveGlow }
+        !compact && { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 }
       ]}
     >
       <LijnBadge lijn={v.lijn} modus={v.modus} vervoerder={v.vervoerder} vervallen={v.vervallen} />
