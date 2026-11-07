@@ -51,6 +51,69 @@ export function geldigeLijnen(input: unknown, max=40): CatalogLijn[] {
   return out;
 }
 
+/** UI-kaarten per vervoerssoort; halte-ID's blijven de echte API-ID's. */
+export type ZoekKaart = {
+  key: string;
+  halte: ZoekResultaat;
+  modus: string | null;
+  gesplitst: boolean;
+  lijnen: CatalogLijn[];
+};
+
+const TREIN_BINNENLAND: Record<string, number> = {
+  sprinter: 0, spr: 0, intercity: 1, ic: 1,
+  "intercity direct": 2, icd: 2, sneltrein: 3, stoptrein: 4, st: 4
+};
+const TREIN_INTERNATIONAAL = new Set([
+  "eurocity direct", "european sleeper", "eurostar", "ice", "nightjet", "govolta"
+]);
+
+/** Alleen binnen dezelfde modus sorteren. Standaardtreinen eerst, internationale daarna. */
+export function sorteerZoekLijnen(lijnen: CatalogLijn[]): CatalogLijn[] {
+  return [...lijnen].sort((a, b) => {
+    if (a.modus !== b.modus) return 0; // per-mode kaarten houden hun eigen catalogus
+    if (a.modus === "train") {
+      const an = a.lijn.trim().toLowerCase();
+      const bn = b.lijn.trim().toLowerCase();
+      const ar = Object.prototype.hasOwnProperty.call(TREIN_BINNENLAND, an) ? 0 : TREIN_INTERNATIONAAL.has(an) ? 2 : 1;
+      const br = Object.prototype.hasOwnProperty.call(TREIN_BINNENLAND, bn) ? 0 : TREIN_INTERNATIONAAL.has(bn) ? 2 : 1;
+      if (ar !== br) return ar - br;
+      if (ar === 0) return TREIN_BINNENLAND[an] - TREIN_BINNENLAND[bn];
+      return a.lijn.localeCompare(b.lijn, "nl", { numeric: true });
+    }
+    return a.lijn.localeCompare(b.lijn, "nl", { numeric: true });
+  });
+}
+
+/** Deel alleen op als de API ook echte lijnen in meerdere modaliteiten levert. */
+export function maakZoekKaarten(resultaten: ZoekResultaat[]): ZoekKaart[] {
+  return resultaten.flatMap<ZoekKaart>(halte => {
+    const catalogus = geldigeLijnen(halte.lijnen);
+    const modi = [...new Set(halte.modi || [])].filter(m => catalogus.some(l => l.modus === m));
+    if (modi.length < 2) {
+      return [{ key: `${halte.id}:alles`, halte, modus: null, gesplitst: false,
+                lijnen: sorteerZoekLijnen(catalogus) }];
+    }
+    return modi.map(modus => ({
+      key: `${halte.id}:${modus}`, halte, modus, gesplitst: true,
+      lijnen: sorteerZoekLijnen(catalogus.filter(l => l.modus === modus))
+    }));
+  });
+}
+
+/** Onderkop van gesplitste kaarten; behoud de echte pleinzijde uit de API. */
+export function zoekKaartSubtitel(kaart: ZoekKaart): string {
+  if (!kaart.gesplitst || !kaart.modus) return "";
+  const label: Record<string,string> = {
+    train: "Trein", metro: "Metro", tram: "Tram", bus: "Bus", ferry: "Pont"
+  };
+  const zijde = (kaart.halte.sub || "").split(" · ").at(-1) || "";
+  const plaats = kaart.halte.plaats || "";
+  return [label[kaart.modus] || kaart.modus, plaats,
+    /^(?:noordzijde|zuidzijde|oostzijde|westzijde|midden)$/i.test(zijde) ? zijde : ""
+  ].filter(Boolean).join(" · ");
+}
+
 export function positieBevestigd(rit: Partial<Pick<Rit, "positie_betrouwbaar" | "live_positie" | "nu_hier">>): boolean {
   return (rit.live_positie === true || rit.positie_betrouwbaar === true) && !!rit.nu_hier;
 }

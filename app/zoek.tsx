@@ -1,6 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { OnderBalk } from "../components/OnderBalk";
@@ -9,7 +9,7 @@ import { useApp } from "../context/AppProvider";
 import { halteIcoon, halteKleur, lijnBadgeHeeftRand, lijnKleur } from "../constants/wayfinding";
 import { api } from "../lib/api";
 import type { Vertrek, ZoekResultaat } from "../lib/types";
-import { geldigeLijnen, rangschikZoekresultaten } from "../lib/wayfindingV2";
+import { geldigeLijnen, maakZoekKaarten, rangschikZoekresultaten, sorteerZoekLijnen, zoekKaartSubtitel, type ZoekKaart } from "../lib/wayfindingV2";
 
 type LijnVoorbeeld = Pick<Vertrek, "lijn" | "modus" | "vervoerder"> & { kleur?: string; tekstkleur?: string };
 type Voorbeelden = Record<string, LijnVoorbeeld[]>;
@@ -19,14 +19,15 @@ function enkeleLijnen(vertrekken: Vertrek[]): LijnVoorbeeld[] {
   const uniek = new Map<string, LijnVoorbeeld>();
   for (const v of vertrekken) {
     const key = v.modus + ":" + v.lijn + ":" + v.vervoerder;
-    if (!uniek.has(key)) uniek.set(key, { lijn: v.lijn, modus: v.modus, vervoerder: v.vervoerder });
+    if (!uniek.has(key)) uniek.set(key, { lijn: v.lijn, modus: v.modus, vervoerder: v.vervoerder,
+      kleur: v.kleur || v.lijn_kleur, tekstkleur: v.tekstkleur || v.lijn_tekstkleur });
   }
   const alle = [...uniek.values()];
   // Gemengde stations: eerst verschillende modaliteiten, daarna de overige lijnen.
   const diverse: LijnVoorbeeld[] = [];
   const modi = new Set<string>();
   for (const x of alle) if (!modi.has(x.modus)) { diverse.push(x); modi.add(x.modus); }
-  return [...diverse, ...alle.filter(x => !diverse.includes(x))].slice(0, 3);
+  return [...diverse, ...alle.filter(x => !diverse.includes(x))].slice(0, 24);
 }
 
 function groepLabel(r: ZoekResultaat): string {
@@ -95,7 +96,10 @@ export default function Zoek() {
     return () => { clearTimeout(t); };
   }, [q, voorThuis]);
 
-  const kies = (r: ZoekResultaat) => {
+  const kaarten = useMemo(() => maakZoekKaarten(resultaten), [resultaten]);
+
+  const kies = (kaart: ZoekKaart) => {
+    const r = kaart.halte;
     if (voorThuis) {
       if (r.lat != null && r.lon != null) zetInstellingen({ thuis: { naam: r.naam, plaats: r.plaats, lat: r.lat, lon: r.lon } });
       router.back();
@@ -103,15 +107,19 @@ export default function Zoek() {
     }
     router.replace({
       pathname: "/halte/[id]",
-      params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats, groep: groepLabel(r),
+      params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats,
+        groep: kaart.gesplitst
+          ? (r.plaats ? zoekKaartSubtitel(kaart).replace(` · ${r.plaats}`, "") : zoekKaartSubtitel(kaart))
+          : groepLabel(r),
+        ...(kaart.modus ? { modus: kaart.modus } : {}),
         lijnen: JSON.stringify(geldigeLijnen(r.lijnen)) }
     });
   };
 
-  const hasResults = resultaten.length > 0;
-  const meestNaam = resultaten[0]?.naam;
-  const relevantAantal = resultaten.filter(x => x.naam === meestNaam).length;
-  const overige = relevantAantal > 1 && relevantAantal < resultaten.length;
+  const hasResults = kaarten.length > 0;
+  const meestNaam = kaarten[0]?.halte.naam;
+  const relevantAantal = kaarten.filter(x => x.halte.naam === meestNaam).length;
+  const overige = relevantAantal > 1 && relevantAantal < kaarten.length;
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={[s.kop, { backgroundColor: colors.header, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
@@ -139,15 +147,15 @@ export default function Zoek() {
         </View>
       </View>
       <FlatList
-        data={resultaten}
-        keyExtractor={(r) => r.id}
+        data={kaarten}
+        keyExtractor={(kaart) => kaart.key}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={s.resultaten}
         ListHeaderComponent={hasResults ? (
           <View style={s.sectiekop}>
             <Text style={[s.sectietitel, { color: colors.sub }]}>{overige ? "MEEST RELEVANT" : "ZOEKRESULTATEN"}</Text>
             <Text style={[s.sectieaantal, { color: colors.sub }]}>
-              {resultaten.length} {resultaten.length === 1 ? "haltegroep" : "haltegroepen"}
+              {kaarten.length} {kaarten.length === 1 ? "resultaat" : "resultaten"}
             </Text>
           </View>
         ) : null}
@@ -162,60 +170,64 @@ export default function Zoek() {
             <Leeg icoon="help-circle-outline" titel="Niets gevonden" tekst={`Geen haltes voor "${q.trim()}". Probeer een andere naam of plaats.`} />
           )
         }
-        renderItem={({ item, index }) => {
-          const catalogus = geldigeLijnen(item.lijnen);
-          const lijst = catalogus.length ? catalogus : voorbeelden[item.id];
-          const zichtbaar = lijst?.slice(0, 4);
-          const vervoerder = lijst?.find(x => x.vervoerder)?.vervoerder;
-          const palet = halteKleur(item.modi, vervoerder);
-          const icon = halteIcoon(item.modi);
-          const rest = Math.max(0, (item.lijnen_aantal || 0) - (zichtbaar?.length || 0));
+        renderItem={({ item: kaart, index }) => {
+          const item = kaart.halte;
+          // Gesplitste kaarten bevatten alleen lijnbadges van hun eigen modus.
+          const lijst = kaart.lijnen.length ? kaart.lijnen
+            : sorteerZoekLijnen(voorbeelden[item.id] || []).filter(x => !kaart.modus || x.modus === kaart.modus);
+          const vervoerder = lijst.find(x => x.vervoerder)?.vervoerder;
+          const palet = halteKleur(kaart.modus ? [kaart.modus] : item.modi, vervoerder);
+          const icoonModus = kaart.modus || item.modi[0];
+          const icon = kaart.gesplitst ? (
+            icoonModus === "train" ? "train-outline" : icoonModus === "metro" ? "subway-outline"
+              : icoonModus === "ferry" ? "boat-outline" : "bus-outline"
+          ) : halteIcoon(item.modi);
+          const sub = kaart.gesplitst ? zoekKaartSubtitel(kaart) : groepLabel(item);
           return (
-            <>
-            {overige && index === relevantAantal ? (
-              <Text style={[s.sectietitel, s.tussenkop, { color: colors.sub }]}>ANDERE RESULTATEN</Text>
-            ) : null}
-            <Pressable
-              onPress={() => kies(item)}
-              style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              android_ripple={{ color: colors.divider }}
-              accessibilityRole="button"
-              accessibilityLabel={`${item.naam}, ${groepLabel(item)}, ${item.plaats}, ${item.lijnen_aantal || 0} lijnen`}
-            >
-              <View style={[s.icoon, { backgroundColor: palet.bg }]}>
-                <Ionicons name={icon} size={24} color={palet.fg} />
-              </View>
-              <View style={s.midden}>
-                <Text style={[s.naam, { color: colors.text }]} numberOfLines={1}>{item.naam}</Text>
-                {!!item.plaats && <Text style={[s.plaats, { color: colors.sub }]} numberOfLines={1}>{item.plaats}</Text>}
-                <Text style={[s.sub, { color: colors.sub }]} numberOfLines={2}>
-                  {groepLabel(item)}
-                </Text>
-              </View>
-              <View style={s.rechts}>
-                {zichtbaar?.length ? (
+            <View>
+              {overige && index === relevantAantal ? (
+                <Text style={[s.sectietitel, s.tussenkop, { color: colors.sub }]}>ANDERE RESULTATEN</Text>
+              ) : null}
+              <Pressable
+                onPress={() => kies(kaart)}
+                style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                android_ripple={{ color: colors.divider }}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.naam}, ${sub}, ${lijst.length || item.lijnen_aantal || 0} lijnen`}
+              >
+                <View style={s.bovenRij}>
+                  <View style={[s.icoon, { backgroundColor: palet.bg }]}>
+                    {kaart.modus === "tram" ? (
+                      <MaterialCommunityIcons name="tram" size={25} color={palet.fg} />
+                    ) : (
+                      <Ionicons name={icon} size={24} color={palet.fg} />
+                    )}
+                  </View>
+                  <View style={s.midden}>
+                    <Text style={[s.naam, { color: colors.text }]} numberOfLines={1}>{item.naam}</Text>
+                    {!kaart.gesplitst && !!item.plaats && (
+                      <Text style={[s.plaats, { color: colors.sub }]} numberOfLines={1}>{item.plaats}</Text>
+                    )}
+                    <Text style={[s.sub, { color: colors.sub }]} numberOfLines={2}>{sub}</Text>
+                  </View>
+                  <Ionicons name={voorThuis ? "home-outline" : "chevron-forward"} size={18} color={colors.sub} />
+                </View>
+                {lijst.length > 0 ? (
                   <View style={s.badges}>
-                    {zichtbaar.map(x => {
+                    {lijst.map(x => {
                       const k = lijnKleur(x.lijn, x.modus, x.vervoerder, x.kleur, x.tekstkleur);
                       return (
-                        <View key={x.modus + x.lijn + x.vervoerder} style={[s.badge, { backgroundColor: k.bg }, lijnBadgeHeeftRand(k) && { borderWidth: 1, borderColor: "#CBD5E1" }]}>
+                        <View key={`${x.modus}:${x.lijn}:${x.vervoerder}`} style={[s.badge, { backgroundColor: k.bg }, lijnBadgeHeeftRand(k) && { borderWidth: 1, borderColor: "#CBD5E1" }]}>
                           <Text style={[s.badgeTekst, { color: k.fg }]} numberOfLines={1}>{x.lijn}</Text>
                         </View>
                       );
                     })}
-                    {rest > 0 && (
-                      <View style={[s.restBadge, { backgroundColor: colors.surface2 }]}>
-                        <Text style={[s.restTekst, { color: colors.sub }]}>+{rest}</Text>
-                      </View>
-                    )}
                   </View>
                 ) : (
                   <Text style={[s.aantal, { color: colors.sub }]}>{item.lijnen_aantal ? `${item.lijnen_aantal} ${item.lijnen_aantal === 1 ? "lijn" : "lijnen"}` : ""}</Text>
                 )}
-                <Ionicons name={voorThuis ? "home-outline" : "chevron-forward"} size={18} color={colors.sub} />
-              </View>
-            </Pressable>
-            </>
+              </Pressable>
+            </View>
           );
         }}
       />
@@ -237,17 +249,15 @@ const s = StyleSheet.create({
   sectieaantal: { fontSize: 12, fontWeight: "500" },
   tussenkop: { marginHorizontal: 5, marginTop: 15, marginBottom: 10 },
   laden: { alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10, marginTop: 25 },
-  kaart: { flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 14, paddingVertical: 14, minHeight: 86, borderRadius: 18, borderWidth: 1, marginBottom: 10 },
+  kaart: { gap: 11, paddingHorizontal: 14, paddingVertical: 14, minHeight: 86, borderRadius: 18, borderWidth: 1, marginBottom: 10 },
+  bovenRij: { flexDirection: "row", alignItems: "center", gap: 11 },
   icoon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   midden: { flex: 1, minWidth: 0 },
   naam: { fontSize: 17, fontWeight: "800", lineHeight: 21, letterSpacing: -0.2 },
   plaats: { fontSize: 12, marginTop: 1 },
   sub: { fontSize: 13, marginTop: 3, fontWeight: "600" },
-  rechts: { maxWidth: 120, minWidth: 44, alignItems: "flex-end", justifyContent: "center", gap: 7 },
-  badges: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", gap: 4 },
+  badges: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-start", gap: 5, width: "100%", paddingTop: 2 },
   badge: { borderRadius: 8, minWidth: 26, minHeight: 25, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
   badgeTekst: { fontWeight: "800", fontSize: 11 },
-  restBadge: { borderRadius: 7, minHeight: 25, paddingHorizontal: 6, justifyContent: "center" },
-  restTekst: { fontWeight: "700", fontSize: 11 },
   aantal: { fontSize: 11, fontWeight: "600", textAlign: "right" }
 });

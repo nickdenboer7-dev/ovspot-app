@@ -28,12 +28,16 @@ function modaliteitChip(modus: string): ModusChip {
 }
 
 export default function Haltebord() {
-  const p = useLocalSearchParams<{ id: string; van?: string; naam?: string; plaats?: string; groep?: string; lijnen?: string }>();
+  const p = useLocalSearchParams<{ id: string; van?: string; naam?: string; plaats?: string; groep?: string; lijnen?: string; modus?: string }>();
   const id = String(p.id || "");
   const van = isTab(p.van) ? p.van : "index";
   const { colors, instellingen, isFavoriet, wisselFavoriet } = useApp();
   // De opgeslagen instelling blijft een voorkeur; op haltes zonder die modus tonen we alles.
-  const [gekozenModus, setGekozenModus] = useState<string>(instellingen.filter === "trein" ? "train" : instellingen.filter);
+  const gevraagdeModus = ["train", "metro", "tram", "bus", "ferry"].includes(String(p.modus))
+    ? String(p.modus) : null;
+  const [gekozenModus, setGekozenModus] = useState<string>(
+    gevraagdeModus || (instellingen.filter === "trein" ? "train" : instellingen.filter)
+  );
   const [storingenOpen, setStoringenOpen] = useState(false);
   const nu = useNu(10_000);
 
@@ -44,9 +48,13 @@ export default function Haltebord() {
   const naam = h?.naam || String(p.naam || "Halte");
   const plaats = h?.plaats || String(p.plaats || "");
   const fav = isFavoriet(id);
-  const modi = [...new Set((h?.modi || []).filter((m) => typeof m === "string" && m.trim().length > 0))];
+  // De gekozen zoekkaart blijft filterbaar, zelfs als die modus momenteel
+  // geen vertrektijden in het API-tijdvenster heeft (bijv. laatste pont).
+  const modi = [...new Set([...(h?.modi || []).filter((m) => typeof m === "string" && m.trim().length > 0),
+    ...(gevraagdeModus ? [gevraagdeModus] : [])])];
   const meerdereModi = modi.length >= 2;
-  const actieveModus = meerdereModi && modi.includes(gekozenModus) ? gekozenModus : "alles";
+  const actieveModus = modi.includes(gekozenModus) && (meerdereModi || gevraagdeModus === gekozenModus)
+    ? gekozenModus : "alles";
   const chips: ModusChip[] = [{ key: "alles", label: "Alles" }, ...modi.map(modaliteitChip)];
   const vertrekken = (h?.vertrekken || []).filter((v) => actieveModus === "alles" || v.modus === actieveModus);
   const titel = naam;
