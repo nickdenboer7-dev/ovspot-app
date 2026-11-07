@@ -79,3 +79,17 @@ export function ritNummer(id: string): string {
   const m = /[:/](\d{2,6})$/.exec(id || "");
   return m ? `rit ${m[1]}` : "";
 }
+
+type Tijden = Pick<Vertrek, "vervallen" | "vertrek_ms" | "gepland" | "verwacht" | "vertraging_min">;
+
+/** Bewaar de echte kloktijd naast de afteltijd, ook voor geplande ritten en kleine schermen. */
+export function vertrekTijden(v: Tijden, nu: number) {
+  const vertrokken = !v.vervallen && typeof v.vertrek_ms === "number" && Number.isFinite(v.vertrek_ms) && v.vertrek_ms < nu;
+  const vertraagd = !v.vervallen && !vertrokken && v.vertraging_min > 0;
+  const kloktijd = String(v.verwacht || v.gepland || "").trim();
+  const tijd = v.vervallen ? "–" : vertrokken ? "Vertrokken" : aftellen(v.vertrek_ms, nu, kloktijd);
+  // Bij >=60 min geeft aftellen zelf de kloktijd; die niet dubbel afdrukken.
+  const tweedeTijd = kloktijd && tijd !== kloktijd && !v.vervallen && !vertrokken ? kloktijd : "";
+  const oorspronkelijk = vertraagd && v.gepland && v.gepland !== kloktijd ? v.gepland : "";
+  return { vertrokken, vertraagd, tijd, kloktijd, tweedeTijd, oorspronkelijk };
+}

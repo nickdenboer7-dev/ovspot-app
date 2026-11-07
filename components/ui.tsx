@@ -27,9 +27,11 @@ export function LiveStip({ kleur, glow }: { kleur: string; glow?: string }) {
 
 export function StatusLabel({ v, compact }: { v: Pick<Vertrek, "vervallen" | "live" | "vertraging_min">; compact?: boolean }) {
   const { colors } = useApp();
-  // Normale dienstregeling is neutraal: geen overbodig 'Gepland'-label.
-  if (v.vervallen || (!v.live && v.vertraging_min <= 0)) return null;
-  const st = v.live ? status(v, colors) : { text: `+${v.vertraging_min} min`, color: colors.delay, dot: false };
+  // Ook geplande ritten tonen hun status: die mag op compacte schermen niet verdwijnen.
+  if (v.vervallen) return null;
+  const st = v.live ? status(v, colors)
+    : v.vertraging_min > 0 ? { text: `+${v.vertraging_min} min`, color: colors.delay, dot: false }
+    : status(v, colors);
   if (!st.text) return null;
   return (
     <View style={[s.statusRij, st.dot ? { backgroundColor: colors.liveGlow, paddingHorizontal: 7, borderRadius: 9 } : undefined]}>
