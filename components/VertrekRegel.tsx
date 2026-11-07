@@ -28,7 +28,11 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
         !compact && { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 }
       ]}
     >
-      <LijnBadge lijn={v.lijn} modus={v.modus} vervoerder={v.vervoerder} vervallen={v.vervallen} />
+      <LijnBadge
+        lijn={v.lijn} modus={v.modus} vervoerder={v.vervoerder}
+        kleur={v.kleur || v.lijn_kleur} tekstkleur={v.tekstkleur || v.lijn_tekstkleur}
+        vervallen={v.vervallen}
+      />
       <View style={s.midden}>
         <View style={s.bestemmingRij}>
           <Text

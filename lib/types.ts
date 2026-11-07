@@ -11,6 +11,11 @@ export type Vertrek = {
   modus: Modus;
   bestemming: string;
   vervoerder: string;
+  /** Officiële GTFS-routekleuren; bij oudere Live-API's zijn lijn_*-velden beschikbaar. */
+  kleur?: string;
+  tekstkleur?: string;
+  lijn_kleur?: string;
+  lijn_tekstkleur?: string;
   gepland: string;
   verwacht: string;
   vertrek_ms: number | null;

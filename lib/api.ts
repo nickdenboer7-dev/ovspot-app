@@ -63,6 +63,7 @@ export function ritParams(ref: RitRef): string {
 export const api = {
   dichtbij: (lat: number, lon: number, straal: number) =>
     get<Dichtbij>(`/dichtbij?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}&straal=${Math.round(straal)}&max=8`),
+  // Vertrek[].kleur/tekstkleur uit GTFS; oude Live-antwoorden hebben lijn_kleur/lijn_tekstkleur.
   halte: (id: string, modus: Filter = "alles", max = 30) =>
     get<Halte>(`/halte/${encodeURIComponent(id)}?modus=${modus}&max=${max}`),
   rit: (ref: RitRef) => get<Rit>(`/rit?${ritParams(ref)}`),
