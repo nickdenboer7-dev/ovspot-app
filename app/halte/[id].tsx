@@ -8,7 +8,7 @@ import { Chips, FoutBalk, Kaart, Kop, KopKnop, Laden, Leeg } from "../../compone
 import { VertrekRegel } from "../../components/VertrekRegel";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
-import { lijnKleur } from "../../constants/wayfinding";
+import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { klok } from "../../lib/format";
 import { useNu, usePolling } from "../../lib/hooks";
@@ -81,9 +81,9 @@ export default function Haltebord() {
             <Text style={[s.catalogusTitel, { color: colors.text }]}>Lijnen op deze halte</Text>
             <View style={s.lijnRij}>
               {lijnCatalogus.slice(0, 8).map((line, i) => {
-                const k = lijnKleur(line.lijn, line.modus, line.vervoerder);
+                const k = lijnKleur(line.lijn, line.modus, line.vervoerder, line.kleur, line.tekstkleur);
                 return (
-                  <View key={`${line.lijn}-${line.vervoerder}-${i}`} style={[s.lijnBadge, { backgroundColor: k.bg }]}>
+                  <View key={`${line.lijn}-${line.vervoerder}-${i}`} style={[s.lijnBadge, { backgroundColor: k.bg }, lijnBadgeHeeftRand(k) && { borderWidth: 1, borderColor: "#CBD5E1" }]}>
                     <Text style={[s.lijnBadgeTekst, { color: k.fg }]}>{line.lijn}</Text>
                   </View>
                 );

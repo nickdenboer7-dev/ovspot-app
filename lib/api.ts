@@ -67,5 +67,6 @@ export const api = {
     get<Halte>(`/halte/${encodeURIComponent(id)}?modus=${modus}&max=${max}`),
   rit: (ref: RitRef) => get<Rit>(`/rit?${ritParams(ref)}`),
   storingen: (ids: string[]) => get<StoringenAntwoord>(`/storingen?haltes=${ids.map(encodeURIComponent).join(",")}`),
+  // &lijnen=1 levert de optionele GTFS-kleuren (kleur/tekstkleur) mee met elke lijn.
   zoek: (q: string) => get<Zoek>(`/zoek?q=${encodeURIComponent(q)}&lijnen=1`, 8000)
 };

@@ -55,14 +55,37 @@ export function carrierKey(raw?: string): string {
   return k;
 }
 
-export function lijnKleur(lijn: string, modus: Modus, vervoerder?: string): WayfindingColor {
+/** GTFS levert RRGGBB zonder #; accepteer ook veilige #RRGGBB-antwoorden. */
+function gtfsHex(raw?: string): string | null {
+  const hex = String(raw || "").trim().replace(/^#/, "").toUpperCase();
+  return /^[0-9A-F]{6}$/.test(hex) ? `#${hex}` : null;
+}
+
+/** Houd de tekst leesbaar bij een GTFS-achtergrond zonder geldige tekstkleur. */
+function contrastKleur(bg: string): string {
+  const rgb = [1, 3, 5].map(i => parseInt(bg.slice(i, i + 2), 16) / 255);
+  const lum = rgb.map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  return (0.2126 * lum[0] + 0.7152 * lum[1] + 0.0722 * lum[2]) > 0.179 ? "#000000" : "#FFFFFF";
+}
+
+export function lijnKleur(lijn: string, modus: Modus, vervoerder?: string, kleur?: string, tekstkleur?: string): WayfindingColor {
   const key = carrierKey(vervoerder);
-  if (modus === "metro" && key === "GVB" && GVB_METRO[lijn]) return GVB_METRO[lijn];
-  if (modus === "train") return COLORS[key] || COLORS.NS;
-  if (modus === "tram") return COLORS[key] && key !== "GVB"
+  let fallback: WayfindingColor;
+  if (modus === "metro" && key === "GVB" && GVB_METRO[lijn]) fallback = GVB_METRO[lijn];
+  else if (modus === "train") fallback = COLORS[key] || COLORS.NS;
+  else if (modus === "tram") fallback = COLORS[key] && key !== "GVB"
     ? COLORS[key] : { bg: "#cb3b2c", fg: "#ffffff", soft: "#fff0ed" };
-  if (modus === "ferry") return COLORS[key] || { bg: "#0b878a", fg: "#ffffff", soft: "#e4f5f5" };
-  return COLORS[key] || (modus === "metro" ? COLORS.GVB : DEFAULT);
+  else if (modus === "ferry") fallback = COLORS[key] || { bg: "#0b878a", fg: "#ffffff", soft: "#e4f5f5" };
+  else fallback = COLORS[key] || (modus === "metro" ? COLORS.GVB : DEFAULT);
+  const bg = gtfsHex(kleur);
+  const fg = gtfsHex(tekstkleur);
+  if (!bg && !fg) return fallback;
+  return { ...fallback, bg: bg || fallback.bg, fg: fg || (bg ? contrastKleur(bg) : fallback.fg) };
+}
+
+/** Witte lijnbadges blijven zichtbaar op een wit zoekresultaat. */
+export function lijnBadgeHeeftRand(palet: WayfindingColor): boolean {
+  return palet.bg.toUpperCase() === "#FFFFFF";
 }
 
 export function halteKleur(modi: Modus[], vervoerder?: string): WayfindingColor {

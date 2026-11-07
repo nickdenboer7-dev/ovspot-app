@@ -132,6 +132,14 @@ export type Rit = {
 
 export type StoringenAntwoord = { ok: boolean; bijgewerkt: string; aantal: number; storingen: Storing[]; niet_geladen: number; gevraagd?: number; gecontroleerd?: number };
 
+export type ZoekLijn = {
+  lijn: string;
+  modus: Modus;
+  vervoerder: string;
+  kleur?: string;
+  tekstkleur?: string;
+};
+
 export type ZoekResultaat = {
   id: string;
   soort: string;
@@ -139,7 +147,7 @@ export type ZoekResultaat = {
   plaats: string;
   modi: Modus[];
   lijnen_aantal: number | null;
-  lijnen?: { lijn: string; modus: Modus; vervoerder: string }[];
+  lijnen?: ZoekLijn[];
   sub?: string;
   lat: number | null;
   lon: number | null;

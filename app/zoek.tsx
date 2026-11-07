@@ -6,12 +6,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { OnderBalk } from "../components/OnderBalk";
 import { Leeg } from "../components/ui";
 import { useApp } from "../context/AppProvider";
-import { halteIcoon, halteKleur, lijnKleur } from "../constants/wayfinding";
+import { halteIcoon, halteKleur, lijnBadgeHeeftRand, lijnKleur } from "../constants/wayfinding";
 import { api } from "../lib/api";
 import type { Vertrek, ZoekResultaat } from "../lib/types";
 import { geldigeLijnen, rangschikZoekresultaten } from "../lib/wayfindingV2";
 
-type LijnVoorbeeld = Pick<Vertrek, "lijn" | "modus" | "vervoerder">;
+type LijnVoorbeeld = Pick<Vertrek, "lijn" | "modus" | "vervoerder"> & { kleur?: string; tekstkleur?: string };
 type Voorbeelden = Record<string, LijnVoorbeeld[]>;
 
 /** Voorbeeldbadges komen uit echte geplande vertrekken, niet uit fictieve vaste nummers. */
@@ -196,9 +196,9 @@ export default function Zoek() {
                 {zichtbaar?.length ? (
                   <View style={s.badges}>
                     {zichtbaar.map(x => {
-                      const k = lijnKleur(x.lijn, x.modus, x.vervoerder);
+                      const k = lijnKleur(x.lijn, x.modus, x.vervoerder, x.kleur, x.tekstkleur);
                       return (
-                        <View key={x.modus + x.lijn + x.vervoerder} style={[s.badge, { backgroundColor: k.bg }]}>
+                        <View key={x.modus + x.lijn + x.vervoerder} style={[s.badge, { backgroundColor: k.bg }, lijnBadgeHeeftRand(k) && { borderWidth: 1, borderColor: "#CBD5E1" }]}>
                           <Text style={[s.badgeTekst, { color: k.fg }]} numberOfLines={1}>{x.lijn}</Text>
                         </View>
                       );

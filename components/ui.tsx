@@ -5,15 +5,15 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, t
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../context/AppProvider";
 import { status } from "../lib/format";
-import { lijnKleur } from "../constants/wayfinding";
+import { lijnBadgeHeeftRand, lijnKleur } from "../constants/wayfinding";
 import type { Modus, Vertrek } from "../lib/types";
 
-export function LijnBadge({ lijn, modus, vervoerder, vervallen, groot }: { lijn: string; modus: Modus; vervoerder?: string; vervallen?: boolean; groot?: boolean }) {
+export function LijnBadge({ lijn, modus, vervoerder, kleur, tekstkleur, vervallen, groot }: { lijn: string; modus: Modus; vervoerder?: string; kleur?: string; tekstkleur?: string; vervallen?: boolean; groot?: boolean }) {
   const { colors } = useApp();
-  const palet = lijnKleur(lijn, modus, vervoerder);
+  const palet = lijnKleur(lijn, modus, vervoerder, kleur, tekstkleur);
   const bg = vervallen ? colors.muted : palet.bg;
   return (
-    <View style={[s.badge, groot && s.badgeGroot, { backgroundColor: bg }]}>
+    <View style={[s.badge, groot && s.badgeGroot, { backgroundColor: bg }, !vervallen && lijnBadgeHeeftRand(palet) && { borderColor: "#CBD5E1", borderWidth: 1 }]}>
       <Text style={[s.badgeText, groot && s.badgeTextGroot, { color: vervallen ? colors.badgeText : palet.fg }]} numberOfLines={1}>
         {lijn}
       </Text>

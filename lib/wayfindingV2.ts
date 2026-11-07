@@ -1,6 +1,6 @@
-import type { Modus, Rit, ZoekResultaat } from "./types";
+import type { Rit, ZoekLijn, ZoekResultaat } from "./types";
 
-export type CatalogLijn = { lijn: string; modus: Modus; vervoerder: string };
+export type CatalogLijn = ZoekLijn;
 
 function norm(v: string): string {
   return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -30,7 +30,7 @@ export function rangschikZoekresultaten(items: ZoekResultaat[], query: string): 
     .map((v) => v.item);
 }
 
-export function geldigeLijnen(input: unknown, max=12): CatalogLijn[] {
+export function geldigeLijnen(input: unknown, max=40): CatalogLijn[] {
   if (!Array.isArray(input)) return [];
   const out: CatalogLijn[] = [], seen = new Set<string>();
   for (const raw of input) {
@@ -41,7 +41,11 @@ export function geldigeLijnen(input: unknown, max=12): CatalogLijn[] {
     const key = [x.lijn,x.modus,x.vervoerder].join("|");
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({lijn:x.lijn,modus:x.modus,vervoerder:x.vervoerder});
+    out.push({
+      lijn: x.lijn, modus: x.modus, vervoerder: x.vervoerder,
+      ...(typeof x.kleur === "string" ? { kleur: x.kleur } : {}),
+      ...(typeof x.tekstkleur === "string" ? { tekstkleur: x.tekstkleur } : {})
+    });
     if (out.length >= max) break;
   }
   return out;
