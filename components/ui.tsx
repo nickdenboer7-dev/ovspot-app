@@ -27,7 +27,9 @@ export function LiveStip({ kleur, glow }: { kleur: string; glow?: string }) {
 
 export function StatusLabel({ v, compact }: { v: Pick<Vertrek, "vervallen" | "live" | "vertraging_min">; compact?: boolean }) {
   const { colors } = useApp();
-  const st = status(v, colors);
+  // Normale dienstregeling is neutraal: geen overbodig 'Gepland'-label.
+  if (v.vervallen || (!v.live && v.vertraging_min <= 0)) return null;
+  const st = v.live ? status(v, colors) : { text: `+${v.vertraging_min} min`, color: colors.delay, dot: false };
   if (!st.text) return null;
   return (
     <View style={[s.statusRij, st.dot ? { backgroundColor: colors.liveGlow, paddingHorizontal: 7, borderRadius: 9 } : undefined]}>
@@ -55,7 +57,7 @@ export function Kop({
   const { colors } = useApp();
   const insets = useSafeAreaInsets();
   return (
-    <View style={[s.kop, { backgroundColor: colors.header, paddingTop: insets.top + (groot ? 14 : 8) }]}>
+    <View style={[s.kop, { backgroundColor: colors.header, borderBottomColor: colors.border, paddingTop: insets.top + (groot ? 12 : 8) }]}>
       {terug ? (
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
@@ -66,14 +68,12 @@ export function Kop({
         >
           <Ionicons name="arrow-back" size={26} color={colors.headerText} />
         </Pressable>
-      ) : (
-        <View style={{ width: 8 }} />
-      )}
+      ) : null}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[groot ? s.kopTitelGroot : s.kopTitel, { color: colors.headerText }]} numberOfLines={1} accessibilityRole="header">
           {titel}
         </Text>
-        {detail ? <Text style={[s.kopDetail, { color: colors.headerText }]} numberOfLines={1}>{detail}</Text> : null}
+        {detail ? <Text style={[s.kopDetail, { color: colors.headerSub }]} numberOfLines={1}>{detail}</Text> : null}
         {sub ? (
           <Text style={[s.kopSub, { color: colors.headerSub }]} numberOfLines={1}>
             {sub}
@@ -118,10 +118,10 @@ export function Chips<T extends string>({
               onPress={() => onKies(o.key)}
               accessibilityRole="tab"
               accessibilityState={{ selected: aan }}
-              style={[s.segmentKnop, aan && { backgroundColor: colors.accent }]}
+              style={[s.segmentKnop, aan && { backgroundColor: colors.infoBg, borderColor: colors.accent, borderWidth: 1 }]}
             >
-              {o.icoon ? <Ionicons name={o.icoon} size={16} color={aan ? colors.onAccent : colors.text} /> : null}
-              <Text style={[s.segmentText, { color: aan ? colors.onAccent : colors.text, fontWeight: aan ? "700" : "500" }]} numberOfLines={1}>
+              {o.icoon ? <Ionicons name={o.icoon} size={16} color={aan ? colors.infoText : colors.body} /> : null}
+              <Text style={[s.segmentText, { color: aan ? colors.infoText : colors.body, fontWeight: aan ? "700" : "500" }]} numberOfLines={1}>
                 {o.label}
               </Text>
             </Pressable>
@@ -140,10 +140,10 @@ export function Chips<T extends string>({
             onPress={() => onKies(o.key)}
             accessibilityRole="tab"
             accessibilityState={{ selected: aan }}
-            style={[s.chip, { backgroundColor: aan ? colors.accent : colors.surface2 }]}
+            style={[s.chip, { backgroundColor: aan ? colors.infoBg : colors.surface2, borderColor: aan ? colors.accent : colors.border }]}
           >
-            {o.icoon ? <Ionicons name={o.icoon} size={16} color={aan ? colors.onAccent : colors.text} /> : null}
-            <Text style={[s.chipText, { color: aan ? colors.onAccent : colors.text, fontWeight: aan ? "700" : "500" }]}>{o.label}</Text>
+            {o.icoon ? <Ionicons name={o.icoon} size={16} color={aan ? colors.infoText : colors.body} /> : null}
+            <Text style={[s.chipText, { color: aan ? colors.infoText : colors.body, fontWeight: aan ? "700" : "500" }]}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -192,31 +192,31 @@ export function FoutBalk({ tekst }: { tekst: string }) {
 }
 
 const s = StyleSheet.create({
-  badge: { minWidth: 44, height: 28, paddingHorizontal: 8, borderRadius: 7, alignItems: "center", justifyContent: "center" },
-  badgeGroot: { minWidth: 50, height: 32, borderRadius: 6 },
+  badge: { minWidth: 44, height: 29, paddingHorizontal: 9, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  badgeGroot: { minWidth: 50, height: 34, borderRadius: 9 },
   badgeText: { fontSize: 14, fontWeight: "700" },
   badgeTextGroot: { fontSize: 16 },
   stip: { width: 8, height: 8, borderRadius: 4 },
   statusRij: { flexDirection: "row", alignItems: "center", gap: 5 },
   statusText: { fontSize: 14, fontWeight: "600" },
-  kop: { flexDirection: "row", alignItems: "center", paddingBottom: 12, paddingRight: 8, gap: 4 },
-  kopKnop: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  kopTitel: { fontSize: 22, fontWeight: "800", letterSpacing: -0.3 },
-  kopTitelGroot: { fontSize: 30, fontWeight: "800", letterSpacing: -0.5, paddingLeft: 8 },
-  kopSub: { fontSize: 13, marginTop: 2 },
-  kopDetail: { fontSize: 13, marginTop: 2, fontWeight: "600" },
+  kop: { flexDirection: "row", alignItems: "center", paddingBottom: 15, paddingHorizontal: 16, gap: 10, borderBottomWidth: 1 },
+  kopKnop: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  kopTitel: { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
+  kopTitelGroot: { fontSize: 28, fontWeight: "800", letterSpacing: -0.6 },
+  kopSub: { fontSize: 12, marginTop: 3 },
+  kopDetail: { fontSize: 14, marginTop: 3, fontWeight: "500" },
   chips: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  chip: { height: 38, paddingHorizontal: 16, borderRadius: 19, flexDirection: "row", alignItems: "center", gap: 6 },
-  chipText: { fontSize: 15 },
-  segment: { flexDirection: "row", borderRadius: 22, padding: 3, gap: 3 },
-  segmentKnop: { flex: 1, minHeight: 40, borderRadius: 19, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 4 },
+  chip: { minHeight: 37, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 6 },
+  chipText: { fontSize: 13, fontWeight: "600" },
+  segment: { flexDirection: "row", borderRadius: 14, padding: 4, gap: 3 },
+  segmentKnop: { flex: 1, minHeight: 38, borderRadius: 11, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 4 },
   segmentText: { fontSize: 14 },
-  kaart: { borderRadius: 16, borderWidth: 1, elevation: 2, shadowColor: "#172b4d", shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, overflow: "hidden" },
+  kaart: { borderRadius: 18, borderWidth: 1, overflow: "hidden" },
   leeg: { alignItems: "center", justifyContent: "center", padding: 32, gap: 10 },
   leegTitel: { fontSize: 17, fontWeight: "700", textAlign: "center" },
   leegTekst: { fontSize: 15, textAlign: "center", lineHeight: 21 },
-  leegKnop: { marginTop: 6, height: 44, paddingHorizontal: 20, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  leegKnop: { marginTop: 6, height: 44, paddingHorizontal: 20, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   leegKnopText: { fontSize: 15, fontWeight: "700" },
-  foutBalk: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  foutBalk: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14 },
   foutText: { fontSize: 13, fontWeight: "600", flex: 1 }
 });

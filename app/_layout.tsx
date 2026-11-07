@@ -23,8 +23,8 @@ function Navigatie() {
 
   return (
     <ThemeProvider value={thema}>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: "slide_from_right" }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="halte/[id]" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="rit" options={{ animation: "slide_from_right" }} />

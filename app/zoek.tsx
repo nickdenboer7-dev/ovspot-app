@@ -114,14 +114,14 @@ export default function Zoek() {
   const overige = relevantAantal > 1 && relevantAantal < resultaten.length;
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={[s.kop, { backgroundColor: colors.header, paddingTop: insets.top + 8 }]}>
+      <View style={[s.kop, { backgroundColor: colors.header, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
         <View style={s.kopRij}>
           <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Terug" style={s.terug} hitSlop={8}>
             <Ionicons name="arrow-back" size={26} color={colors.headerText} />
           </Pressable>
-          <Text style={[s.kopTitel, { color: colors.headerText }]}>OVspot</Text>
+          <Text style={[s.kopTitel, { color: colors.headerText }]}>Zoeken</Text>
         </View>
-        <View style={[s.veld, { backgroundColor: colors.surface }]}>
+        <View style={[s.veld, { backgroundColor: colors.surface2 }]}>
           <Ionicons name="search" size={21} color={colors.accent} />
           <TextInput
             autoFocus value={q} onChangeText={setQ}
@@ -225,7 +225,7 @@ export default function Zoek() {
 }
 
 const s = StyleSheet.create({
-  kop: { gap: 8, paddingHorizontal: 12, paddingBottom: 15 },
+  kop: { gap: 8, paddingHorizontal: 16, paddingBottom: 15, borderBottomWidth: 1 },
   kopRij: { flexDirection: "row", alignItems: "center", gap: 4 },
   kopTitel: { fontSize: 23, fontWeight: "800", letterSpacing: -0.5 },
   terug: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
@@ -237,15 +237,15 @@ const s = StyleSheet.create({
   sectieaantal: { fontSize: 12, fontWeight: "500" },
   tussenkop: { marginHorizontal: 5, marginTop: 15, marginBottom: 10 },
   laden: { alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10, marginTop: 25 },
-  kaart: { flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 12, paddingVertical: 12, minHeight: 86, borderRadius: 14, borderWidth: 1, marginBottom: 10, elevation: 2, shadowColor: "#172b4d", shadowOpacity: 0.06, shadowRadius: 5, shadowOffset: { width: 0, height: 2 } },
-  icoon: { width: 48, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  kaart: { flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 14, paddingVertical: 14, minHeight: 86, borderRadius: 18, borderWidth: 1, marginBottom: 10 },
+  icoon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   midden: { flex: 1, minWidth: 0 },
   naam: { fontSize: 17, fontWeight: "800", lineHeight: 21, letterSpacing: -0.2 },
   plaats: { fontSize: 12, marginTop: 1 },
   sub: { fontSize: 13, marginTop: 3, fontWeight: "600" },
   rechts: { maxWidth: 120, minWidth: 44, alignItems: "flex-end", justifyContent: "center", gap: 7 },
   badges: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", gap: 4 },
-  badge: { borderRadius: 6, minWidth: 26, minHeight: 25, paddingHorizontal: 5, alignItems: "center", justifyContent: "center" },
+  badge: { borderRadius: 8, minWidth: 26, minHeight: 25, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
   badgeTekst: { fontWeight: "800", fontSize: 11 },
   restBadge: { borderRadius: 7, minHeight: 25, paddingHorizontal: 6, justifyContent: "center" },
   restTekst: { fontWeight: "700", fontSize: 11 },

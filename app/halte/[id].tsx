@@ -125,7 +125,7 @@ export default function Haltebord() {
         }
       />
       {meerdereModi ? (
-        <View style={[s.chips, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+<View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
           <Chips<string>
             opties={chips}
             waarde={actieveModus}
@@ -161,16 +161,16 @@ export default function Haltebord() {
 }
 
 const s = StyleSheet.create({
-  chips: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth * 2 },
-  inhoud: { padding: 12, gap: 12, paddingBottom: 24 },
-  storing: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, minHeight: 46, paddingVertical: 10 },
+  chips: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  inhoud: { padding: 14, gap: 13, paddingBottom: 28 },
+  storing: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, minHeight: 46, paddingVertical: 10 },
   storingText: { flex: 1, fontSize: 15, fontWeight: "600" },
-  geenVertrekken: { padding: 15, gap: 15 },
+  geenVertrekken: { padding: 16, gap: 15 },
   lijnenCatalogus: { gap: 11 },
   catalogusTitel: { fontSize: 15, fontWeight: "800" },
   lijnRij: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   lijnBadge: { minWidth: 39, minHeight: 29, paddingHorizontal: 9, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   lijnBadgeTekst: { fontSize: 13, fontWeight: "800" },
-  geenInformatie: { borderRadius: 11, paddingHorizontal: 12, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 10 },
+  geenInformatie: { borderRadius: 14, paddingHorizontal: 13, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 10 },
   geenTekst: { flex: 1, fontSize: 13, fontWeight: "600" }
 });

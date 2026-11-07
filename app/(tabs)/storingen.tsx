@@ -58,7 +58,7 @@ export default function Storingen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Kop groot titel="Storingen" />
-      <View style={[s.chips, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <Chips<Bereik>
           opties={[
             { key: "mijn", label: storingenMijn ? `Mijn haltes · ${storingenMijn}` : "Mijn haltes" },
@@ -80,6 +80,6 @@ export default function Storingen() {
 }
 
 const s = StyleSheet.create({
-  chips: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth * 2 },
-  lijst: { padding: 12, gap: 12, paddingBottom: 24 }
+  chips: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  lijst: { padding: 14, gap: 12, paddingBottom: 28 }
 });

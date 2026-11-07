@@ -45,7 +45,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
             </View>
           ) : null}
         </View>
-        <View style={s.detailRij}>
+        {(v.live || vertraagd || (!compact && info)) ? <View style={s.detailRij}>
           {!compact && info ? (
             <Text style={[s.info, { color: colors.sub }]} numberOfLines={1}>
               {info}
@@ -59,11 +59,11 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
               </Text>
             </View>
           ) : <StatusLabel v={v} compact />)}
-        </View>
+        </View> : null}
       </View>
       <View style={[s.rechts, vertrokken && s.rechtsVertrokken]}>
         <Text style={[s.minuten, vertrokken && s.vertrokkenTekst, { color: v.vervallen || vertrokken ? colors.muted : vertraagd ? colors.delay : colors.text }]}>{tijd}</Text>
-        {!vertrokken && (vertraagd || (!compact && v.gepland !== tijd)) ? (
+        {!vertrokken && vertraagd && v.gepland ? (
           <Text style={[s.gepland, { color: colors.sub, textDecorationLine: vertraagd || v.vervallen ? "line-through" : "none" }]}>{v.gepland}</Text>
         ) : null}
       </View>
@@ -79,20 +79,20 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
 }
 
 const s = StyleSheet.create({
-  rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 52, paddingVertical: 5 },
-  rijVol: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 78, paddingHorizontal: 12, paddingVertical: 11 },
+  rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 54, paddingVertical: 7 },
+  rijVol: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 76, paddingHorizontal: 15, paddingVertical: 11 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
   bestemmingRij: { flexDirection: "row", alignItems: "center", gap: 8 },
   bestemming: { fontSize: 16, fontWeight: "800", flexShrink: 1, lineHeight: 21 },
-  bestemmingCompact: { fontSize: 16, flexShrink: 1, lineHeight: 20 },
+  bestemmingCompact: { fontSize: 15, fontWeight: "700", flexShrink: 1, lineHeight: 20 },
   info: { fontSize: 13 },
   detailRij: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, minHeight: 18 },
-  rechts: { minWidth: 54, maxWidth: 67, alignItems: "flex-end" },
+  rechts: { minWidth: 61, maxWidth: 88, alignItems: "flex-end" },
   rechtsVertrokken: { minWidth: 86, maxWidth: 92 },
-  minuten: { fontSize: 17, fontWeight: "800" },
+  minuten: { fontSize: 17, fontWeight: "800", fontVariant: ["tabular-nums"], textAlign: "right" },
   vertrokkenTekst: { fontSize: 14 },
-  gepland: { fontSize: 12, marginTop: 1 },
-  liveStatus: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "transparent", borderRadius: 9, paddingHorizontal: 7 },
+  gepland: { fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] },
+  liveStatus: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 9, paddingHorizontal: 7, minHeight: 22 },
   liveTekst: { fontSize: 13, fontWeight: "600" },
   vervaltLabel: { paddingHorizontal: 7, height: 22, borderRadius: 6, justifyContent: "center" },
   vervaltText: { fontSize: 12, fontWeight: "700" }

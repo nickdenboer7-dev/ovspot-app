@@ -33,6 +33,8 @@ export default function Favorieten() {
   const { colors, favorieten, verwijderFavoriet, verplaatsFavoriet } = useApp();
   const [bewerk, setBewerk] = useState(false);
   const nu = useNu(10_000);
+  const plaatsen = [...new Set(favorieten.map((f) => f.plaats).filter(Boolean))];
+  const locatieLabel = plaatsen.length === 1 ? plaatsen[0] : `${favorieten.length} haltes`;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -42,12 +44,28 @@ export default function Favorieten() {
         rechts={
           favorieten.length ? (
             <Pressable onPress={() => setBewerk((b) => !b)} accessibilityRole="button" style={s.bewerk} hitSlop={6}>
-              <Text style={[s.bewerkText, { color: colors.headerText }]}>{bewerk ? "Klaar" : "Bewerk"}</Text>
+              <Text style={[s.bewerkText, { color: colors.accent }]}>{bewerk ? "Klaar" : "Bewerk"}</Text>
             </Pressable>
           ) : null
         }
       />
+      <View style={[s.zoekStrook, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
+        <Pressable onPress={() => router.push("/zoek")} accessibilityRole="search" accessibilityLabel="Zoek een halte"
+          style={[s.zoekbalk, { backgroundColor: colors.surface2 }]}>
+          <Ionicons name="search-outline" size={20} color={colors.sub} />
+          <Text style={[s.zoekText, { color: colors.sub }]}>Zoek halte om toe te voegen</Text>
+        </Pressable>
+      </View>
       <ScrollView contentContainerStyle={s.lijst}>
+        {favorieten.length ? (
+          <View style={s.metaRij}>
+            <Text style={[s.metaTitel, { color: colors.text }]}>Mijn haltes</Text>
+            <View style={[s.locatieChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Ionicons name="location-sharp" size={12} color={colors.accent} />
+              <Text style={[s.locatieTekst, { color: colors.sub }]} numberOfLines={1}>{locatieLabel}</Text>
+            </View>
+          </View>
+        ) : null}
         {!favorieten.length ? (
           <Leeg
             icoon="star-outline"
@@ -86,8 +104,15 @@ export default function Favorieten() {
 }
 
 const s = StyleSheet.create({
-  lijst: { padding: 12, gap: 12, paddingBottom: 24 },
-  bewerk: { height: 44, justifyContent: "center", paddingHorizontal: 10 },
+  lijst: { padding: 14, paddingTop: 17, gap: 12, paddingBottom: 26 },
+  zoekStrook: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  zoekbalk: { height: 49, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 15 },
+  zoekText: { fontSize: 15 },
+  metaRij: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 1 },
+  metaTitel: { fontSize: 18, fontWeight: "700" },
+  locatieChip: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, maxWidth: "54%" },
+  locatieTekst: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
+  bewerk: { height: 44, justifyContent: "center", paddingHorizontal: 10, borderRadius: 12 },
   bewerkText: { fontSize: 16, fontWeight: "600" },
   bewerkRij: { flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 16, paddingRight: 6, minHeight: 60 },
   bewerkNaam: { fontSize: 16, fontWeight: "600" },

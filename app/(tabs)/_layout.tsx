@@ -1,11 +1,13 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import { isTab, OnderBalk } from "../../components/OnderBalk";
+import { useApp } from "../../context/AppProvider";
 
 export default function TabsLayout() {
+  const { colors } = useApp();
   return (
     <Tabs
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.background }, tabBarHideOnKeyboard: true }}
       tabBar={(props) => {
         const naam = props.state.routes[props.state.index]?.name;
         return <OnderBalk actief={isTab(naam) ? naam : "index"} onKies={(k) => props.navigation.navigate(k)} />;

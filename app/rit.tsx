@@ -87,13 +87,14 @@ export default function Ritverloop() {
   let tijdlijn: React.ReactNode = null;
   if (rit) {
     const kl = railKleuren(rit, colors);
-    const nh = rit.nu_hier;
+    // INCOMING betreft het voertuig op zijn vorige rit: geen 'Nu hier' op deze route.
+    const nh = rit.rit_status === "INCOMING" ? null : rit.nu_hier;
     const bevestigd = positieBevestigd(rit);
     const voortgangLabel = positieTekst(rit);
     const rijen: Rij[] = [];
 
     const voorbijAantal = rit.haltes.findIndex((h) => (h.state ? h.state !== "PASSED" : h.status !== "geweest"));
-    const voorbij = voorbijAantal < 0 ? rit.haltes.length : voorbijAantal;
+    const voorbij = rit.rit_status === "INCOMING" ? 0 : voorbijAantal < 0 ? rit.haltes.length : voorbijAantal;
 
     // Bij meer dan 2 gepasseerde haltes standaard inklappen tot de laatste gepasseerde halte
     const toonVanaf = voorbij > 2 && !toonGepasseerd ? Math.max(0, voorbij - 1) : 0;
@@ -107,7 +108,7 @@ export default function Ritverloop() {
     const laatste = rit.haltes.length - 1;
 
     tijdlijn = (
-      <Kaart style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
+      <Kaart style={{ paddingHorizontal: 13, paddingTop: 5, paddingBottom: 7 }}>
         {voorbij > 2 ? (
           <Pressable
             onPress={() => setToonGepasseerd((v) => !v)}
@@ -156,6 +157,7 @@ export default function Ritverloop() {
           const geweest = h.state ? h.state === "PASSED" : h.status === "geweest";
           const huidig = h.state ? h.state === "ARRIVED" : h.status === "huidig";
           const naderend = h.state === "APPROACHING";
+          const beginhalte = rit.rit_status === "INCOMING" && i === 0;
           const vertraagd = h.vertraging_min > 0;
 
           const tijdKleur = geweest || h.vervalt ? colors.muted : vertraagd ? colors.delay : rit.live && h.live_tijd ? colors.live : colors.text;
@@ -186,7 +188,7 @@ export default function Ritverloop() {
               <View style={s.rail}>
                 <View style={[s.lijnBoven, { backgroundColor: kl.boven(i) }]} />
                 <View style={[s.lijnOnder, { backgroundColor: kl.onder(i) }]} />
-                {huidig ? (
+                {huidig || naderend ? (
                   <View style={[s.nuBol, { backgroundColor: colors.live, borderColor: colors.liveGlow }]}>
                     <Ionicons name={trein ? "train" : "bus"} size={15} color="#fff" />
                   </View>
@@ -205,12 +207,13 @@ export default function Ritverloop() {
                     style={[
                       s.naam,
                       { color: geweest || h.vervalt ? colors.muted : colors.text, textDecorationLine: h.vervalt ? "line-through" : "none" },
-                      (huidig || naderend) ? { fontWeight: "800" } : null
+                      (huidig || naderend || beginhalte) ? { fontWeight: "800", color: huidig || naderend ? colors.live : colors.text } : null
                     ]}
                     numberOfLines={2}
                   >
                     {h.naam}
                   </Text>
+                  {beginhalte && !h.vervalt ? <Label tekst="Beginhalte" bg={colors.infoBg} fg={colors.infoText} /> : null}
                   {h.vervalt ? <Label tekst="Vervalt" bg={colors.redBg} fg={colors.red} /> : null}
                   {i === laatste && !h.vervalt ? <Label tekst="Eindhalte" bg={colors.accent} fg={colors.onAccent} /> : null}
                   {h.spoor_gewijzigd ? <Label tekst={`Spoor ${h.spoor_gewijzigd.naar}`} bg={colors.warnBg} fg={colors.delay} /> : null}
@@ -251,16 +254,29 @@ export default function Ritverloop() {
   }, [poll.laatsteOk, draai]);
 
   const isLive = rit?.live_positie ?? rit?.positie_betrouwbaar;
+  const isIncoming = rit?.rit_status === "INCOMING" && !rit?.vervallen;
+  const inkomendVoertuig = rit?.voertuig_info ?? rit?.voertuig;
+  const inkomendNummer = String(inkomendVoertuig?.nummer ?? "").trim();
+  const inkomendGpsLeeftijd = inkomendVoertuig?.leeftijd_s;
+  const inkomendSoort = trein ? "Trein" : rit?.modus === "tram" ? "Tram" : rit?.modus === "metro" ? "Metro" : "Bus";
+
+  useEffect(() => {
+    if (rit?.rit_status !== "INCOMING") return;
+    // Een inkomende bus heeft de eerste halte nog niet bereikt.
+    gescrold.current = false;
+    setToonGepasseerd(false);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [rit?.rit_status, rit?.id]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={[s.kop, { backgroundColor: colors.header, paddingTop: insets.top + 8 }]}>
+      <View style={[s.kop, { backgroundColor: colors.header, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} accessibilityRole="button" accessibilityLabel="Terug" style={s.kopKnop} hitSlop={8}>
           <Ionicons name="arrow-back" size={26} color={colors.headerText} />
         </Pressable>
         {lijn ? (
-          <View style={[s.lijnVak, { borderColor: colors.headerText }]}>
-            <Text style={[s.lijnVakText, { color: colors.headerText }]} numberOfLines={1}>
+          <View style={[s.lijnVak, { backgroundColor: colors.infoBg, borderColor: colors.infoBg }]}>
+            <Text style={[s.lijnVakText, { color: colors.infoText }]} numberOfLines={1}>
               {lijn}
             </Text>
           </View>
@@ -275,18 +291,45 @@ export default function Ritverloop() {
             </Text>
           ) : null}
         </View>
+        <Pressable onPress={() => router.push("/instellingen")} accessibilityRole="button"
+          accessibilityLabel="Instellingen" style={s.kopKnop} hitSlop={8}>
+          <Ionicons name="settings-outline" size={23} color={colors.headerSub} />
+        </Pressable>
       </View>
 
       {rit ? (
         <View style={s.liveVast}>
-          <View style={[s.liveBalk, { backgroundColor: colors.surface2 }]}>
+          <View style={[s.liveBalk, {
+            backgroundColor: isIncoming ? colors.infoBg : colors.surface,
+            borderColor: isIncoming ? colors.infoBg : colors.border
+          }, isIncoming ? s.incomingBalk : null]}>
             {rit.vervallen ? (
               <Text style={[s.liveText, { color: colors.red }]}>Deze rit vervalt</Text>
+            ) : isIncoming ? (
+              <View style={s.incomingInhoud}>
+                <View style={s.incomingKop}>
+                  <LiveStip kleur={colors.infoText} />
+                  <Text style={[s.incomingTitel, { color: colors.infoText }]} numberOfLines={2}>
+                    {rit.status_omschrijving || "Onderweg naar beginhalte"}
+                  </Text>
+                </View>
+                <View style={s.incomingDetails}>
+                  {inkomendNummer ? (
+                    <Text style={[s.incomingDetail, { color: colors.text }]} numberOfLines={1}>
+                      {inkomendSoort} {inkomendNummer}
+                    </Text>
+                  ) : null}
+                  <Text style={[s.incomingGps, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
+                    {poll.fout ? "Verbinding kwijt" : typeof inkomendGpsLeeftijd === "number" && inkomendGpsLeeftijd >= 0
+                      ? `GPS ${inkomendGpsLeeftijd}s oud` : "Positie geschat"}
+                  </Text>
+                </View>
+              </View>
             ) : rit.live ? (
               <View style={s.liveLinks}>
                 <LiveStip kleur={colors.live} />
                 <Text style={[s.liveText, { color: colors.live }]}>
-                  {isLive && rit.rit_status === "ARRIVED" ? "Bij halte" : isLive && rit.rit_status === "DRIVING" ? "Rijdt nu" : "Live tijden"}
+                  {rit.rit_status === "ARRIVED" ? "Bij halte" : rit.rit_status === "DRIVING" ? "Rijdt nu" : "Live tijden"}
                 </Text>
                 {rit.vertraging_min > 0 || isLive ? (
                   <Text style={[s.liveText, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>
@@ -297,17 +340,22 @@ export default function Ritverloop() {
             ) : (
               <Text style={[s.liveText, { color: colors.sub }]}>Dienstregeling</Text>
             )}
-            <View style={[s.streepje, { backgroundColor: colors.border }]} />
-            <View style={s.ververst}>
-              <Animated.View style={{ transform: [{ rotate: draai.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] }}>
-                <Ionicons name={poll.fout ? "cloud-offline-outline" : "sync"} size={15} color={poll.fout ? colors.red : colors.sub} />
-              </Animated.View>
-              <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
-                {poll.fout ? "Verbinding kwijt" : isLive && rit.nu_hier?.gps_leeftijd_s != null
-                  ? `GPS ${rit.nu_hier.gps_leeftijd_s}s oud`
-                  : rit.live ? "Positie geschat" : "Geen GPS-positie"}
-              </Text>
-            </View>
+            {!isIncoming ? (
+              <>
+                <View style={[s.streepje, { backgroundColor: colors.border }]} />
+                <View style={s.ververst}>
+                  <Animated.View style={{ transform: [{ rotate: draai.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] }}>
+                    <Ionicons name={poll.fout ? "cloud-offline-outline" : "sync"} size={15} color={poll.fout ? colors.red : colors.sub} />
+                  </Animated.View>
+                  <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
+                    {poll.fout ? "Verbinding kwijt" : isLive && rit.nu_hier?.gps_leeftijd_s != null
+                      ? `GPS ${rit.nu_hier.gps_leeftijd_s}s oud`
+                      : isLive && typeof rit.gps_leeftijd_s === "number" ? `GPS ${rit.gps_leeftijd_s}s oud`
+                      : rit.live ? "Positie geschat" : "Geen GPS-positie"}
+                  </Text>
+                </View>
+              </>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -335,29 +383,36 @@ function Label({ tekst, bg, fg }: { tekst: string; bg: string; fg: string }) {
 }
 
 const s = StyleSheet.create({
-  kop: { flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 14, paddingRight: 14 },
-  kopKnop: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  lijnVak: { minWidth: 46, height: 40, paddingHorizontal: 9, borderWidth: 2, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  lijnVakText: { fontSize: 20, fontWeight: "800" },
-  kopTitel: { fontSize: 21, lineHeight: 25, fontWeight: "800", letterSpacing: -0.3 },
-  kopSub: { fontSize: 14, marginTop: 1 },
-  inhoud: { padding: 10, gap: 12, paddingBottom: 24 },
+  kop: { flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 14, paddingRight: 12, paddingLeft: 4, borderBottomWidth: 1 },
+  kopKnop: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  lijnVak: { minWidth: 48, height: 38, paddingHorizontal: 10, borderWidth: 1, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  lijnVakText: { fontSize: 17, fontWeight: "800" },
+  kopTitel: { fontSize: 20, lineHeight: 25, fontWeight: "800", letterSpacing: -0.4 },
+  kopSub: { fontSize: 12, marginTop: 3 },
+  inhoud: { padding: 14, gap: 13, paddingBottom: 28 },
   infoBalk: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 12, padding: 13 },
   infoTitel: { fontSize: 14, fontWeight: "800" },
   infoTekst: { fontSize: 12, marginTop: 3, lineHeight: 17 },
-  liveBalk: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, paddingHorizontal: 14, minHeight: 46 },
+  liveBalk: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, minHeight: 48 },
+  incomingBalk: { paddingVertical: 9, alignItems: "stretch" },
+  incomingInhoud: { flex: 1, gap: 3 },
+  incomingKop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  incomingTitel: { flex: 1, fontSize: 15, lineHeight: 20, fontWeight: "700" },
+  incomingDetails: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingLeft: 19 },
+  incomingDetail: { fontSize: 13, fontWeight: "600", flexShrink: 1 },
+  incomingGps: { fontSize: 12, flexShrink: 1 },
   liveLinks: { flexDirection: "row", alignItems: "center", gap: 8 },
-  liveText: { fontSize: 16, fontWeight: "700" },
+  liveText: { fontSize: 14, fontWeight: "700" },
   streepje: { width: 1, height: 22 },
   ververst: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 },
   ververstText: { fontSize: 13, flexShrink: 1 },
   rij: { flexDirection: "row", alignItems: "stretch", minHeight: 57 },
   tijdKol: { width: 62, justifyContent: "center", paddingLeft: 4 },
-  tijd: { fontSize: 17, fontWeight: "700" },
-  tijdSub: { fontSize: 13, fontWeight: "500", marginTop: 1 },
+  tijd: { fontSize: 17, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  tijdSub: { fontSize: 13, fontWeight: "500", marginTop: 1, fontVariant: ["tabular-nums"] },
   rail: { width: 32, alignItems: "center", justifyContent: "center" },
-  lijnBoven: { position: "absolute", top: 0, height: "50%", width: 3, left: 14.5 },
-  lijnOnder: { position: "absolute", bottom: 0, height: "50%", width: 3, left: 14.5 },
+  lijnBoven: { position: "absolute", top: 0, height: "50%", width: 4, left: 14 },
+  lijnOnder: { position: "absolute", bottom: 0, height: "50%", width: 4, left: 14 },
   vinkBol: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   open: { width: 18, height: 18, borderRadius: 9, borderWidth: 3 },
   nuBol: { width: 32, height: 32, borderRadius: 16, borderWidth: 5, alignItems: "center", justifyContent: "center" },
@@ -373,6 +428,6 @@ const s = StyleSheet.create({
   nuSub: { fontSize: 13, marginTop: 1 },
   passeerKnop: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   passeerText: { fontSize: 13, fontWeight: "700" },
-  label: { paddingHorizontal: 8, height: 22, borderRadius: 6, justifyContent: "center" },
+  label: { paddingHorizontal: 9, minHeight: 23, borderRadius: 8, justifyContent: "center" },
   labelText: { fontSize: 12, fontWeight: "700" }
 });

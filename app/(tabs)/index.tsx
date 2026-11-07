@@ -77,7 +77,7 @@ export default function Dichtbij() {
   }, [haltes, zetDichtbijIds]);
 
   const plaats = haltes.find((h) => h.plaats)?.plaats;
-  const bronTekst = pos?.bron === "thuis" ? `Thuislocatie · ${thuis?.naam ?? ""}` : plaats ? `Op je locatie · ${plaats}` : "Op je locatie";
+  const bronTekst = pos?.bron === "thuis" ? (thuis?.plaats || thuis?.naam || "Thuislocatie") : (plaats || "Huidige locatie");
 
   let inhoud: React.ReactNode;
   if (!pos && locFout) {
@@ -128,15 +128,15 @@ export default function Dichtbij() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Kop groot titel="OVspot" rechts={<KopKnop icoon={zoekt ? "locate" : "location-outline"} label="Locatie vernieuwen" onPress={() => void zoekLocatie()} />} />
-      <View style={[s.zoekStrook, { backgroundColor: colors.surface }]}>
+      <Kop groot titel="Dichtbij" rechts={<KopKnop icoon={zoekt ? "locate" : "location-outline"} label="Locatie vernieuwen" onPress={() => void zoekLocatie()} />} />
+      <View style={[s.zoekStrook, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
         <Pressable
           onPress={() => router.push("/zoek")}
           style={[s.zoekbalk, { backgroundColor: colors.surface2 }]}
           accessibilityRole="search"
           accessibilityLabel="Zoek halte, lijn of plaats"
         >
-          <Ionicons name="search" size={22} color={colors.sub} />
+          <Ionicons name="search-outline" size={20} color={colors.sub} />
           <Text style={[s.zoekText, { color: colors.sub }]}>Zoek halte, lijn of plaats</Text>
         </Pressable>
       </View>
@@ -155,12 +155,13 @@ export default function Dichtbij() {
       >
         <View style={s.titelRij}>
           <Text style={[s.titel, { color: colors.text }]} accessibilityRole="header">
-            Dichtbij
+            Haltes in de buurt
           </Text>
           {pos ? (
-            <Text style={[s.bron, { color: colors.sub }]} numberOfLines={1}>
-              {bronTekst}
-            </Text>
+            <View style={[s.locatieChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Ionicons name="location-sharp" size={12} color={colors.accent} />
+              <Text style={[s.bron, { color: colors.sub }]} numberOfLines={1}>{bronTekst}</Text>
+            </View>
           ) : null}
         </View>
         {poll.fout && gegevens ? <FoutBalk tekst={poll.fout} /> : null}
@@ -171,11 +172,12 @@ export default function Dichtbij() {
 }
 
 const s = StyleSheet.create({
-  zoekStrook: { paddingHorizontal: 16, paddingVertical: 12 },
-  zoekbalk: { height: 50, borderRadius: 25, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18 },
-  zoekText: { fontSize: 17 },
-  lijst: { padding: 12, paddingTop: 16, gap: 12, paddingBottom: 24 },
-  titelRij: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingHorizontal: 4, gap: 12 },
-  titel: { fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
-  bron: { fontSize: 13, flexShrink: 1, textAlign: "right" }
+  zoekStrook: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  zoekbalk: { height: 49, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 15 },
+  zoekText: { fontSize: 15 },
+  lijst: { padding: 14, paddingTop: 17, gap: 12, paddingBottom: 26 },
+  titelRij: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2, gap: 10, marginBottom: 1 },
+  titel: { fontSize: 18, fontWeight: "700", letterSpacing: -0.2, flexShrink: 1 },
+  bron: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
+  locatieChip: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, maxWidth: "49%" }
 });

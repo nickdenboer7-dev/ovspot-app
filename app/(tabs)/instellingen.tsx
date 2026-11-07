@@ -125,12 +125,12 @@ export default function Instellingen() {
 }
 
 const s = StyleSheet.create({
-  lijst: { padding: 12, gap: 18, paddingBottom: 32 },
-  sectieTitel: { fontSize: 12, fontWeight: "700", letterSpacing: 0.8, paddingHorizontal: 4 },
-  sectieKaart: {},
-  regel: { padding: 16 },
-  label: { fontSize: 16, fontWeight: "700" },
-  uitleg: { fontSize: 14, marginTop: 3, lineHeight: 20 },
-  link: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 16 },
-  linkText: { flex: 1, fontSize: 16 }
+  lijst: { padding: 16, gap: 20, paddingBottom: 34 },
+  sectieTitel: { fontSize: 11, fontWeight: "800", letterSpacing: 1.05, paddingHorizontal: 4 },
+  sectieKaart: { borderRadius: 16 },
+  regel: { paddingHorizontal: 16, paddingVertical: 17 },
+  label: { fontSize: 15, fontWeight: "700" },
+  uitleg: { fontSize: 13, marginTop: 4, lineHeight: 19 },
+  link: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 54, paddingHorizontal: 16 },
+  linkText: { flex: 1, fontSize: 15, fontWeight: "500" }
 });

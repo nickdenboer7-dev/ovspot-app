@@ -33,7 +33,7 @@ export function DichtbijSkeleton({ locatie }: { locatie: boolean }) {
 const s = StyleSheet.create({
   wikkel: { gap: 11 },
   status: { fontSize: 13, marginHorizontal: 6, marginBottom: 1 },
-  kaart: { borderWidth: 1, borderRadius: 16, padding: 13, gap: 12 },
+  kaart: { borderWidth: 1, borderRadius: 18, padding: 14, gap: 12 },
   boven: { flexDirection: "row", alignItems: "center", gap: 12 },
   icoon: { width: 42, height: 42, borderRadius: 11 },
   tekst: { flex: 1, gap: 8 },

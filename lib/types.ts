@@ -66,7 +66,7 @@ export type DichtbijHalte = {
 export type Dichtbij = { ok: boolean; bijgewerkt: string; haltes: DichtbijHalte[] };
 
 export type HalteState = "PASSED" | "ARRIVED" | "APPROACHING" | "SCHEDULED";
-export type RitStatus = "DRIVING" | "ARRIVED" | "SCHEDULED" | "PASSED" | string;
+export type RitStatus = "DRIVING" | "ARRIVED" | "SCHEDULED" | "PASSED" | "INCOMING" | string;
 
 export type RitHalte = {
   id: string;
@@ -95,6 +95,15 @@ export type NuHier = {
   gps_leeftijd_s: number | null;
 };
 
+export type RitVoertuig = {
+  nummer?: string | null;
+  snelheid_kmh?: number | null;
+  soort?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  leeftijd_s?: number | null;
+};
+
 export type Rit = {
   ok: boolean;
   id: string;
@@ -112,7 +121,9 @@ export type Rit = {
   live_positie?: boolean;
   gps_betrouwbaar?: boolean;
   rit_status?: RitStatus;
-  voertuig?: Record<string, unknown> | null;
+  status_omschrijving?: string | null;
+  voertuig?: RitVoertuig | null;
+  voertuig_info?: RitVoertuig | null;
   gps_leeftijd_s?: number | null;
   haltes: RitHalte[];
   storingen: Storing[];
