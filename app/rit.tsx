@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isTab, OnderBalk } from "../components/OnderBalk";
 import { Kaart, Laden, Leeg, LiveStip } from "../components/ui";
@@ -252,13 +252,6 @@ export default function Ritverloop() {
     );
   }
 
-  const draai = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (!poll.laatsteOk) return;
-    draai.setValue(0);
-    Animated.timing(draai, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-  }, [poll.laatsteOk, draai]);
-
   const isLive = rit ? positieBevestigd(rit) : false;
   const isIncoming = rit?.rit_status === "INCOMING" && !rit?.vervallen;
   const bronLabel = rit ? ritBronLabel(rit, !!poll.fout) : null;
@@ -327,7 +320,7 @@ export default function Ritverloop() {
                     </Text>
                   ) : null}
                   {bronLabel ? (
-                    <Text style={[s.incomingGps, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
+                    <Text style={[s.incomingGps, { color: poll.fout ? colors.red : bronLabel === "GPS actueel" ? colors.live : colors.sub }]} numberOfLines={1}>
                       {bronLabel}
                     </Text>
                   ) : null}
@@ -352,10 +345,12 @@ export default function Ritverloop() {
               <>
                 <View style={[s.streepje, { backgroundColor: colors.border }]} />
                 <View style={s.ververst}>
-                  <Animated.View style={{ transform: [{ rotate: draai.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] }}>
-                    <Ionicons name={poll.fout ? "cloud-offline-outline" : "sync"} size={15} color={poll.fout ? colors.red : colors.sub} />
-                  </Animated.View>
-                  <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
+                  <Ionicons
+                    name={poll.fout ? "cloud-offline-outline" : bronLabel === "GPS actueel" ? "checkmark-circle" : "information-circle-outline"}
+                    size={16}
+                    color={poll.fout ? colors.red : bronLabel === "GPS actueel" ? colors.live : colors.sub}
+                  />
+                  <Text style={[s.ververstText, { color: poll.fout ? colors.red : bronLabel === "GPS actueel" ? colors.live : colors.sub }]} numberOfLines={1}>
                     {bronLabel}
                   </Text>
                 </View>

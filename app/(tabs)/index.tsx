@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { HalteKaart } from "../../components/HalteKaart";
 import { DichtbijSkeleton } from "../../components/DichtbijSkeleton";
+import { groepeerDichtbijHaltes } from "../../lib/dichtbijClusters";
 import { FoutBalk, Kop, KopKnop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
@@ -67,6 +68,9 @@ export default function Dichtbij() {
     ? vorigeHaltes.data : null;
   const gegevens = poll.data ?? oudeData;
   const haltes = gegevens?.haltes ?? [];
+  // Alleen de Dichtbij-weergave clustert; alle originele IDs blijven beschikbaar
+  // voor storingen, ritlinks en de afzonderlijke halteborden.
+  const halteGroepen = useMemo(() => groepeerDichtbijHaltes(gegevens?.haltes ?? []), [gegevens?.haltes]);
 
   useEffect(() => {
     if (poll.data && key !== "geen") vorigeHaltes = { key, data: poll.data, ts: Date.now() };
@@ -109,15 +113,17 @@ export default function Dichtbij() {
   } else if (!gegevens && poll.fout) {
     inhoud = <Leeg icoon="cloud-offline-outline" titel="Kan vertrektijden niet laden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />;
   } else {
-    inhoud = haltes.map((h) => (
+    inhoud = halteGroepen.map((h) => (
       <HalteKaart
         key={h.id}
         id={h.id}
         naam={h.naam}
         sub={afstand(h.afstand_m)}
         modi={h.modi}
-        vertrekken={h.vertrekken}
-        storingen={h.storingen_aantal ?? 0}
+        vertrekken={h.vertrekken.map((x) => x.vertrek)}
+        gecombineerdeVertrekken={h.haltes.length > 1 ? h.vertrekken : undefined}
+        aantalHaltepalen={h.haltes.length}
+        storingen={h.storingen_aantal}
         fout={h.fout}
         nu={nu}
         van="index"

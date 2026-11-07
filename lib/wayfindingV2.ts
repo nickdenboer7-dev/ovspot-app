@@ -78,19 +78,25 @@ export function ritBannerTitel(rit: RitLiveStatus): string {
   return "Live tijden";
 }
 
-/** Geen generieke 'Positie geschat' op elke realtime rit; benoem de echte bron. */
+/** Rustige GPS-versheid: geen secondenteller bij normale NDOV-intervallen. */
+export function gpsVersheidLabel(leeftijd: number | null | undefined): string {
+  if (typeof leeftijd !== "number" || !Number.isFinite(leeftijd) || leeftijd < 0) return "Positie geschat";
+  if (leeftijd <= 45) return "GPS actueel";
+  if (leeftijd <= 120) return "Live bijgewerkt";
+  return "Positie geschat";
+}
+
+/** KV8-zonder-GPS blijft als KV8 benoemd; alleen echte voertuig-GPS heeft GPS-versheid. */
 export function ritBronLabel(rit: RitLiveStatus, verbindingsfout = false): string | null {
   if (verbindingsfout) return "Verbinding kwijt";
   if (rit.vervallen) return null;
   if (rit.rit_status === "INCOMING") {
     const leeftijd = rit.voertuig_info?.leeftijd_s ?? rit.voertuig?.leeftijd_s;
-    return typeof leeftijd === "number" && Number.isFinite(leeftijd) && leeftijd >= 0
-      ? `GPS ${Math.round(leeftijd)}s oud` : null;
+    return gpsVersheidLabel(leeftijd);
   }
   if (positieBevestigd(rit)) {
     const leeftijd = rit.nu_hier?.gps_leeftijd_s ?? rit.gps_leeftijd_s ?? rit.voertuig_info?.leeftijd_s;
-    return typeof leeftijd === "number" && Number.isFinite(leeftijd) && leeftijd >= 0
-      ? `GPS ${Math.round(leeftijd)}s oud` : "GPS bevestigd";
+    return gpsVersheidLabel(leeftijd);
   }
   if (rit.live && rit.nu_hier) return "KV8 halteberichten";
   return null;
