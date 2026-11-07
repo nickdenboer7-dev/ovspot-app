@@ -10,11 +10,12 @@ import { FoutBalk, Kop, KopKnop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
 import { afstand } from "../../lib/format";
+import { binnenLocatieTimeout, LocatieTimeoutFout } from "../../lib/locationTimeout";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Dichtbij as DichtbijData } from "../../lib/types";
 
 type Positie = { lat: number; lon: number; bron: "gps" | "thuis" };
-type LocFout = "geweigerd" | "geweigerd-blijvend" | "uit" | "fout";
+type LocFout = "geweigerd" | "geweigerd-blijvend" | "uit" | "timeout" | "fout";
 
 // Een korte geheugen-cache voorkomt een leeg scherm bij terugkeer of themawisseling.
 // Alleen tonen voor exact dezelfde GPS-gebiedssleutel en straal.
@@ -26,33 +27,66 @@ export default function Dichtbij() {
   const [locFout, setLocFout] = useState<LocFout | null>(null);
   const [zoekt, setZoekt] = useState(false);
   const laatsteLoc = useRef(0);
+  const locatiePoging = useRef(0);
   const nu = useNu(10_000);
   const thuis = instellingen.thuis;
 
   const zoekLocatie = useCallback(async () => {
+    // Bij snel opnieuw proberen mag de vorige (langzame) GPS-aanroep nooit winnen.
+    const poging = ++locatiePoging.current;
+    const geldig = () => locatiePoging.current === poging;
     setZoekt(true);
     try {
-      let perm = await Location.getForegroundPermissionsAsync();
-      if (!perm.granted && perm.canAskAgain) perm = await Location.requestForegroundPermissionsAsync();
-      if (!perm.granted) throw new Error(perm.canAskAgain ? "geweigerd" : "geweigerd-blijvend");
-      if (!(await Location.hasServicesEnabledAsync())) throw new Error("uit");
-      const snel = await Location.getLastKnownPositionAsync({ maxAge: 120_000, requiredAccuracy: 300 });
-      if (snel) setPos({ lat: snel.coords.latitude, lon: snel.coords.longitude, bron: "gps" });
-      const precies = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setPos({ lat: precies.coords.latitude, lon: precies.coords.longitude, bron: "gps" });
+      const positie = await binnenLocatieTimeout(async (signal) => {
+        const controleer = () => {
+          if (signal.aborted || !geldig()) throw new Error("geannuleerd");
+        };
+
+        // Alle Expo-calls vallen onder dezelfde, harde 5-seconden-deadline.
+        let perm = await Location.getForegroundPermissionsAsync();
+        controleer();
+        if (!perm.granted && perm.canAskAgain) {
+          perm = await Location.requestForegroundPermissionsAsync();
+          controleer();
+        }
+        if (!perm.granted) throw new Error(perm.canAskAgain ? "geweigerd" : "geweigerd-blijvend");
+
+        const services = await Location.hasServicesEnabledAsync();
+        controleer();
+        if (!services) throw new Error("uit");
+
+        const snel = await Location.getLastKnownPositionAsync({ maxAge: 120_000, requiredAccuracy: 300 });
+        controleer();
+        if (snel) {
+          // Bruikbare vorige fix direct tonen, ook wanneer een nieuwe fix uitblijft.
+          setPos({ lat: snel.coords.latitude, lon: snel.coords.longitude, bron: "gps" });
+          setLocFout(null);
+          laatsteLoc.current = Date.now();
+        }
+
+        const precies = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        controleer();
+        return { lat: precies.coords.latitude, lon: precies.coords.longitude, bron: "gps" as const };
+      });
+      if (!geldig()) return;
+      setPos(positie);
       setLocFout(null);
       laatsteLoc.current = Date.now();
     } catch (e: any) {
-      const reden = (["geweigerd", "geweigerd-blijvend", "uit"].includes(e?.message) ? e.message : "fout") as LocFout;
+      if (!geldig() || e?.message === "geannuleerd") return;
+      const reden: LocFout = e instanceof LocatieTimeoutFout ? "timeout"
+        : (["geweigerd", "geweigerd-blijvend", "uit"].includes(e?.message) ? e.message : "fout");
       setLocFout(reden);
-      setPos((oud) => (oud && oud.bron === "gps" ? oud : thuis ? { lat: thuis.lat, lon: thuis.lon, bron: "thuis" } : null));
+      setPos(oud => oud?.bron === "gps" ? oud
+        : thuis ? { lat: thuis.lat, lon: thuis.lon, bron: "thuis" } : null);
     } finally {
-      setZoekt(false);
+      if (geldig()) setZoekt(false);
     }
   }, [thuis]);
 
   useEffect(() => {
     void zoekLocatie();
+    return () => { locatiePoging.current += 1; };
   }, [zoekLocatie]);
 
   // Terug naar dit scherm na een paar minuten: locatie opnieuw bepalen (je kunt verplaatst zijn).
@@ -88,14 +122,20 @@ export default function Dichtbij() {
     inhoud = (
       <Leeg
         icoon="location-outline"
-        titel={locFout === "uit" ? "Locatie staat uit" : "Geen toegang tot je locatie"}
-        tekst="Zet locatie aan om haltes dichtbij te zien, of kies een thuislocatie in Instellingen."
+        titel={locFout === "uit" ? "Locatie staat uit"
+          : locFout === "timeout" ? "Locatie duurt te lang"
+          : locFout === "geweigerd" || locFout === "geweigerd-blijvend"
+            ? "Geen toegang tot je locatie" : "Locatie niet beschikbaar"}
+        tekst={locFout === "timeout"
+          ? "Geen GPS-positie binnen 5 seconden. Probeer opnieuw of kies een thuislocatie in Instellingen."
+          : "Zet locatie aan om haltes dichtbij te zien, of kies een thuislocatie in Instellingen."}
         knop={
           locFout === "geweigerd-blijvend"
             ? { label: "Open instellingen", onPress: () => Linking.openSettings() }
             : locFout === "uit"
               ? { label: "Opnieuw proberen", onPress: () => void zoekLocatie() }
-              : { label: "Locatie toestaan", onPress: () => void zoekLocatie() }
+              : { label: locFout === "geweigerd" ? "Locatie toestaan" : "Opnieuw proberen",
+                onPress: () => void zoekLocatie() }
         }
       />
     );
@@ -170,6 +210,9 @@ export default function Dichtbij() {
             </View>
           ) : null}
         </View>
+        {locFout === "timeout" && pos ? (
+          <FoutBalk tekst="Nieuwe GPS-positie niet beschikbaar na 5 seconden. Je ziet de laatst bekende of ingestelde thuislocatie." />
+        ) : null}
         {poll.fout && gegevens ? <FoutBalk tekst={poll.fout} /> : null}
         {inhoud}
       </ScrollView>
