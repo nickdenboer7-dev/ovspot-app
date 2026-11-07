@@ -47,11 +47,15 @@ export function geldigeLijnen(input: unknown, max=12): CatalogLijn[] {
   return out;
 }
 
-export function positieBevestigd(rit: Pick<Rit, "positie_betrouwbaar"|"nu_hier">): boolean {
-  return rit.positie_betrouwbaar === true && !!rit.nu_hier;
+export function positieBevestigd(rit: Partial<Pick<Rit, "positie_betrouwbaar" | "live_positie" | "nu_hier">>): boolean {
+  return (rit.live_positie === true || rit.positie_betrouwbaar === true) && !!rit.nu_hier;
 }
 
-export function positieTekst(rit: Pick<Rit, "positie_betrouwbaar"|"nu_hier">): string {
+export function positieTekst(rit: Partial<Pick<Rit, "positie_betrouwbaar" | "live_positie" | "nu_hier" | "rit_status">>): string {
   if (!rit.nu_hier) return "";
-  return positieBevestigd(rit) ? "Nu hier" : "Verwachte positie";
+  const bevestigd = positieBevestigd(rit);
+  if (!bevestigd) return "Verwachte positie";
+  // Alleen een bevestigde rit met de nieuwe API-status krijgt het specifiekere label.
+  // Oude API-antwoorden behouden het vertrouwde "Nu hier".
+  return rit.rit_status === "ARRIVED" ? "Halteert nu" : "Nu hier";
 }

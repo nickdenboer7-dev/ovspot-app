@@ -15,7 +15,6 @@ import type { Rit, RitHalte } from "../lib/types";
 
 type Rij = { soort: "halte"; h: RitHalte; i: number } | { soort: "nu" };
 
-/** Minuten tussen twee "HH:MM"-tijden (over middernacht heen). 0 als een van beide ontbreekt. */
 function minutenTussen(a: string, b: string): number {
   const m = (t: string) => {
     const r = /^(\d{1,2}):(\d{2})$/.exec(t || "");
@@ -32,14 +31,14 @@ function railKleuren(rit: Rit, c: Palette) {
   const komend = positieBevestigd(rit) ? c.live : c.accent;
   const n = rit.haltes.length;
   const nh = rit.nu_hier;
-  // Segment j -> j+1 is voorbij als het voertuig al voorbij halte j+1 is (of er staat).
+
   const segVoorbij = (j: number) => {
     if (nh) return nh.bij_halte ? j + 1 <= nh.volgende_index : j + 1 <= nh.na_index;
-    return rit.haltes[j + 1]?.status === "geweest";
+    const hNext = rit.haltes[j + 1];
+    return hNext?.state === "PASSED" || hNext?.status === "geweest";
   };
+
   return {
-    // Het stuk tussen de laatst gepasseerde halte en de volgende is in tweeën gedeeld door de 'Nu hier'-regel:
-    // onderkant van de gepasseerde halte grijs, bovenkant van de volgende halte gekleurd.
     boven: (i: number) => (i === 0 ? "transparent" : segVoorbij(i - 1) ? voorbij : komend),
     onder: (i: number) => (i === n - 1 ? "transparent" : segVoorbij(i) || (!!nh && !nh.bij_halte && i === nh.na_index) ? voorbij : komend),
     voorbij,
@@ -62,6 +61,7 @@ export default function Ritverloop() {
     instap_ms: p.instap_ms && Number.isFinite(Number(p.instap_ms)) ? Number(p.instap_ms) : undefined,
     richting: p.richting ? String(p.richting) : undefined
   };
+
   const [toonGepasseerd, setToonGepasseerd] = useState(false);
   const { colors } = useApp();
   const insets = useSafeAreaInsets();
@@ -91,9 +91,13 @@ export default function Ritverloop() {
     const bevestigd = positieBevestigd(rit);
     const voortgangLabel = positieTekst(rit);
     const rijen: Rij[] = [];
-    const voorbijAantal = rit.haltes.findIndex((h) => h.status !== "geweest");
+
+    const voorbijAantal = rit.haltes.findIndex((h) => (h.state ? h.state !== "PASSED" : h.status !== "geweest"));
     const voorbij = voorbijAantal < 0 ? rit.haltes.length : voorbijAantal;
-    const toonVanaf = voorbij > 4 && !toonGepasseerd ? voorbij - 2 : 0;
+
+    // Bij meer dan 2 gepasseerde haltes standaard inklappen tot de laatste gepasseerde halte
+    const toonVanaf = voorbij > 2 && !toonGepasseerd ? Math.max(0, voorbij - 1) : 0;
+
     rit.haltes.forEach((h, i) => {
       if (i < toonVanaf) return;
       rijen.push({ soort: "halte", h, i });
@@ -104,21 +108,32 @@ export default function Ritverloop() {
 
     tijdlijn = (
       <Kaart style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
-        {voorbij > 4 ? (
-          <Pressable onPress={() => setToonGepasseerd((v) => !v)}
-            accessibilityRole="button" style={s.passeerKnop}>
+        {voorbij > 2 ? (
+          <Pressable
+            onPress={() => setToonGepasseerd((v) => !v)}
+            accessibilityRole="button"
+            style={s.passeerKnop}
+          >
             <Text style={[s.passeerText, { color: colors.accent }]}>
-              {toonGepasseerd ? "Verberg gepasseerde haltes" : `Toon ${voorbij - 2} eerdere haltes`}
+              {toonGepasseerd ? "Verberg eerdere haltes" : `Toon ${voorbij - 1} eerdere halte${voorbij - 1 > 1 ? "s" : ""}`}
             </Text>
             <Ionicons name={toonGepasseerd ? "chevron-up" : "chevron-down"} size={18} color={colors.accent} />
           </Pressable>
         ) : null}
+
         {rijen.map((r, k) => {
           const scheiding = k < rijen.length - 1 ? { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 } : null;
+
           if (r.soort === "nu") {
             const over = nh?.over_min == null ? "" : nh.over_min <= 0 ? " · nu" : ` over ${nh.over_min} min`;
             return (
-              <View key="nu" style={[s.rij, { minHeight: 72 }, scheiding]} onLayout={(e) => scrollNaar(e.nativeEvent.layout.y)} accessible accessibilityLabel={`${voortgangLabel}. Volgende halte ${nh?.volgende_naam}${over}`}>
+              <View
+                key="nu"
+                style={[s.rij, { minHeight: 72 }, scheiding]}
+                onLayout={(e) => scrollNaar(e.nativeEvent.layout.y)}
+                accessible
+                accessibilityLabel={`${voortgangLabel}. Volgende halte ${nh?.volgende_naam}${over}`}
+              >
                 <View style={s.tijdKol} />
                 <View style={s.rail}>
                   <View style={[s.lijnBoven, { backgroundColor: kl.voorbij }]} />
@@ -130,38 +145,44 @@ export default function Ritverloop() {
                 <View style={s.naamKol}>
                   <Text style={[s.nuTitel, { color: bevestigd ? colors.live : colors.accent }]}>{voortgangLabel}</Text>
                   <Text style={[s.nuSub, { color: colors.sub }]} numberOfLines={2}>
-                    Volgende: {nh?.volgende_naam}
-                    {over}
+                    Volgende: {nh?.volgende_naam}{over}
                   </Text>
                 </View>
               </View>
             );
           }
+
           const { h, i } = r;
-          const geweest = h.status === "geweest";
-          const huidig = h.status === "huidig";
+          const geweest = h.state ? h.state === "PASSED" : h.status === "geweest";
+          const huidig = h.state ? h.state === "ARRIVED" : h.status === "huidig";
+          const naderend = h.state === "APPROACHING";
           const vertraagd = h.vertraging_min > 0;
+
           const tijdKleur = geweest || h.vervalt ? colors.muted : vertraagd ? colors.delay : rit.live && h.live_tijd ? colors.live : colors.text;
-          // Op tijd = groene tijd, geen extra tekst. Bij vertraging de geplande tijd doorgestreept eronder.
           const sub = vertraagd ? h.gepland : "";
-          // Aankomst/vertrek alleen als het voertuig er echt even staat (2 min of meer).
           const wacht = minutenTussen(h.aankomst, h.vertrek);
           const aanVertrek = wacht >= 2 && wacht <= 15 && !geweest ? `aankomst ${h.aankomst} · vertrek ${h.vertrek}` : "";
           const onderregel = h.plaats;
+
           return (
             <View
               key={`${h.id}-${i}`}
               style={[s.rij, scheiding]}
-              onLayout={huidig ? (e) => scrollNaar(e.nativeEvent.layout.y) : undefined}
+              onLayout={huidig || naderend ? (e) => scrollNaar(e.nativeEvent.layout.y) : undefined}
               accessible
-              accessibilityLabel={`${h.naam}${h.plaats ? `, ${h.plaats}` : ""}, ${h.vervalt ? "vervalt" : h.verwacht}${vertraagd ? `, gepland ${h.gepland}` : ""}${geweest ? ", geweest" : ""}${huidig ? (bevestigd ? ", nu hier" : ", verwachte positie") : ""}`}
+              accessibilityLabel={`${h.naam}${h.plaats ? `, ${h.plaats}` : ""}, ${h.vervalt ? "vervalt" : h.verwacht}${vertraagd ? `, gepland ${h.gepland}` : ""}${geweest ? ", geweest" : ""}${huidig ? (bevestigd ? ", halteert nu" : ", verwachte positie") : ""}`}
             >
               <View style={s.tijdKol}>
-                <Text style={[s.tijd, { color: tijdKleur, textDecorationLine: h.vervalt ? "line-through" : "none" }]}>{h.verwacht || h.gepland}</Text>
+                <Text style={[s.tijd, { color: tijdKleur, textDecorationLine: h.vervalt ? "line-through" : "none" }]}>
+                  {h.verwacht || h.gepland}
+                </Text>
                 {sub ? (
-                  <Text style={[s.tijdSub, vertraagd ? { color: colors.muted, textDecorationLine: "line-through" } : { color: colors.live }]}>{sub}</Text>
+                  <Text style={[s.tijdSub, vertraagd ? { color: colors.muted, textDecorationLine: "line-through" } : { color: colors.live }]}>
+                    {sub}
+                  </Text>
                 ) : null}
               </View>
+
               <View style={s.rail}>
                 <View style={[s.lijnBoven, { backgroundColor: kl.boven(i) }]} />
                 <View style={[s.lijnOnder, { backgroundColor: kl.onder(i) }]} />
@@ -177,10 +198,15 @@ export default function Ritverloop() {
                   <View style={[s.open, { borderColor: h.vervalt ? colors.rail : kl.komend, backgroundColor: colors.surface }]} />
                 )}
               </View>
+
               <View style={s.naamKol}>
                 <View style={s.naamRij}>
                   <Text
-                    style={[s.naam, { color: geweest || h.vervalt ? colors.muted : colors.text, textDecorationLine: h.vervalt ? "line-through" : "none" }]}
+                    style={[
+                      s.naam,
+                      { color: geweest || h.vervalt ? colors.muted : colors.text, textDecorationLine: h.vervalt ? "line-through" : "none" },
+                      (huidig || naderend) ? { fontWeight: "800" } : null
+                    ]}
                     numberOfLines={2}
                   >
                     {h.naam}
@@ -189,18 +215,26 @@ export default function Ritverloop() {
                   {i === laatste && !h.vervalt ? <Label tekst="Eindhalte" bg={colors.accent} fg={colors.onAccent} /> : null}
                   {h.spoor_gewijzigd ? <Label tekst={`Spoor ${h.spoor_gewijzigd.naar}`} bg={colors.warnBg} fg={colors.delay} /> : null}
                 </View>
-                {huidig ? <Text style={[s.nuTitelKlein, { color: bevestigd ? colors.live : colors.accent }]}>{voortgangLabel}</Text> : null}
+
+                {huidig ? (
+                  <Text style={[s.nuTitelKlein, { color: bevestigd ? colors.live : colors.accent }]}>
+                    {voortgangLabel}
+                  </Text>
+                ) : null}
+
                 {onderregel ? (
                   <Text style={[s.plaats, { color: colors.sub }]} numberOfLines={1}>
                     {onderregel}
                   </Text>
                 ) : null}
+
                 {aanVertrek ? (
                   <Text style={[s.wacht, { color: colors.sub }]} numberOfLines={1}>
                     {aanVertrek}
                   </Text>
                 ) : null}
               </View>
+
               {h.spoor && trein ? <Text style={[s.spoor, { color: colors.sub }]}>Spoor {h.spoor}</Text> : null}
             </View>
           );
@@ -209,13 +243,14 @@ export default function Ritverloop() {
     );
   }
 
-  // Icoontje draait één keer rond bij elke geslaagde verversing.
   const draai = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!poll.laatsteOk) return;
     draai.setValue(0);
     Animated.timing(draai, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
   }, [poll.laatsteOk, draai]);
+
+  const isLive = rit?.live_positie ?? rit?.positie_betrouwbaar;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -250,9 +285,11 @@ export default function Ritverloop() {
             ) : rit.live ? (
               <View style={s.liveLinks}>
                 <LiveStip kleur={colors.live} />
-                <Text style={[s.liveText, { color: colors.live }]}>Live</Text>
+                <Text style={[s.liveText, { color: colors.live }]}>
+                  {rit.rit_status === "ARRIVED" ? "Bij halte" : rit.rit_status === "DRIVING" ? "Rijdt nu" : "Live tijden"}
+                </Text>
                 <Text style={[s.liveText, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>
-                  {rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : rit.positie_betrouwbaar ? "Op tijd" : "Live tijden"}
+                  {rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : isLive ? "Op tijd" : "Live tijden"}
                 </Text>
               </View>
             ) : (
@@ -264,7 +301,7 @@ export default function Ritverloop() {
                 <Ionicons name={poll.fout ? "cloud-offline-outline" : "sync"} size={15} color={poll.fout ? colors.red : colors.sub} />
               </Animated.View>
               <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
-                {poll.fout ? "Verbinding kwijt" : rit.positie_betrouwbaar && rit.nu_hier?.gps_leeftijd_s != null
+                {poll.fout ? "Verbinding kwijt" : isLive && rit.nu_hier?.gps_leeftijd_s != null
                   ? `GPS ${rit.nu_hier.gps_leeftijd_s}s oud`
                   : "Positie onzeker"}
               </Text>

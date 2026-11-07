@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useApp } from "../context/AppProvider";
 import { aftellen, spoorLabel } from "../lib/format";
 import type { Vertrek } from "../lib/types";
-import { LijnBadge, StatusLabel } from "./ui";
+import { LijnBadge, LiveStip, StatusLabel } from "./ui";
 
 /**
  * Eén vertrek. compact = kaartje op Dichtbij/Favorieten (badge · bestemming · status · minuten).
@@ -11,14 +11,18 @@ import { LijnBadge, StatusLabel } from "./ui";
  */
 export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; nu: number; compact?: boolean; eerste?: boolean; onPress?: () => void }) {
   const { colors } = useApp();
-  const minuten = v.vervallen ? "–" : aftellen(v.vertrek_ms, nu, v.verwacht);
+  const vertrokken = !v.vervallen && typeof v.vertrek_ms === "number" && Number.isFinite(v.vertrek_ms) && v.vertrek_ms < nu;
+  const vertraagd = !v.vervallen && !vertrokken && v.vertraging_min > 0;
+  const minuten = v.vervallen ? "–" : vertrokken ? "Vertrokken" : aftellen(v.vertrek_ms, nu, v.verwacht);
+  const tijd = vertraagd && v.verwacht ? v.verwacht : minuten;
   const info = [spoorLabel(v.modus, v.spoor), v.vervoerder].filter(Boolean).join(" · ");
-  const a11y = `${v.lijn_naam || v.lijn} naar ${v.bestemming}, ${v.vervallen ? "vervalt" : minuten}${v.vertraging_min > 0 ? `, ${v.vertraging_min} minuten vertraging` : ""}${v.spoor ? `, ${spoorLabel(v.modus, v.spoor)}` : ""}`;
+  const a11y = `${v.lijn_naam || v.lijn} naar ${v.bestemming}, ${v.vervallen ? "vervalt" : vertrokken ? "vertrokken" : tijd}${vertraagd ? `, ${v.vertraging_min} minuten vertraging, gepland ${v.gepland}` : ""}${v.spoor ? `, ${spoorLabel(v.modus, v.spoor)}` : ""}`;
 
   const inhoud = (
     <View
       style={[
         compact ? s.rijCompact : s.rijVol,
+        vertrokken && { opacity: 0.55 },
         { borderTopColor: colors.divider, borderTopWidth: compact && !eerste ? StyleSheet.hairlineWidth * 2 : 0 },
         !compact && { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 }
       ]}
@@ -47,13 +51,20 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
               {info}
             </Text>
           ) : null}
-          <StatusLabel v={v} compact />
+          {!vertrokken && (v.live && !v.vervallen ? (
+            <View style={[s.liveStatus, { backgroundColor: colors.liveGlow }]}>
+              <LiveStip kleur={colors.live} />
+              <Text style={[s.liveTekst, { color: vertraagd ? colors.delay : colors.live }]}>
+                {vertraagd ? `+${v.vertraging_min} min` : "Live"}
+              </Text>
+            </View>
+          ) : <StatusLabel v={v} compact />)}
         </View>
       </View>
-      <View style={s.rechts}>
-        <Text style={[s.minuten, { color: v.vervallen ? colors.muted : colors.text }]}>{minuten}</Text>
-        {!compact && v.gepland !== minuten ? (
-          <Text style={[s.gepland, { color: colors.sub, textDecorationLine: v.vervallen ? "line-through" : "none" }]}>{v.gepland}</Text>
+      <View style={[s.rechts, vertrokken && s.rechtsVertrokken]}>
+        <Text style={[s.minuten, vertrokken && s.vertrokkenTekst, { color: v.vervallen || vertrokken ? colors.muted : vertraagd ? colors.delay : colors.text }]}>{tijd}</Text>
+        {!vertrokken && (vertraagd || (!compact && v.gepland !== tijd)) ? (
+          <Text style={[s.gepland, { color: colors.sub, textDecorationLine: vertraagd || v.vervallen ? "line-through" : "none" }]}>{v.gepland}</Text>
         ) : null}
       </View>
     </View>
@@ -77,8 +88,12 @@ const s = StyleSheet.create({
   info: { fontSize: 13 },
   detailRij: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, minHeight: 18 },
   rechts: { minWidth: 54, maxWidth: 67, alignItems: "flex-end" },
+  rechtsVertrokken: { minWidth: 86, maxWidth: 92 },
   minuten: { fontSize: 17, fontWeight: "800" },
+  vertrokkenTekst: { fontSize: 14 },
   gepland: { fontSize: 12, marginTop: 1 },
+  liveStatus: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "transparent", borderRadius: 9, paddingHorizontal: 7 },
+  liveTekst: { fontSize: 13, fontWeight: "600" },
   vervaltLabel: { paddingHorizontal: 7, height: 22, borderRadius: 6, justifyContent: "center" },
   vervaltText: { fontSize: 12, fontWeight: "700" }
 });

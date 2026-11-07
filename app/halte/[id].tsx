@@ -12,23 +12,43 @@ import { lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { klok } from "../../lib/format";
 import { useNu, usePolling } from "../../lib/hooks";
-import type { Filter, Vertrek } from "../../lib/types";
+import type { Vertrek } from "../../lib/types";
+
+type ModusChip = { key: string; label: string; icoon?: keyof typeof Ionicons.glyphMap };
+
+function modaliteitChip(modus: string): ModusChip {
+  switch (modus) {
+    case "train": return { key: modus, label: "Trein", icoon: "train-outline" };
+    case "bus": return { key: modus, label: "Bus", icoon: "bus-outline" };
+    case "tram": return { key: modus, label: "Tram", icoon: "subway-outline" };
+    case "metro": return { key: modus, label: "Metro", icoon: "subway-outline" };
+    case "ferry": return { key: modus, label: "Veerboot", icoon: "boat-outline" };
+    default: return { key: modus, label: modus.charAt(0).toUpperCase() + modus.slice(1), icoon: "ellipse-outline" };
+  }
+}
 
 export default function Haltebord() {
   const p = useLocalSearchParams<{ id: string; van?: string; naam?: string; plaats?: string; groep?: string; lijnen?: string }>();
   const id = String(p.id || "");
   const van = isTab(p.van) ? p.van : "index";
   const { colors, instellingen, isFavoriet, wisselFavoriet } = useApp();
-  const [filter, setFilter] = useState<Filter>(instellingen.filter);
+  // De opgeslagen instelling blijft een voorkeur; op haltes zonder die modus tonen we alles.
+  const [gekozenModus, setGekozenModus] = useState<string>(instellingen.filter === "trein" ? "train" : instellingen.filter);
   const [storingenOpen, setStoringenOpen] = useState(false);
   const nu = useNu(10_000);
 
-  const poll = usePolling(`halte:${id}:${filter}`, () => api.halte(id, filter, 40), 15_000);
+  // Haal alle modaliteiten op: de API kent nog geen afzonderlijk tram- of metrofilter.
+  // Zo blijven de mogelijke chips stabiel bij het wisselen van filter.
+  const poll = usePolling(`halte:${id}`, () => api.halte(id, "alles", 60), 15_000);
   const h = poll.data;
   const naam = h?.naam || String(p.naam || "Halte");
   const plaats = h?.plaats || String(p.plaats || "");
   const fav = isFavoriet(id);
-  const beideModi = !!h && h.modi.includes("train") && h.modi.some((m) => m !== "train");
+  const modi = [...new Set((h?.modi || []).filter((m) => typeof m === "string" && m.trim().length > 0))];
+  const meerdereModi = modi.length >= 2;
+  const actieveModus = meerdereModi && modi.includes(gekozenModus) ? gekozenModus : "alles";
+  const chips: ModusChip[] = [{ key: "alles", label: "Alles" }, ...modi.map(modaliteitChip)];
+  const vertrekken = (h?.vertrekken || []).filter((v) => actieveModus === "alles" || v.modus === actieveModus);
   const titel = naam;
   const haltegroep = String(p.groep || "").trim();
   const groepSub = [plaats && !naam.toLowerCase().includes(plaats.toLowerCase()) ? plaats : "", haltegroep].filter(Boolean).join(" · ");
@@ -53,10 +73,10 @@ export default function Haltebord() {
   if (poll.laden && !h) lijst = <Laden />;
   else if (!h && poll.fout)
     lijst = <Leeg icoon="cloud-offline-outline" titel="Kan vertrektijden niet laden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />;
-  else if (h && !h.vertrekken.length)
+  else if (h && !vertrekken.length)
     lijst = (
       <Kaart style={s.geenVertrekken}>
-        {lijnCatalogus.length > 0 && filter === "alles" ? (
+        {lijnCatalogus.length > 0 && actieveModus === "alles" ? (
           <View style={s.lijnenCatalogus}>
             <Text style={[s.catalogusTitel, { color: colors.text }]}>Lijnen op deze halte</Text>
             <View style={s.lijnRij}>
@@ -74,7 +94,7 @@ export default function Haltebord() {
         <View style={[s.geenInformatie, { backgroundColor: colors.infoBg }]}>
           <Ionicons name="information-circle-outline" size={22} color={colors.infoText} />
           <Text style={[s.geenTekst, { color: colors.infoText }]}>
-            {filter === "alles" ? "Momenteel geen vertrekken in de komende tijd." : `Geen ${filter === "trein" ? "treinen" : "bussen"} in de komende tijd.`}
+            {actieveModus === "alles" ? "Momenteel geen vertrekken in de komende tijd." : `Geen ${modaliteitChip(actieveModus).label.toLowerCase()}vertrekken in de komende tijd.`}
           </Text>
         </View>
       </Kaart>
@@ -82,7 +102,7 @@ export default function Haltebord() {
   else if (h)
     lijst = (
       <Kaart>
-        {h.vertrekken.map((v, i) => (
+        {vertrekken.map((v, i) => (
           <VertrekRegel key={`${v.lijn}-${v.vertrek_ms}-${i}`} v={v} nu={nu} onPress={v.rit ? () => openRit(v) : undefined} />
         ))}
       </Kaart>
@@ -104,16 +124,12 @@ export default function Haltebord() {
           />
         }
       />
-      {beideModi || filter !== "alles" ? (
+      {meerdereModi ? (
         <View style={[s.chips, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <Chips<Filter>
-            opties={[
-              { key: "alles", label: "Alles" },
-              { key: "trein", label: "Trein", icoon: "train-outline" },
-              { key: "bus", label: "Bus", icoon: "bus-outline" }
-            ]}
-            waarde={filter}
-            onKies={setFilter}
+          <Chips<string>
+            opties={chips}
+            waarde={actieveModus}
+            onKies={setGekozenModus}
           />
         </View>
       ) : null}
