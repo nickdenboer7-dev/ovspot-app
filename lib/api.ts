@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import type { Dichtbij, Filter, Halte, Rit, RitRef, StoringenAntwoord, Zoek } from "./types";
+import { freshApiUrl } from "./freshRequest";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiBase?: string };
 export const API_BASE = (extra.apiBase || "https://ovspot.nl/app/v1").replace(/\/$/, "");
@@ -12,18 +13,20 @@ export class ApiError extends Error {
   }
 }
 
-// Antwoord per URL met ETag bewaren: bij 304 geven we het vorige antwoord terug (bijna 0 bytes dataverkeer).
-const etagCache = new Map<string, { etag: string; data: unknown }>();
-
+// Geen eigen ETag-cache: elk vertrek-/rit-/zoekverzoek wordt opnieuw via HTTPS opgehaald.
 async function get<T>(path: string, timeoutMs = 12000): Promise<T> {
-  const url = API_BASE + path;
-  const previous = etagCache.get(url);
+  const url = freshApiUrl(API_BASE, path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: { Accept: "application/json", ...(previous ? { "If-None-Match": previous.etag } : {}) },
+      headers: {
+        Accept: "application/json",
+        "Cache-Control": "no-store, no-cache, max-age=0",
+        Pragma: "no-cache"
+      },
+      cache: "no-store",
       signal: controller.signal
     });
   } catch {
@@ -31,7 +34,8 @@ async function get<T>(path: string, timeoutMs = 12000): Promise<T> {
   } finally {
     clearTimeout(timer);
   }
-  if (res.status === 304 && previous) return previous.data as T;
+  // Zonder If-None-Match mag de server geen 304 zonder body leveren.
+  if (res.status === 304) throw new ApiError("Geen nieuw API-antwoord ontvangen", 304);
   let body: any = null;
   try {
     body = await res.json();
@@ -40,11 +44,6 @@ async function get<T>(path: string, timeoutMs = 12000): Promise<T> {
   }
   if (!res.ok || !body) {
     throw new ApiError(body?.fout || (res.status >= 500 ? "Gegevens tijdelijk niet beschikbaar" : "Er ging iets mis"), res.status);
-  }
-  const etag = res.headers.get("ETag");
-  if (etag) {
-    if (etagCache.size > 150) etagCache.delete(etagCache.keys().next().value as string);
-    etagCache.set(url, { etag, data: body });
   }
   return body as T;
 }
