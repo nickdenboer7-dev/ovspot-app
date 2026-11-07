@@ -286,11 +286,13 @@ export default function Ritverloop() {
               <View style={s.liveLinks}>
                 <LiveStip kleur={colors.live} />
                 <Text style={[s.liveText, { color: colors.live }]}>
-                  {rit.rit_status === "ARRIVED" ? "Bij halte" : rit.rit_status === "DRIVING" ? "Rijdt nu" : "Live tijden"}
+                  {isLive && rit.rit_status === "ARRIVED" ? "Bij halte" : isLive && rit.rit_status === "DRIVING" ? "Rijdt nu" : "Live tijden"}
                 </Text>
-                <Text style={[s.liveText, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>
-                  {rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : isLive ? "Op tijd" : "Live tijden"}
-                </Text>
+                {rit.vertraging_min > 0 || isLive ? (
+                  <Text style={[s.liveText, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>
+                    {rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : "Op tijd"}
+                  </Text>
+                ) : null}
               </View>
             ) : (
               <Text style={[s.liveText, { color: colors.sub }]}>Dienstregeling</Text>
@@ -303,7 +305,7 @@ export default function Ritverloop() {
               <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
                 {poll.fout ? "Verbinding kwijt" : isLive && rit.nu_hier?.gps_leeftijd_s != null
                   ? `GPS ${rit.nu_hier.gps_leeftijd_s}s oud`
-                  : "Positie onzeker"}
+                  : rit.live ? "Positie geschat" : "Geen GPS-positie"}
               </Text>
             </View>
           </View>
@@ -311,15 +313,8 @@ export default function Ritverloop() {
       ) : null}
 
       <ScrollView ref={scrollRef} contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
-        {rit?.live && rit.nu_hier && !positieBevestigd(rit) ? (
-          <View style={[s.infoBalk, { backgroundColor: colors.infoBg }]}>
-            <Ionicons name="information-circle-outline" size={19} color={colors.infoText} />
-            <View style={{ flex: 1 }}>
-              <Text style={[s.infoTitel, { color: colors.infoText }]}>Live positie onzeker</Text>
-              <Text style={[s.infoTekst, { color: colors.infoText }]}>We tonen de geschatte voortgang van deze rit, geen bevestigde GPS-positie.</Text>
-            </View>
-          </View>
-        ) : null}
+        {/* Bij live KV8-tijden zonder bevestigde GPS volstaat het neutrale label
+            "Positie geschat" in de statusbalk. Geen tweede, alarmerende banner. */}
         {poll.laden && !rit ? <Laden /> : null}
         {!rit && poll.fout && !poll.laden ? (
           <Leeg icoon="git-commit-outline" titel="Rit niet gevonden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />
