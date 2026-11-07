@@ -16,7 +16,13 @@ test('Amsterdam Centraal: één API-halte wordt vier afzonderlijke moduskaarten'
     lijn('1', 'tram'), lijn('2', 'tram'),
     lijn('314', 'bus'), lijn('316', 'bus'), lijn('N47', 'bus'),
     lijn('F2', 'ferry')
-  ], { sub: 'Metro en Tram en Bus en Veer · midden' });
+  ], { sub: 'Metro en Tram en Bus en Veer · midden',
+    omschrijving: 'Amsterdam',
+    modus_omschrijvingen: {
+      metro: 'Amsterdam', tram: 'Perron A3, B2, C1',
+      bus: 'Perron B, C, D, H, J, K', ferry: 'Perron D, E'
+    }
+  });
   const kaarten = maakZoekKaarten([halte]);
   assert.deepEqual(kaarten.map(x => x.modus), ['metro', 'tram', 'bus', 'ferry']);
   assert.equal(new Set(kaarten.map(x => x.key)).size, 4);
@@ -25,8 +31,8 @@ test('Amsterdam Centraal: één API-halte wordt vier afzonderlijke moduskaarten'
     assert.equal(k.gesplitst, true);
     assert.ok(k.lijnen.length >= 1);
     assert.ok(k.lijnen.every(l => l.modus === k.modus));
-    assert.ok(zoekKaartSubtitel(k).startsWith({ metro: 'Metro', tram: 'Tram', bus: 'Bus', ferry: 'Pont' }[k.modus] + ' · Amsterdam'));
-    assert.ok(zoekKaartSubtitel(k).endsWith(' · midden'));
+    assert.equal(zoekKaartSubtitel(k), halte.modus_omschrijvingen[k.modus]);
+    assert.ok(!/midden|westzijde|oostzijde/.test(zoekKaartSubtitel(k)));
   }
   assert.deepEqual(kaarten.find(x => x.modus === 'bus').lijnen.map(x => x.lijn), ['314', '316', 'N47']);
   assert.equal(kaarten.find(x => x.modus === 'bus').lijnen[0].kleur, '#E1251B');
@@ -74,8 +80,24 @@ test('Eén modus of oude API zonder lijncatalogus: niet kunstmatig splitsen', ()
   assert.equal(kaarten[1].lijnen.length, 0);
 });
 
-test('Zijdeaanduiding van busstation blijft behouden na uitsplitsing', () => {
-  const halte = maak('bus-west', ['bus', 'tram'], [lijn('314','bus'), lijn('2','tram')], { sub: 'Bus en Tram · westzijde' });
+test('Oude gegokte windrichting wordt genegeerd; alleen bronomschrijving of plaats/ID', () => {
+  const halte = maak('bus-west', ['bus', 'tram'], [lijn('314','bus'), lijn('2','tram')], {
+    sub: 'Bus en Tram · westzijde', omschrijving: 'Stationsplein',
+    modus_omschrijvingen: { bus: 'Busstation IJ-Zijde, Bushalte M', tram: 'Stationsplein' }
+  });
   const kaarten = maakZoekKaarten([halte]);
-  assert.deepEqual(kaarten.map(zoekKaartSubtitel), ['Bus · Amsterdam · westzijde', 'Tram · Amsterdam · westzijde']);
+  assert.deepEqual(kaarten.map(zoekKaartSubtitel), ['Busstation IJ-Zijde, Bushalte M', 'Stationsplein']);
+  const oud = maak('oud', ['bus', 'tram'], [lijn('314','bus'), lijn('2','tram')], {
+    sub: 'Bus en Tram · westzijde'
+  });
+  assert.deepEqual(maakZoekKaarten([oud]).map(zoekKaartSubtitel), ['Amsterdam', 'Amsterdam']);
+  const geenPlaats = maak('geenPlaats', ['bus'], [lijn('5','bus')], { plaats:'', sub:'Bus · midden' });
+  assert.equal(zoekKaartSubtitel(maakZoekKaarten([geenPlaats])[0]), 'geenPlaats');
+});
+
+test('Bestaande enkele halte toont officiële omschrijving zonder modifier', () => {
+  const halte = maak('3184386', ['bus'], [lijn('314','bus')], { omschrijving:'Perron A' });
+  const [kaart] = maakZoekKaarten([halte]);
+  assert.equal(kaart.gesplitst, false);
+  assert.equal(zoekKaartSubtitel(kaart), 'Perron A');
 });

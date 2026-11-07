@@ -101,17 +101,12 @@ export function maakZoekKaarten(resultaten: ZoekResultaat[]): ZoekKaart[] {
   });
 }
 
-/** Onderkop van gesplitste kaarten; behoud de echte pleinzijde uit de API. */
+/** Alleen GTFS-omschrijving van de fysieke halte; nooit gegokte zijden. */
 export function zoekKaartSubtitel(kaart: ZoekKaart): string {
-  if (!kaart.gesplitst || !kaart.modus) return "";
-  const label: Record<string,string> = {
-    train: "Trein", metro: "Metro", tram: "Tram", bus: "Bus", ferry: "Pont"
-  };
-  const zijde = (kaart.halte.sub || "").split(" · ").at(-1) || "";
-  const plaats = kaart.halte.plaats || "";
-  return [label[kaart.modus] || kaart.modus, plaats,
-    /^(?:noordzijde|zuidzijde|oostzijde|westzijde|midden)$/i.test(zijde) ? zijde : ""
-  ].filter(Boolean).join(" · ");
+  const omschrijving = kaart.modus
+    ? kaart.halte.modus_omschrijvingen?.[kaart.modus]
+    : kaart.halte.omschrijving;
+  return (omschrijving || kaart.halte.omschrijving || kaart.halte.plaats || kaart.halte.id).trim();
 }
 
 export function positieBevestigd(rit: Partial<Pick<Rit, "positie_betrouwbaar" | "live_positie" | "nu_hier">>): boolean {

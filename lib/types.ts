@@ -153,6 +153,9 @@ export type ZoekResultaat = {
   modi: Modus[];
   lijnen_aantal: number | null;
   lijnen?: ZoekLijn[];
+  /** Uitsluitend officiële GTFS-stopgegevens; ontbrekend bij oudere API's. */
+  omschrijving?: string;
+  modus_omschrijvingen?: Record<string, string>;
   sub?: string;
   lat: number | null;
   lon: number | null;

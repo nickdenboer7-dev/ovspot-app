@@ -31,16 +31,9 @@ function enkeleLijnen(vertrekken: Vertrek[]): LijnVoorbeeld[] {
 }
 
 function groepLabel(r: ZoekResultaat): string {
-  const modi = r.modi || [];
-  // Stationsperrons centraal herkennen; andere modaliteiten hebben eigen kaarten.
-  if (modi.includes("train")) return "Treinen · spoorperrons";
-  if (modi.length >= 3) {
-    const termen = (["metro", "tram", "bus", "ferry"] as const)
-      .filter(m => modi.includes(m))
-      .map(m => ({ metro: "Metro", tram: "tram", bus: "bus", ferry: "pont" }[m]));
-    if (termen.length >= 3) return termen.slice(0, -1).join(", ") + " en " + termen[termen.length - 1];
-  }
-  return (r.sub || modi.join(" en ")).replace("Tram en Bus", "Tram en bus").replace("Veer", "pont");
+  // Oude API's bevatten nog een afgeleide `sub` met gissingen over windrichting.
+  // Gebruik uitsluitend de nieuwe GTFS-omschrijving of neutrale fallback.
+  return (r.omschrijving || r.plaats || r.id).trim();
 }
 
 export default function Zoek() {
@@ -108,9 +101,7 @@ export default function Zoek() {
     router.replace({
       pathname: "/halte/[id]",
       params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats,
-        groep: kaart.gesplitst
-          ? (r.plaats ? zoekKaartSubtitel(kaart).replace(` · ${r.plaats}`, "") : zoekKaartSubtitel(kaart))
-          : groepLabel(r),
+        groep: kaart.gesplitst ? zoekKaartSubtitel(kaart) : groepLabel(r),
         ...(kaart.modus ? { modus: kaart.modus } : {}),
         lijnen: JSON.stringify(geldigeLijnen(r.lijnen)) }
     });

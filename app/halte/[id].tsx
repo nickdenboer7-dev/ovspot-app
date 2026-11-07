@@ -59,7 +59,9 @@ export default function Haltebord() {
   const vertrekken = (h?.vertrekken || []).filter((v) => actieveModus === "alles" || v.modus === actieveModus);
   const titel = naam;
   const haltegroep = String(p.groep || "").trim();
-  const groepSub = [plaats && !naam.toLowerCase().includes(plaats.toLowerCase()) ? plaats : "", haltegroep].filter(Boolean).join(" · ");
+  const plaatsSub = plaats && !naam.toLowerCase().includes(plaats.toLowerCase())
+    && plaats.toLowerCase() !== haltegroep.toLowerCase() ? plaats : "";
+  const groepSub = [plaatsSub, haltegroep].filter(Boolean).join(" · ");
   let lijnCatalogus: ReturnType<typeof geldigeLijnen> = [];
   try { lijnCatalogus = geldigeLijnen(JSON.parse(String(p.lijnen || "[]"))); } catch { /* Navigatieparameter is optioneel. */ }
 
