@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useApp } from "../context/AppProvider";
-import { aftellen, spoorLabel } from "../lib/format";
+import { aftellen, bestemmingVoorWeergave, spoorLabel } from "../lib/format";
 import type { Vertrek } from "../lib/types";
 import { LijnBadge, LiveStip, StatusLabel } from "./ui";
 
@@ -16,7 +16,8 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
   const minuten = v.vervallen ? "–" : vertrokken ? "Vertrokken" : aftellen(v.vertrek_ms, nu, v.verwacht);
   const tijd = vertraagd && v.verwacht ? v.verwacht : minuten;
   const info = [spoorLabel(v.modus, v.spoor), v.vervoerder].filter(Boolean).join(" · ");
-  const a11y = `${v.lijn_naam || v.lijn} naar ${v.bestemming}, ${v.vervallen ? "vervalt" : vertrokken ? "vertrokken" : tijd}${vertraagd ? `, ${v.vertraging_min} minuten vertraging, gepland ${v.gepland}` : ""}${v.spoor ? `, ${spoorLabel(v.modus, v.spoor)}` : ""}`;
+  const displayBestemming = bestemmingVoorWeergave(v.lijn, v.bestemming);
+  const a11y = `${v.lijn_naam || v.lijn} naar ${displayBestemming}, ${v.vervallen ? "vervalt" : vertrokken ? "vertrokken" : tijd}${vertraagd ? `, ${v.vertraging_min} minuten vertraging, gepland ${v.gepland}` : ""}${v.spoor ? `, ${spoorLabel(v.modus, v.spoor)}` : ""}`;
 
   const inhoud = (
     <View
@@ -37,7 +38,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
             ]}
             numberOfLines={2}
           >
-            {v.bestemming}
+            {displayBestemming}
           </Text>
           {v.vervallen ? (
             <View style={[s.vervaltLabel, { backgroundColor: colors.redBg }]}>

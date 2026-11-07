@@ -8,7 +8,7 @@ import { Kaart, Laden, Leeg, LiveStip } from "../components/ui";
 import { useApp } from "../context/AppProvider";
 import type { Palette } from "../constants/theme";
 import { api } from "../lib/api";
-import { isTrein, ritNummer } from "../lib/format";
+import { bestemmingVoorWeergave, isTrein, ritNummer } from "../lib/format";
 import { usePolling } from "../lib/hooks";
 import { positieBevestigd, positieTekst, ritBannerTitel, ritBronLabel } from "../lib/wayfindingV2";
 import type { Rit, RitHalte } from "../lib/types";
@@ -72,7 +72,7 @@ export default function Ritverloop() {
   const rit = poll.data;
 
   const lijn = rit?.lijn || String(p.lijn || "");
-  const bestemming = rit?.bestemming || String(p.bestemming || "Rit");
+  const bestemming = bestemmingVoorWeergave(lijn, rit?.bestemming || String(p.bestemming || "Rit"));
   const vervoerder = rit?.vervoerder || String(p.vervoerder || "");
   const trein = isTrein(rit?.modus || String(p.modus || ""));
   const ritnr = rit ? ritNummer(rit.id) : "";

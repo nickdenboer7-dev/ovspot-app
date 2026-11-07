@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useApp } from "../context/AppProvider";
+import { bestemmingVoorWeergave } from "../lib/format";
 import type { Modus, Vertrek } from "../lib/types";
 import type { VertrekBijPaal } from "../lib/dichtbijClusters";
 import type { TabKey } from "./OnderBalk";
@@ -95,7 +96,7 @@ export function HalteKaart({
             <Pressable key={`${halteId}-${v.lijn}-${v.vertrek_ms}-${i}`}
               onPress={() => openHalte(halteId)}
               accessibilityRole="button"
-              accessibilityLabel={`Haltebord ${naam}, richting ${v.bestemming}, lijn ${v.lijn}`}
+              accessibilityLabel={`Haltebord ${naam}, richting ${bestemmingVoorWeergave(v.lijn, v.bestemming)}, lijn ${v.lijn}`}
               android_ripple={{ color: colors.divider }}
               style={s.richtingRegel}>
               <VertrekRegel v={v} nu={nu} compact eerste={false} />

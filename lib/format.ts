@@ -64,6 +64,12 @@ export function isTrein(m: Modus): boolean {
   return m === "train";
 }
 
+export function bestemmingVoorWeergave(lijn: Vertrek["lijn"], bestemming: string): string {
+  return String(lijn).trim() === "395" && typeof bestemming === "string" && bestemming.trim() === "Amsterdam"
+    ? "Amsterdam Sloterdijk"
+    : bestemming;
+}
+
 export function spoorLabel(modus: Modus, spoor: string): string {
   if (!spoor) return "";
   return isTrein(modus) ? `Spoor ${spoor}` : `Perron ${spoor}`;
