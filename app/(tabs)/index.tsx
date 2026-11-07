@@ -10,11 +10,12 @@ import { FoutBalk, Kop, KopKnop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
 import { afstand } from "../../lib/format";
-import { binnenLocatieTimeout, LocatieTimeoutFout } from "../../lib/locationTimeout";
+import { binnenLocatieTimeout, kiesLocatieFallback, LocatieTimeoutFout, vindGpsPositie } from "../../lib/locationTimeout";
+import type { LocatiePositie } from "../../lib/locationTimeout";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Dichtbij as DichtbijData } from "../../lib/types";
 
-type Positie = { lat: number; lon: number; bron: "gps" | "thuis" };
+type Positie = LocatiePositie;
 type LocFout = "geweigerd" | "geweigerd-blijvend" | "uit" | "timeout" | "fout";
 
 // Een korte geheugen-cache voorkomt een leeg scherm bij terugkeer of themawisseling.
@@ -37,37 +38,11 @@ export default function Dichtbij() {
     const geldig = () => locatiePoging.current === poging;
     setZoekt(true);
     try {
-      const positie = await binnenLocatieTimeout(async (signal) => {
-        const controleer = () => {
-          if (signal.aborted || !geldig()) throw new Error("geannuleerd");
-        };
-
-        // Alle Expo-calls vallen onder dezelfde, harde 5-seconden-deadline.
-        let perm = await Location.getForegroundPermissionsAsync();
-        controleer();
-        if (!perm.granted && perm.canAskAgain) {
-          perm = await Location.requestForegroundPermissionsAsync();
-          controleer();
-        }
-        if (!perm.granted) throw new Error(perm.canAskAgain ? "geweigerd" : "geweigerd-blijvend");
-
-        const services = await Location.hasServicesEnabledAsync();
-        controleer();
-        if (!services) throw new Error("uit");
-
-        const snel = await Location.getLastKnownPositionAsync({ maxAge: 120_000, requiredAccuracy: 300 });
-        controleer();
-        if (snel) {
-          // Bruikbare vorige fix direct tonen, ook wanneer een nieuwe fix uitblijft.
-          setPos({ lat: snel.coords.latitude, lon: snel.coords.longitude, bron: "gps" });
-          setLocFout(null);
-          laatsteLoc.current = Date.now();
-        }
-
-        const precies = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        controleer();
-        return { lat: precies.coords.latitude, lon: precies.coords.longitude, bron: "gps" as const };
-      });
+      // Eén deadline voor alle native stappen, ook vastgelopen permissie-/provider-promises.
+      // Laatste bekende GPS is primair; een nieuwe GPS-fix wordt alleen gevraagd als die ontbreekt.
+      const positie = await binnenLocatieTimeout(
+        (signal) => vindGpsPositie(Location, Location.Accuracy.Balanced, signal)
+      );
       if (!geldig()) return;
       setPos(positie);
       setLocFout(null);
@@ -77,8 +52,8 @@ export default function Dichtbij() {
       const reden: LocFout = e instanceof LocatieTimeoutFout ? "timeout"
         : (["geweigerd", "geweigerd-blijvend", "uit"].includes(e?.message) ? e.message : "fout");
       setLocFout(reden);
-      setPos(oud => oud?.bron === "gps" ? oud
-        : thuis ? { lat: thuis.lat, lon: thuis.lon, bron: "thuis" } : null);
+      // Altijd een bruikbare positie: eerdere GPS > thuislocatie > Amsterdam Centraal.
+      setPos(oud => kiesLocatieFallback(oud, thuis));
     } finally {
       if (geldig()) setZoekt(false);
     }
@@ -97,7 +72,10 @@ export default function Dichtbij() {
   );
 
   const key = pos ? `${pos.lat.toFixed(3)}:${pos.lon.toFixed(3)}:${instellingen.straal}` : "geen";
-  const poll = usePolling(key, () => (pos ? api.dichtbij(pos.lat, pos.lon, instellingen.straal) : Promise.resolve(null)), 20_000);
+  const poll = usePolling(key, () => (pos
+    ? binnenLocatieTimeout(() => api.dichtbij(pos.lat, pos.lon, instellingen.straal), 12_000)
+        .catch(e => { if (e instanceof LocatieTimeoutFout) throw new Error("Haltes laden duurt te lang"); throw e; })
+    : Promise.resolve(null)), 20_000);
   const oudeData = vorigeHaltes && vorigeHaltes.key === key && Date.now() - vorigeHaltes.ts < 90_000
     ? vorigeHaltes.data : null;
   const gegevens = poll.data ?? oudeData;
@@ -115,7 +93,9 @@ export default function Dichtbij() {
   }, [haltes, zetDichtbijIds]);
 
   const plaats = haltes.find((h) => h.plaats)?.plaats;
-  const bronTekst = pos?.bron === "thuis" ? (thuis?.plaats || thuis?.naam || "Thuislocatie") : (plaats || "Huidige locatie");
+  const bronTekst = pos?.bron === "standaard" ? "Standaardlocatie · Amsterdam Centraal"
+    : pos?.bron === "thuis" ? (thuis?.plaats || thuis?.naam || "Thuislocatie")
+    : (plaats || "Huidige locatie");
 
   let inhoud: React.ReactNode;
   if (!pos && locFout) {
@@ -210,8 +190,12 @@ export default function Dichtbij() {
             </View>
           ) : null}
         </View>
-        {locFout === "timeout" && pos ? (
-          <FoutBalk tekst="Nieuwe GPS-positie niet beschikbaar na 5 seconden. Je ziet de laatst bekende of ingestelde thuislocatie." />
+        {locFout && pos ? (
+          <FoutBalk tekst={pos.bron === "standaard"
+            ? "GPS niet beschikbaar. Haltes bij Amsterdam Centraal worden getoond; probeer je locatie opnieuw."
+            : pos.bron === "thuis"
+              ? "GPS niet beschikbaar. Haltes bij je ingestelde thuislocatie worden getoond."
+              : "Nieuwe GPS-positie niet beschikbaar. Je ziet je laatst bekende locatie."} />
         ) : null}
         {poll.fout && gegevens ? <FoutBalk tekst={poll.fout} /> : null}
         {inhoud}
