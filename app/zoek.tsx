@@ -30,12 +30,6 @@ function enkeleLijnen(vertrekken: Vertrek[]): LijnVoorbeeld[] {
   return [...diverse, ...alle.filter(x => !diverse.includes(x))].slice(0, 24);
 }
 
-function groepLabel(r: ZoekResultaat): string {
-  // Oude API's bevatten nog een afgeleide `sub` met gissingen over windrichting.
-  // Gebruik uitsluitend de nieuwe GTFS-omschrijving of neutrale fallback.
-  return (r.omschrijving || r.plaats || r.id).trim();
-}
-
 export default function Zoek() {
   const { colors, zetInstellingen } = useApp();
   const { doel } = useLocalSearchParams<{ doel?: string }>();
@@ -101,7 +95,7 @@ export default function Zoek() {
     router.replace({
       pathname: "/halte/[id]",
       params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats,
-        groep: kaart.gesplitst ? zoekKaartSubtitel(kaart) : groepLabel(r),
+        groep: zoekKaartSubtitel(kaart),
         ...(kaart.modus ? { modus: kaart.modus } : {}),
         lijnen: JSON.stringify(geldigeLijnen(r.lijnen)) }
     });
@@ -173,7 +167,11 @@ export default function Zoek() {
             icoonModus === "train" ? "train-outline" : icoonModus === "metro" ? "subway-outline"
               : icoonModus === "ferry" ? "boat-outline" : "bus-outline"
           ) : halteIcoon(item.modi);
-          const sub = kaart.gesplitst ? zoekKaartSubtitel(kaart) : groepLabel(item);
+          const sub = zoekKaartSubtitel(kaart);
+          const plaatsZichtbaar = !kaart.gesplitst && !!item.plaats
+            && item.plaats.trim().toLocaleLowerCase("nl") !== item.naam.trim().toLocaleLowerCase("nl");
+          const subZichtbaar = !!sub && (!plaatsZichtbaar
+            || sub.trim().toLocaleLowerCase("nl") !== item.plaats.trim().toLocaleLowerCase("nl"));
           return (
             <View>
               {overige && index === relevantAantal ? (
@@ -184,7 +182,8 @@ export default function Zoek() {
                 style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 android_ripple={{ color: colors.divider }}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.naam}, ${sub}, ${lijst.length || item.lijnen_aantal || 0} lijnen`}
+                accessibilityLabel={[` ${item.naam}`.trim(), ...(plaatsZichtbaar ? [item.plaats] : []),
+                  ...(subZichtbaar ? [sub] : []), `${lijst.length || item.lijnen_aantal || 0} lijnen`].join(", ")}
               >
                 <View style={s.bovenRij}>
                   <View style={[s.icoon, { backgroundColor: palet.bg }]}>
@@ -196,10 +195,10 @@ export default function Zoek() {
                   </View>
                   <View style={s.midden}>
                     <Text style={[s.naam, { color: colors.text }]} numberOfLines={1}>{item.naam}</Text>
-                    {!kaart.gesplitst && !!item.plaats && (
+                    {plaatsZichtbaar ? (
                       <Text style={[s.plaats, { color: colors.sub }]} numberOfLines={1}>{item.plaats}</Text>
-                    )}
-                    <Text style={[s.sub, { color: colors.sub }]} numberOfLines={2}>{sub}</Text>
+                    ) : null}
+                    {subZichtbaar ? <Text style={[s.sub, { color: colors.sub }]} numberOfLines={2}>{sub}</Text> : null}
                   </View>
                   <Ionicons name={voorThuis ? "home-outline" : "chevron-forward"} size={18} color={colors.sub} />
                 </View>

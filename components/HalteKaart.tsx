@@ -62,17 +62,17 @@ export function HalteKaart({
           )}
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={s.naamRij}>
-              <Text style={[s.naam, { color: colors.text }]} numberOfLines={1}>
+              <Text style={[s.naam, { color: colors.text }]} numberOfLines={2}>
                 {naam}
               </Text>
-              {sub ? (
-                <View style={[s.afstandChip, { backgroundColor: colors.surface2 }]}>
-                  <Ionicons name="walk-outline" size={12} color={colors.sub} />
-                  <Text style={[s.afstandText, { color: colors.sub }]} numberOfLines={1}>{sub} lopen</Text>
-                </View>
-              ) : null}
               {storingen ? <Ionicons name="warning-outline" size={16} color={colors.delay} accessibilityLabel="Er is een storing" /> : null}
             </View>
+            {sub ? (
+              <View style={[s.afstandChip, { backgroundColor: colors.surface2 }]}>
+                <Ionicons name="walk-outline" size={12} color={colors.sub} />
+                <Text style={[s.afstandText, { color: colors.sub }]} numberOfLines={1}>{sub} lopen</Text>
+              </View>
+            ) : null}
 {gecombineerd ? (
               <Text style={[s.sub, { color: colors.sub }]}>{aantalHaltepalen} haltepalen · beide richtingen</Text>
             ) : !sub && plaats && !naam.toLowerCase().includes(plaats.toLowerCase()) ? (
@@ -120,10 +120,10 @@ const s = StyleSheet.create({
   richtingRegel: { minHeight: 46 },
   kop: { flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 10 },
   icoon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  naamRij: { flexDirection: "row", alignItems: "center", gap: 6 },
-  afstandChip: { flexDirection: "row", alignItems: "center", borderRadius: 9, gap: 3, paddingHorizontal: 7, paddingVertical: 5, maxWidth: 116 },
+  naamRij: { flexDirection: "row", alignItems: "flex-start", gap: 6, flexWrap: "wrap" },
+  afstandChip: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", borderRadius: 9, gap: 3, paddingHorizontal: 7, paddingVertical: 5, maxWidth: 116, marginTop: 4 },
   afstandText: { fontSize: 11, fontWeight: "600" },
-  naam: { fontSize: 17, fontWeight: "800", letterSpacing: -0.2, flexShrink: 1 },
+  naam: { fontSize: 17, fontWeight: "800", letterSpacing: -0.2, flex: 1, minWidth: 0, flexWrap: "wrap" },
   sub: { fontSize: 13, marginTop: 2 },
   geen: { fontSize: 14, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth * 2 }
 });

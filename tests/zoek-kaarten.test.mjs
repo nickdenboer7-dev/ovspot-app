@@ -80,7 +80,7 @@ test('Eén modus of oude API zonder lijncatalogus: niet kunstmatig splitsen', ()
   assert.equal(kaarten[1].lijnen.length, 0);
 });
 
-test('Oude gegokte windrichting wordt genegeerd; alleen bronomschrijving of plaats/ID', () => {
+test('Oude gegokte windrichting wordt genegeerd; alleen bronomschrijving of plaats', () => {
   const halte = maak('bus-west', ['bus', 'tram'], [lijn('314','bus'), lijn('2','tram')], {
     sub: 'Bus en Tram · westzijde', omschrijving: 'Stationsplein',
     modus_omschrijvingen: { bus: 'Busstation IJ-Zijde, Bushalte M', tram: 'Stationsplein' }
@@ -92,7 +92,7 @@ test('Oude gegokte windrichting wordt genegeerd; alleen bronomschrijving of plaa
   });
   assert.deepEqual(maakZoekKaarten([oud]).map(zoekKaartSubtitel), ['Amsterdam', 'Amsterdam']);
   const geenPlaats = maak('geenPlaats', ['bus'], [lijn('5','bus')], { plaats:'', sub:'Bus · midden' });
-  assert.equal(zoekKaartSubtitel(maakZoekKaarten([geenPlaats])[0]), 'geenPlaats');
+  assert.equal(zoekKaartSubtitel(maakZoekKaarten([geenPlaats])[0]), '');
 });
 
 test('Bestaande enkele halte toont officiële omschrijving zonder modifier', () => {

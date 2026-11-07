@@ -101,12 +101,29 @@ export function maakZoekKaarten(resultaten: ZoekResultaat[]): ZoekKaart[] {
   });
 }
 
-/** Alleen GTFS-omschrijving van de fysieke halte; nooit gegokte zijden. */
+/** GTFS-beschrijving > perroncode > plaats; nooit technische halte-ID's. */
 export function zoekKaartSubtitel(kaart: ZoekKaart): string {
-  const omschrijving = kaart.modus
-    ? kaart.halte.modus_omschrijvingen?.[kaart.modus]
-    : kaart.halte.omschrijving;
-  return (omschrijving || kaart.halte.omschrijving || kaart.halte.plaats || kaart.halte.id).trim();
+  const halte = kaart.halte;
+  const onbruikbaar = (waarde: string): boolean => {
+    const t = waarde.trim();
+    return !t || norm(t) === norm(halte.id) || /^\d{4,}$/.test(t)
+      || /^(?:stop[_ -]?id|halte[_ -]?id)\s*[:#=]?/i.test(t)
+      || /^(?:NL:)?[A-Z]{1,5}:\d{4,}$/i.test(t);
+  };
+  const perron = (halte.perroncode || halte.platform_code || "").trim();
+  const opties = [
+    kaart.modus ? halte.modus_omschrijvingen?.[kaart.modus] : undefined,
+    halte.omschrijving,
+    halte.stop_desc,
+    perron ? (/^(?:perron|platform|spoor)\b/i.test(perron) ? perron : `Perron ${perron}`) : undefined,
+    halte.plaats
+  ];
+  for (const waarde of opties) {
+    if (typeof waarde !== "string" || onbruikbaar(waarde)) continue;
+    const kandidaat = waarde.trim();
+    if (norm(kandidaat) !== norm(halte.naam)) return kandidaat;
+  }
+  return "";
 }
 
 export function positieBevestigd(rit: Partial<Pick<Rit, "positie_betrouwbaar" | "live_positie" | "nu_hier">>): boolean {

@@ -156,6 +156,9 @@ export type ZoekResultaat = {
   /** Uitsluitend officiële GTFS-stopgegevens; ontbrekend bij oudere API's. */
   omschrijving?: string;
   modus_omschrijvingen?: Record<string, string>;
+  stop_desc?: string;
+  perroncode?: string;
+  platform_code?: string;
   sub?: string;
   lat: number | null;
   lon: number | null;
