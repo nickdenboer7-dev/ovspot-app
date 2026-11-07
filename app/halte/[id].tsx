@@ -103,21 +103,7 @@ export default function Haltebord() {
     lijst = (
       <Kaart>
         {vertrekken.map((v, i) => (
-          <VertrekRegel
-            key={`${v.lijn}-${v.vertrek_ms}-${i}`}
-            v={v}
-            nu={nu}
-            onPress={v.rit ? () => openRit(v) : undefined}
-            diagnose={
-              (id === "3183779" || id === "3183780" || id === "stoparea:502182") &&
-              String(v.lijn).trim() === "395" &&
-              (
-                i === vertrekken.findIndex((x) =>
-                  String(x.lijn).trim() === "395" && String(x.bestemming || "").toLowerCase().includes("amsterdam")
-                ) || v.gepland === "21:23" || v.gepland === "21:53"
-              )
-            }
-          />
+          <VertrekRegel key={`${v.lijn}-${v.vertrek_ms}-${i}`} v={v} nu={nu} onPress={v.rit ? () => openRit(v) : undefined} />
         ))}
       </Kaart>
     );

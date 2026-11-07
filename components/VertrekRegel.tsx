@@ -2,7 +2,6 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useApp } from "../context/AppProvider";
 import { aftellen, bestemmingVoorWeergave, spoorLabel } from "../lib/format";
-import { API_BASE } from "../lib/api";
 import type { Vertrek } from "../lib/types";
 import { LijnBadge, LiveStip, StatusLabel } from "./ui";
 
@@ -10,9 +9,8 @@ import { LijnBadge, LiveStip, StatusLabel } from "./ui";
  * Eén vertrek. compact = kaartje op Dichtbij/Favorieten (badge · bestemming · status · minuten).
  * vol = haltebord (met spoor/vervoerder eronder en geplande tijd onder de minuten).
  */
-export function VertrekRegel({ v, nu, compact, eerste, onPress, diagnose = false }: { v: Vertrek; nu: number; compact?: boolean; eerste?: boolean; onPress?: () => void; diagnose?: boolean }) {
+export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; nu: number; compact?: boolean; eerste?: boolean; onPress?: () => void }) {
   const { colors } = useApp();
-  const [tekstLayout, setTekstLayout] = React.useState("(nog niet gemeten)");
   const vertrokken = !v.vervallen && typeof v.vertrek_ms === "number" && Number.isFinite(v.vertrek_ms) && v.vertrek_ms < nu;
   const vertraagd = !v.vervallen && !vertrokken && v.vertraging_min > 0;
   const minuten = v.vervallen ? "–" : vertrokken ? "Vertrokken" : aftellen(v.vertrek_ms, nu, v.verwacht);
@@ -22,7 +20,6 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress, diagnose = false
   const a11y = `${v.lijn_naam || v.lijn} naar ${displayBestemming}, ${v.vervallen ? "vervalt" : vertrokken ? "vertrokken" : tijd}${vertraagd ? `, ${v.vertraging_min} minuten vertraging, gepland ${v.gepland}` : ""}${v.spoor ? `, ${spoorLabel(v.modus, v.spoor)}` : ""}`;
 
   const inhoud = (
-    <>
     <View
       style={[
         compact ? s.rijCompact : s.rijVol,
@@ -40,10 +37,6 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress, diagnose = false
               { color: v.vervallen ? colors.muted : colors.text, textDecorationLine: v.vervallen ? "line-through" : "none" }
             ]}
             numberOfLines={2}
-            onTextLayout={diagnose ? (e) => {
-              const werkelijk = e.nativeEvent.lines.map((regel) => regel.text).join(" | ");
-              setTekstLayout((oud) => oud === werkelijk ? oud : werkelijk);
-            } : undefined}
           >
             {displayBestemming}
           </Text>
@@ -76,19 +69,6 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress, diagnose = false
         ) : null}
       </View>
     </View>
-    {diagnose ? (
-      <View style={s.diagnoseVlak}>
-        <Text selectable style={s.diagnoseTekst}>
-          {`DIAG 395 · API-veld: ${JSON.stringify(v.bestemming ?? null)}`}
-          {`\nUI-tekst: ${JSON.stringify(displayBestemming ?? null)} · Lijn: ${JSON.stringify(v.lijn)}`}
-          {`\nNative tekstregels: ${tekstLayout}`}
-          {`\nRuwe tekens: ${Array.from(String(v.bestemming ?? "")).map((c) => c.codePointAt(0)?.toString(16)).join(" ")}`}
-          {`\nRit: ${v.rit?.trip || "onbekend"} · Vertrek: ${v.gepland}`}
-          {`\nBron: ${API_BASE}/halte/...`}
-        </Text>
-      </View>
-    ) : null}
-    </>
   );
 
   if (!onPress) return <View accessible accessibilityLabel={a11y}>{inhoud}</View>;
@@ -100,8 +80,6 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress, diagnose = false
 }
 
 const s = StyleSheet.create({
-  diagnoseVlak: { paddingHorizontal: 15, paddingVertical: 8, backgroundColor: "#fef3c7", borderBottomWidth: 1, borderBottomColor: "#fcd34d" },
-  diagnoseTekst: { fontSize: 12, lineHeight: 17, color: "#713f12" },
   rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 54, paddingVertical: 7 },
   rijVol: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 76, paddingHorizontal: 15, paddingVertical: 11 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
