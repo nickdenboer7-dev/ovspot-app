@@ -10,7 +10,7 @@ import type { Palette } from "../constants/theme";
 import { api } from "../lib/api";
 import { isTrein, ritNummer } from "../lib/format";
 import { usePolling } from "../lib/hooks";
-import { positieBevestigd, positieTekst } from "../lib/wayfindingV2";
+import { positieBevestigd, positieTekst, ritBannerTitel, ritBronLabel } from "../lib/wayfindingV2";
 import type { Rit, RitHalte } from "../lib/types";
 
 type Rij = { soort: "halte"; h: RitHalte; i: number } | { soort: "nu" };
@@ -87,9 +87,10 @@ export default function Ritverloop() {
   let tijdlijn: React.ReactNode = null;
   if (rit) {
     const kl = railKleuren(rit, colors);
-    // INCOMING betreft het voertuig op zijn vorige rit: geen 'Nu hier' op deze route.
-    const nh = rit.rit_status === "INCOMING" ? null : rit.nu_hier;
+    // Een KV8-haltebericht is geen GPS-markering. Geen voertuigstip of 'Nu hier'
+    // zonder exact bevestigde GPS-koppeling; haltevolgorde blijft uit KV8 komen.
     const bevestigd = positieBevestigd(rit);
+    const nh = rit.rit_status === "INCOMING" || !bevestigd ? null : rit.nu_hier;
     const voortgangLabel = positieTekst(rit);
     const rijen: Rij[] = [];
 
@@ -130,7 +131,7 @@ export default function Ritverloop() {
             return (
               <View
                 key="nu"
-                style={[s.rij, { minHeight: 72 }, scheiding]}
+                style={[s.rij, { minHeight: 60 }, scheiding]}
                 onLayout={(e) => scrollNaar(e.nativeEvent.layout.y)}
                 accessible
                 accessibilityLabel={`${voortgangLabel}. Volgende halte ${nh?.volgende_naam}${over}`}
@@ -157,6 +158,8 @@ export default function Ritverloop() {
           const geweest = h.state ? h.state === "PASSED" : h.status === "geweest";
           const huidig = h.state ? h.state === "ARRIVED" : h.status === "huidig";
           const naderend = h.state === "APPROACHING";
+          const kv8Volgende = !bevestigd && rit.live && !!rit.nu_hier &&
+            rit.nu_hier.volgende_index === i && !geweest && rit.rit_status !== "INCOMING";
           const beginhalte = rit.rit_status === "INCOMING" && i === 0;
           const vertraagd = h.vertraging_min > 0;
 
@@ -188,7 +191,7 @@ export default function Ritverloop() {
               <View style={s.rail}>
                 <View style={[s.lijnBoven, { backgroundColor: kl.boven(i) }]} />
                 <View style={[s.lijnOnder, { backgroundColor: kl.onder(i) }]} />
-                {huidig || naderend ? (
+                {huidig && bevestigd ? (
                   <View style={[s.nuBol, { backgroundColor: colors.live, borderColor: colors.liveGlow }]}>
                     <Ionicons name={trein ? "train" : "bus"} size={15} color="#fff" />
                   </View>
@@ -207,7 +210,10 @@ export default function Ritverloop() {
                     style={[
                       s.naam,
                       { color: geweest || h.vervalt ? colors.muted : colors.text, textDecorationLine: h.vervalt ? "line-through" : "none" },
-                      (huidig || naderend || beginhalte) ? { fontWeight: "800", color: huidig || naderend ? colors.live : colors.text } : null
+                      (huidig || naderend || beginhalte || kv8Volgende) ? {
+                        fontWeight: "800", color: bevestigd && huidig ? colors.live
+                          : (huidig || naderend || kv8Volgende) ? colors.infoText : colors.text
+                      } : null
                     ]}
                     numberOfLines={2}
                   >
@@ -219,9 +225,9 @@ export default function Ritverloop() {
                   {h.spoor_gewijzigd ? <Label tekst={`Spoor ${h.spoor_gewijzigd.naar}`} bg={colors.warnBg} fg={colors.delay} /> : null}
                 </View>
 
-                {huidig ? (
-                  <Text style={[s.nuTitelKlein, { color: bevestigd ? colors.live : colors.accent }]}>
-                    {voortgangLabel}
+                {huidig || kv8Volgende || naderend ? (
+                  <Text style={[s.nuTitelKlein, { color: huidig && bevestigd ? colors.live : colors.infoText }]}>
+                    {naderend && bevestigd ? "Volgende halte" : voortgangLabel || "Volgende halte (KV8)"}
                   </Text>
                 ) : null}
 
@@ -253,11 +259,12 @@ export default function Ritverloop() {
     Animated.timing(draai, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
   }, [poll.laatsteOk, draai]);
 
-  const isLive = rit?.live_positie ?? rit?.positie_betrouwbaar;
+  const isLive = rit ? positieBevestigd(rit) : false;
   const isIncoming = rit?.rit_status === "INCOMING" && !rit?.vervallen;
+  const bronLabel = rit ? ritBronLabel(rit, !!poll.fout) : null;
+  const bannerTitel = rit ? ritBannerTitel(rit) : "";
   const inkomendVoertuig = rit?.voertuig_info ?? rit?.voertuig;
   const inkomendNummer = String(inkomendVoertuig?.nummer ?? "").trim();
-  const inkomendGpsLeeftijd = inkomendVoertuig?.leeftijd_s;
   const inkomendSoort = trein ? "Trein" : rit?.modus === "tram" ? "Tram" : rit?.modus === "metro" ? "Metro" : "Bus";
 
   useEffect(() => {
@@ -310,7 +317,7 @@ export default function Ritverloop() {
                 <View style={s.incomingKop}>
                   <LiveStip kleur={colors.infoText} />
                   <Text style={[s.incomingTitel, { color: colors.infoText }]} numberOfLines={2}>
-                    {rit.status_omschrijving || "Onderweg naar beginhalte"}
+                    {bannerTitel}
                   </Text>
                 </View>
                 <View style={s.incomingDetails}>
@@ -319,28 +326,29 @@ export default function Ritverloop() {
                       {inkomendSoort} {inkomendNummer}
                     </Text>
                   ) : null}
-                  <Text style={[s.incomingGps, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
-                    {poll.fout ? "Verbinding kwijt" : typeof inkomendGpsLeeftijd === "number" && inkomendGpsLeeftijd >= 0
-                      ? `GPS ${inkomendGpsLeeftijd}s oud` : "Positie geschat"}
-                  </Text>
+                  {bronLabel ? (
+                    <Text style={[s.incomingGps, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
+                      {bronLabel}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
             ) : rit.live ? (
               <View style={s.liveLinks}>
-                <LiveStip kleur={colors.live} />
-                <Text style={[s.liveText, { color: colors.live }]}>
-                  {rit.rit_status === "ARRIVED" ? "Bij halte" : rit.rit_status === "DRIVING" ? "Rijdt nu" : "Live tijden"}
+                <LiveStip kleur={isLive ? colors.live : colors.infoText} />
+                <Text style={[s.liveText, { color: isLive ? colors.live : colors.infoText }]}>
+                  {bannerTitel}
                 </Text>
-                {rit.vertraging_min > 0 || isLive ? (
-                  <Text style={[s.liveText, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>
-                    {rit.vertraging_min > 0 ? `+${rit.vertraging_min} min` : "Op tijd"}
+                {rit.vertraging_min > 0 ? (
+                  <Text style={[s.liveVertraging, { color: colors.delay }]}>
+                    +{rit.vertraging_min} min
                   </Text>
                 ) : null}
               </View>
             ) : (
               <Text style={[s.liveText, { color: colors.sub }]}>Dienstregeling</Text>
             )}
-            {!isIncoming ? (
+            {!isIncoming && bronLabel ? (
               <>
                 <View style={[s.streepje, { backgroundColor: colors.border }]} />
                 <View style={s.ververst}>
@@ -348,10 +356,7 @@ export default function Ritverloop() {
                     <Ionicons name={poll.fout ? "cloud-offline-outline" : "sync"} size={15} color={poll.fout ? colors.red : colors.sub} />
                   </Animated.View>
                   <Text style={[s.ververstText, { color: poll.fout ? colors.red : colors.sub }]} numberOfLines={1}>
-                    {poll.fout ? "Verbinding kwijt" : isLive && rit.nu_hier?.gps_leeftijd_s != null
-                      ? `GPS ${rit.nu_hier.gps_leeftijd_s}s oud`
-                      : isLive && typeof rit.gps_leeftijd_s === "number" ? `GPS ${rit.gps_leeftijd_s}s oud`
-                      : rit.live ? "Positie geschat" : "Geen GPS-positie"}
+                    {bronLabel}
                   </Text>
                 </View>
               </>
@@ -361,8 +366,8 @@ export default function Ritverloop() {
       ) : null}
 
       <ScrollView ref={scrollRef} contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
-        {/* Bij live KV8-tijden zonder bevestigde GPS volstaat het neutrale label
-            "Positie geschat" in de statusbalk. Geen tweede, alarmerende banner. */}
+        {/* KV8-halteberichten sturen alleen de halterichting aan. Een groene
+            GPS-voertuigstip verschijnt uitsluitend na exacte GPS-bevestiging. */}
         {poll.laden && !rit ? <Laden /> : null}
         {!rit && poll.fout && !poll.laden ? (
           <Leeg icoon="git-commit-outline" titel="Rit niet gevonden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />
@@ -403,6 +408,7 @@ const s = StyleSheet.create({
   incomingGps: { fontSize: 12, flexShrink: 1 },
   liveLinks: { flexDirection: "row", alignItems: "center", gap: 8 },
   liveText: { fontSize: 14, fontWeight: "700" },
+  liveVertraging: { fontSize: 13, fontWeight: "600", marginLeft: 3 },
   streepje: { width: 1, height: 22 },
   ververst: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 },
   ververstText: { fontSize: 13, flexShrink: 1 },

@@ -54,8 +54,44 @@ export function positieBevestigd(rit: Partial<Pick<Rit, "positie_betrouwbaar" | 
 export function positieTekst(rit: Partial<Pick<Rit, "positie_betrouwbaar" | "live_positie" | "nu_hier" | "rit_status">>): string {
   if (!rit.nu_hier) return "";
   const bevestigd = positieBevestigd(rit);
-  if (!bevestigd) return "Verwachte positie";
+  // KV8 geeft een haltebericht, niet automatisch de actuele GPS-positie.
+  if (!bevestigd) return rit.rit_status === "ARRIVED" ? "Bij halte gemeld (KV8)" : "Volgende halte (KV8)";
   // Alleen een bevestigde rit met de nieuwe API-status krijgt het specifiekere label.
   // Oude API-antwoorden behouden het vertrouwde "Nu hier".
   return rit.rit_status === "ARRIVED" ? "Halteert nu" : "Nu hier";
+}
+
+/** Houd betrouwbare GPS, realtime KV8 en dienstregeling expliciet gescheiden. */
+type RitLiveStatus = Partial<Pick<Rit,
+  "live" | "vervallen" | "rit_status" | "status_omschrijving" | "nu_hier" |
+  "positie_betrouwbaar" | "live_positie" | "gps_leeftijd_s" |
+  "voertuig" | "voertuig_info">>;
+
+export function ritBannerTitel(rit: RitLiveStatus): string {
+  if (rit.vervallen) return "Deze rit vervalt";
+  if (rit.rit_status === "INCOMING") return rit.status_omschrijving || "Onderweg naar beginhalte";
+  if (!rit.live) return "Dienstregeling";
+  // Rijdt nu/Bij halte uitsluitend bij bevestigde GPS, niet alleen KV8-passages.
+  if (!positieBevestigd(rit)) return "Live tijden";
+  if (rit.rit_status === "ARRIVED") return "Bij halte";
+  if (rit.rit_status === "DRIVING") return "Rijdt nu";
+  return "Live tijden";
+}
+
+/** Geen generieke 'Positie geschat' op elke realtime rit; benoem de echte bron. */
+export function ritBronLabel(rit: RitLiveStatus, verbindingsfout = false): string | null {
+  if (verbindingsfout) return "Verbinding kwijt";
+  if (rit.vervallen) return null;
+  if (rit.rit_status === "INCOMING") {
+    const leeftijd = rit.voertuig_info?.leeftijd_s ?? rit.voertuig?.leeftijd_s;
+    return typeof leeftijd === "number" && Number.isFinite(leeftijd) && leeftijd >= 0
+      ? `GPS ${Math.round(leeftijd)}s oud` : null;
+  }
+  if (positieBevestigd(rit)) {
+    const leeftijd = rit.nu_hier?.gps_leeftijd_s ?? rit.gps_leeftijd_s ?? rit.voertuig_info?.leeftijd_s;
+    return typeof leeftijd === "number" && Number.isFinite(leeftijd) && leeftijd >= 0
+      ? `GPS ${Math.round(leeftijd)}s oud` : "GPS bevestigd";
+  }
+  if (rit.live && rit.nu_hier) return "KV8 halteberichten";
+  return null;
 }
