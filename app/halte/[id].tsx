@@ -110,8 +110,11 @@ export default function Haltebord() {
             onPress={v.rit ? () => openRit(v) : undefined}
             diagnose={
               (id === "3183779" || id === "3183780" || id === "stoparea:502182") &&
-              i === vertrekken.findIndex((x) =>
-                String(x.lijn).trim() === "395" && String(x.bestemming || "").toLowerCase().includes("amsterdam")
+              String(v.lijn).trim() === "395" &&
+              (
+                i === vertrekken.findIndex((x) =>
+                  String(x.lijn).trim() === "395" && String(x.bestemming || "").toLowerCase().includes("amsterdam")
+                ) || v.gepland === "21:23" || v.gepland === "21:53"
               )
             }
           />

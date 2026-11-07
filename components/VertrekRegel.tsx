@@ -12,6 +12,7 @@ import { LijnBadge, LiveStip, StatusLabel } from "./ui";
  */
 export function VertrekRegel({ v, nu, compact, eerste, onPress, diagnose = false }: { v: Vertrek; nu: number; compact?: boolean; eerste?: boolean; onPress?: () => void; diagnose?: boolean }) {
   const { colors } = useApp();
+  const [tekstLayout, setTekstLayout] = React.useState("(nog niet gemeten)");
   const vertrokken = !v.vervallen && typeof v.vertrek_ms === "number" && Number.isFinite(v.vertrek_ms) && v.vertrek_ms < nu;
   const vertraagd = !v.vervallen && !vertrokken && v.vertraging_min > 0;
   const minuten = v.vervallen ? "–" : vertrokken ? "Vertrokken" : aftellen(v.vertrek_ms, nu, v.verwacht);
@@ -39,6 +40,10 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress, diagnose = false
               { color: v.vervallen ? colors.muted : colors.text, textDecorationLine: v.vervallen ? "line-through" : "none" }
             ]}
             numberOfLines={2}
+            onTextLayout={diagnose ? (e) => {
+              const werkelijk = e.nativeEvent.lines.map((regel) => regel.text).join(" | ");
+              setTekstLayout((oud) => oud === werkelijk ? oud : werkelijk);
+            } : undefined}
           >
             {displayBestemming}
           </Text>
@@ -76,6 +81,9 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress, diagnose = false
         <Text selectable style={s.diagnoseTekst}>
           {`DIAG 395 · API-veld: ${JSON.stringify(v.bestemming ?? null)}`}
           {`\nUI-tekst: ${JSON.stringify(displayBestemming ?? null)} · Lijn: ${JSON.stringify(v.lijn)}`}
+          {`\nNative tekstregels: ${tekstLayout}`}
+          {`\nRuwe tekens: ${Array.from(String(v.bestemming ?? "")).map((c) => c.codePointAt(0)?.toString(16)).join(" ")}`}
+          {`\nRit: ${v.rit?.trip || "onbekend"} · Vertrek: ${v.gepland}`}
           {`\nBron: ${API_BASE}/halte/...`}
         </Text>
       </View>
