@@ -10,7 +10,7 @@ import { FoutBalk, Kop, KopKnop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
 import { afstand } from "../../lib/format";
-import { binnenLocatieTimeout, kiesLocatieFallback, LocatieTimeoutFout, vindGpsPositie } from "../../lib/locationTimeout";
+import { bepaalLocatieMetFallback, binnenLocatieTimeout, kiesLocatieFallback, LocatieTimeoutFout } from "../../lib/locationTimeout";
 import type { LocatiePositie } from "../../lib/locationTimeout";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Dichtbij as DichtbijData } from "../../lib/types";
@@ -29,6 +29,7 @@ export default function Dichtbij() {
   const [zoekt, setZoekt] = useState(false);
   const laatsteLoc = useRef(0);
   const locatiePoging = useRef(0);
+  const laatstePositie = useRef<Positie | null>(null);
   const nu = useNu(10_000);
   const thuis = instellingen.thuis;
 
@@ -38,22 +39,25 @@ export default function Dichtbij() {
     const geldig = () => locatiePoging.current === poging;
     setZoekt(true);
     try {
-      // Eén deadline voor alle native stappen, ook vastgelopen permissie-/provider-promises.
-      // Laatste bekende GPS is primair; een nieuwe GPS-fix wordt alleen gevraagd als die ontbreekt.
-      const positie = await binnenLocatieTimeout(
-        (signal) => vindGpsPositie(Location, Location.Accuracy.Balanced, signal)
+      // Ook een hangende native GPS-promise eindigt na maximaal 4 seconden met een fallback.
+      const reserve = kiesLocatieFallback(laatstePositie.current, thuis);
+      const { positie, fout } = await bepaalLocatieMetFallback(
+        Location, Location.Accuracy.Balanced, reserve
       );
       if (!geldig()) return;
+      laatstePositie.current = positie;
       setPos(positie);
-      setLocFout(null);
-      laatsteLoc.current = Date.now();
+      setLocFout(fout);
+      if (!fout) laatsteLoc.current = Date.now();
     } catch (e: any) {
       if (!geldig() || e?.message === "geannuleerd") return;
       const reden: LocFout = e instanceof LocatieTimeoutFout ? "timeout"
         : (["geweigerd", "geweigerd-blijvend", "uit"].includes(e?.message) ? e.message : "fout");
       setLocFout(reden);
-      // Altijd een bruikbare positie: eerdere GPS > thuislocatie > Amsterdam Centraal.
-      setPos(oud => kiesLocatieFallback(oud, thuis));
+      // Ook onverwachte JS-fouten mogen nooit een leeg scherm of blijvende spinner geven.
+      const reserve = kiesLocatieFallback(laatstePositie.current, thuis);
+      laatstePositie.current = reserve;
+      setPos(reserve);
     } finally {
       if (geldig()) setZoekt(false);
     }

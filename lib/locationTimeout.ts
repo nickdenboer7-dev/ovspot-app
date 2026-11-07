@@ -1,9 +1,9 @@
 /**
  * Expo's Android-location Promises hebben geen betrouwbare native annulering.
- * Beperk de volledige keten (permissie, services, cache en GPS) tot 5 seconden.
+ * Beperk de volledige keten (permissie, services, cache en GPS) tot 4 seconden.
  * De signal-guard voorkomt dat een late native reactie alsnog resultaten zet.
  */
-export const LOCATIE_TIMEOUT_MS = 5_000;
+export const LOCATIE_TIMEOUT_MS = 4_000;
 
 export class LocatieTimeoutFout extends Error {
   constructor() {
@@ -94,4 +94,33 @@ export async function vindGpsPositie(
     throw new Error("Ongeldige GPS-positie");
   }
   return { lat: precies.coords.latitude, lon: precies.coords.longitude, bron: "gps" };
+}
+
+/**
+ * Niet-blokkerende resultaatfunctie voor het scherm Dichtbij.
+ * Native Android-promises mogen blijven hangen: na de harde deadline komt altijd
+ * een positie terug, zodat de UI loading/zoekt kan uitschakelen.
+ */
+export type LocatieReden = "geweigerd" | "geweigerd-blijvend" | "uit" | "timeout" | "fout";
+export type LocatieResultaat = { positie: LocatiePositie; fout: LocatieReden | null };
+
+export async function bepaalLocatieMetFallback(
+  locatie: LocatieProvider,
+  accuracy: number,
+  reserve: LocatiePositie,
+  timeoutMs = LOCATIE_TIMEOUT_MS
+): Promise<LocatieResultaat> {
+  try {
+    const positie = await binnenLocatieTimeout(
+      (signal) => vindGpsPositie(locatie, accuracy, signal),
+      timeoutMs
+    );
+    return { positie, fout: null };
+  } catch (e: unknown) {
+    const bericht = e instanceof Error ? e.message : "";
+    const fout: LocatieReden = e instanceof LocatieTimeoutFout ? "timeout"
+      : bericht === "geweigerd" || bericht === "geweigerd-blijvend" || bericht === "uit"
+        ? bericht : "fout";
+    return { positie: reserve, fout };
+  }
 }

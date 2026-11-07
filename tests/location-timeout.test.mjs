@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { binnenLocatieTimeout, LocatieTimeoutFout, LOCATIE_TIMEOUT_MS } from '../lib/locationTimeout.ts';
 
-test('GPS-keten heeft standaard een harde deadline van maximaal 5 seconden', () => {
-  assert.equal(LOCATIE_TIMEOUT_MS, 5000);
+test('GPS-keten heeft standaard een harde deadline van maximaal 4 seconden', () => {
+  assert.equal(LOCATIE_TIMEOUT_MS, 4000);
 });
 
 test('Bruikbare cached GPS-positie kan meteen worden toegepast', async () => {

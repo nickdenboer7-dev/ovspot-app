@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   binnenLocatieTimeout, kiesLocatieFallback, LocatieTimeoutFout,
-  STANDAARD_LOCATIE, vindGpsPositie
+  STANDAARD_LOCATIE, vindGpsPositie, bepaalLocatieMetFallback, LOCATIE_TIMEOUT_MS
 } from '../lib/locationTimeout.ts';
 
 const gps = (lat = 52.38, lon = 4.90) => ({ coords: { latitude: lat, longitude: lon } });
@@ -83,4 +83,50 @@ test('een laat permissieantwoord na timeout start nooit alsnog GPS', async () =>
   resolve({ granted: true, canAskAgain: true });
   await new Promise(r => setImmediate(r));
   assert.equal(currentCalls, 0);
+});
+
+test('4 seconden geldt voor de volledige locatieketen, inclusief current GPS', () => {
+  assert.equal(LOCATIE_TIMEOUT_MS, 4000);
+});
+
+test('hangende getCurrentPositionAsync levert automatisch direct na timeout een fallback-resultaat', async () => {
+  const reserve = kiesLocatieFallback(null, null);
+  const resultaat = await bepaalLocatieMetFallback(provider({
+    getLastKnownPositionAsync: async () => null,
+    getCurrentPositionAsync: () => new Promise(() => {})
+  }), 3, reserve, 25);
+  assert.deepEqual(resultaat, { positie: STANDAARD_LOCATIE, fout: 'timeout' });
+});
+
+test('geweigerde permissie of uitgeschakelde GPS geeft direct een fallback, zonder wachten op native GPS', async () => {
+  const cases = [
+    [provider({ getForegroundPermissionsAsync: async () => ({ granted: false, canAskAgain: false }) }), 'geweigerd-blijvend'],
+    [provider({ hasServicesEnabledAsync: async () => false }), 'uit'],
+    [provider({ getLastKnownPositionAsync: async () => { throw Error('Geen GPS fix'); } }), 'fout']
+  ];
+  for (const [locatie, fout] of cases) {
+    const start = Date.now();
+    const res = await bepaalLocatieMetFallback(locatie, 3, STANDAARD_LOCATIE);
+    assert.deepEqual(res, { positie: STANDAARD_LOCATIE, fout });
+    assert.ok(Date.now() - start < 500, 'fouten geven onmiddellijk fallback');
+  }
+});
+
+test('hangende permissie en locatieprovider leveren ook een fallback', async () => {
+  for (const step of ['getForegroundPermissionsAsync', 'hasServicesEnabledAsync', 'getLastKnownPositionAsync']) {
+    const loc = provider({ [step]: () => new Promise(() => {}) });
+    const result = await bepaalLocatieMetFallback(loc, 3,
+      { lat: 53.201, lon: 5.799, bron: 'thuis' }, 20);
+    assert.equal(result.fout, 'timeout');
+    assert.equal(result.positie.bron, 'thuis');
+  }
+});
+
+test('geen cache en een native GPS error: geen lege positie of eeuwige spinner', async () => {
+  const result = await bepaalLocatieMetFallback(provider({
+    getLastKnownPositionAsync: async () => null,
+    getCurrentPositionAsync: async () => { throw new Error('gps_unavailable'); }
+  }), 3, STANDAARD_LOCATIE);
+  assert.equal(result.fout, 'fout');
+  assert.deepEqual(result.positie, STANDAARD_LOCATIE);
 });
