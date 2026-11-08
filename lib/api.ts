@@ -1,6 +1,8 @@
 import Constants from "expo-constants";
 import type { Dichtbij, Filter, Halte, Rit, RitRef, LiveRitVoertuigAntwoord, StoringenAntwoord, Zoek, StationVertrektijden, LijnVertrekken, FeedbackInzending } from "./types";
 import { freshApiUrl } from "./freshRequest";
+import { deviceSession, decryptApiBody, resetDeviceRegistration } from "./deviceSecureApi";
+import type { EncryptedEnvelope } from "./deviceCrypto";
 import { dichtbijPad } from "./dichtbijQuery";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiBase?: string };
@@ -16,9 +18,20 @@ export class ApiError extends Error {
   }
 }
 
-// Geen eigen ETag-cache: elk vertrek-/rit-/zoekverzoek wordt opnieuw via HTTPS opgehaald.
+// Nieuwe Android-build: alle GET-antwoorden via per-toestel AES-GCM-over-HTTPS.
+// Nooit automatisch terugvallen op openbare JSON of een HTTP-verbinding.
 async function get<T>(path: string, timeoutMs = 12000, base = API_BASE): Promise<T> {
-  const url = freshApiUrl(base, path);
+  if (base !== API_BASE && base !== API_V2_BASE) {
+    throw new ApiError("Ongeldige API-basis", 0);
+  }
+  let session: Awaited<ReturnType<typeof deviceSession>>;
+  try {
+    session = await deviceSession(API_BASE);
+  } catch {
+    throw new ApiError("Beveiligde toestelregistratie niet bereikbaar", 0);
+  }
+  // Nginx rewrite /app/v1 -> /app/v2 behoudt de live KV8-verrijking.
+  const url = freshApiUrl(API_BASE, "/secure" + path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
@@ -26,26 +39,36 @@ async function get<T>(path: string, timeoutMs = 12000, base = API_BASE): Promise
     res = await fetch(url, {
       headers: {
         Accept: "application/json",
+        "X-OVspot-Device-ID": session.deviceId,
         "Cache-Control": "no-store, no-cache, max-age=0",
-        Pragma: "no-cache"
+        Pragma: "no-cache",
       },
       cache: "no-store",
-      signal: controller.signal
+      signal: controller.signal,
     });
   } catch {
-    throw new ApiError("Geen verbinding", 0);
+    throw new ApiError("Geen beveiligde verbinding", 0);
   } finally {
     clearTimeout(timer);
   }
-  // Zonder If-None-Match mag de server geen 304 zonder body leveren.
-  if (res.status === 304) throw new ApiError("Geen nieuw API-antwoord ontvangen", 304);
-  let body: any = null;
-  try {
-    body = await res.json();
-  } catch {
-    body = null;
+  if (res.status === 401) {
+    await resetDeviceRegistration();
+    throw new ApiError("Toestel opnieuw registreren. Probeer het opnieuw.", 401);
   }
-  if (!res.ok || !body) {
+  if (res.status === 304) throw new ApiError("Geen nieuw API-antwoord ontvangen", 304);
+  let envelope: EncryptedEnvelope;
+  try {
+    envelope = await res.json() as EncryptedEnvelope;
+  } catch {
+    throw new ApiError("Ongeldig beveiligd API-antwoord", res.status);
+  }
+  let body: any;
+  try {
+    body = await decryptApiBody(envelope, session, url);
+  } catch {
+    throw new ApiError("Versleutelde gegevens konden niet worden gecontroleerd", 0);
+  }
+  if (!res.ok || !body?.ok) {
     throw new ApiError(body?.fout || (res.status >= 500 ? "Gegevens tijdelijk niet beschikbaar" : "Er ging iets mis"), res.status);
   }
   return body as T;

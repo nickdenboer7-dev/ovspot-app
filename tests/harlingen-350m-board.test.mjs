@@ -68,7 +68,8 @@ test("Stationscherm haalt verse multimodale vertrektijden via expliciete v2-url"
   assert.match(api,/\/vertrektijden\?halte_id=\$\{encodeURIComponent\(id\)\}/);
   assert.match(api,/get<StationVertrektijden>\([\s\S]*?API_V2_BASE/);
   assert.match(api,/cache: "no-store"/);
-  assert.match(api,/freshApiUrl\(base, path\)/);
+  assert.match(api,/freshApiUrl\(API_BASE, "\/secure" \+ path\)/);
+  assert.match(api,/decryptApiBody\(envelope, session, url\)/);
   assert.match(board,/api\.stationVertrektijden\(id, 60\)/);
   assert.match(board,/stationPoll\.verversen\(\)/);
   assert.match(board,/multimodaalStation && !handmatigeModus \? "alles"/);
