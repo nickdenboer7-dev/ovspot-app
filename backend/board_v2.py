@@ -604,13 +604,13 @@ def _halte_uncached(stop_id,modus,limit,gtfs,kv8,now,ns):
 
 
 
-CLUSTER_RADIUS_M = 200
+CLUSTER_RADIUS_M = 350
 BOARD_WINDOW_S = 120 * 60
 BOARD_TYPES = frozenset(("train", "bus", "tram"))
 
 
 def _quays_within_radius(gtfs, lat, lon, radius=CLUSTER_RADIUS_M):
-    """Alle echte halte- en perron-ID's fysiek binnen 200 m; géén naamheuristiek."""
+    """Alle echte halte- en perron-ID's fysiek binnen de straal; géén naamheuristiek."""
     dy=radius/111120.0
     dx=radius/(111120.0*max(0.1,math.cos(math.radians(lat))))
     rows=gtfs.execute(
@@ -695,7 +695,7 @@ def _vertrektijden_items(rows,gtfs,kv8,now,limit):
 
 
 def vertrektijden(gtfs,kv8,stop_id=None,lat=None,lon=None,limit=30,now=None):
-    """Multimodaal 200-m-haltebord; bij 0 vertrek in 120m de volgende 10.
+    """Multimodaal 350-m-haltebord; bij 0 vertrek in 120m de volgende 10.
 
     Bewust een apart opt-in-endpoint: de bestaande /halte- en /dichtbij-
     contracten, lijnfilters en KV8/GPS-matching veranderen niet.

@@ -12,7 +12,7 @@ import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { storingPastBijModus } from "../../lib/storingPerModus";
 import { klok } from "../../lib/format";
-import { busstationZoekterm, heeftBusstationAanvullingNodig, kiesGekoppeldBusstation, voegBusstationToe } from "../../lib/stationGroups";
+import { voegStationVertrektijdenToe } from "../../lib/stationGroups";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Vertrek } from "../../lib/types";
 
@@ -20,6 +20,7 @@ type ModusChip = { key: string; label: string; icoon?: keyof typeof Ionicons.gly
 
 function modaliteitChip(modus: string): ModusChip {
   switch (modus) {
+    case "alles": return { key: modus, label: "Alles", icoon: "layers-outline" };
     case "train": return { key: modus, label: "Trein", icoon: "train-outline" };
     case "bus": return { key: modus, label: "Bus", icoon: "bus-outline" };
     case "tram": return { key: modus, label: "Tram", icoon: "subway-outline" };
@@ -41,26 +42,27 @@ export default function Haltebord() {
     gevraagdeModus || (instellingen.filter === "trein" ? "train" : instellingen.filter)
   );
   const [storingenOpen, setStoringenOpen] = useState(false);
+  const [handmatigeModus, setHandmatigeModus] = useState(false);
+  const [ververst, setVervers] = useState(false);
   const nu = useNu(10_000);
 
-  // Haal alle modaliteiten op: de API kent nog geen afzonderlijk tram- of metrofilter.
-  // Zo blijven de mogelijke chips stabiel bij het wisselen van filter.
+  // Houd de bestaande /halte-data voor meldingen, metro/ferry en compatibiliteit.
+  // Bij een station komen de vertrekregels zelf direct van /app/v2/vertrektijden.
   const poll = usePolling(`halte:${id}`, () => api.halte(id, "alles", 60), 15_000);
   const hoofd = poll.data;
-  // Compatibiliteitsaanvulling zolang de live API nog niet alle fysieke
-  // parent_station- en busstationclusters aan het stationsbord koppelt.
-  // Onafhankelijke polling: treinvertrekken blijven direct zichtbaar.
-  const busPoll = usePolling(
-    `station-bus:${hoofd?.id || "geen"}:${hoofd?.plaats || ""}:${heeftBusstationAanvullingNodig(hoofd) ? "ja" : "nee"}`,
-    async () => {
-      if (!heeftBusstationAanvullingNodig(hoofd)) return null;
-      const gevonden = await api.zoek(busstationZoekterm(hoofd));
-      const busstation = kiesGekoppeldBusstation(hoofd, gevonden.resultaten);
-      return busstation ? api.halte(busstation.id, "alles", 60) : null;
-    },
-    45_000
+  // Ook vanaf een afzonderlijke haltepaal met naam "Station"/"Busstation"
+  // dezelfde fysieke 350m-cluster openen, niet uitsluitend vanaf het treinparent.
+  const isStation = !!hoofd && (hoofd.modi.includes("train")
+    || /\b(?:station|busstation)\b/i.test(hoofd.naam));
+  const stationPoll = usePolling(
+    `station-350m:${id}:${isStation ? "station" : "geen-station"}`,
+    () => isStation ? api.stationVertrektijden(id, 60) : Promise.resolve(null),
+    15_000
   );
-  const h = useMemo(() => hoofd ? voegBusstationToe(hoofd, busPoll.data) : null, [hoofd, busPoll.data]);
+  const h = useMemo(
+    () => hoofd ? voegStationVertrektijdenToe(hoofd, stationPoll.data) : null,
+    [hoofd, stationPoll.data]
+  );
   const naam = h?.naam || String(p.naam || "Halte");
   const plaats = h?.plaats || String(p.plaats || "");
   const fav = isFavoriet(id);
@@ -74,13 +76,18 @@ export default function Haltebord() {
       const aIndex = volgorde.indexOf(a), bIndex = volgorde.indexOf(b);
       return (aIndex < 0 ? 99 : aIndex) - (bIndex < 0 ? 99 : bIndex);
     });
+  // Voor een multimodaal station staan Trein + Bus chronologisch bij elkaar.
+  // Expliciete keuzes via de chips blijven daarna gerespecteerd.
   const meerdereModi = modi.length >= 2;
-  const actieveModus = meerdereModi
-    ? (modi.includes(gekozenModus) ? gekozenModus
-      : gevraagdeModus && modi.includes(gevraagdeModus) ? gevraagdeModus
-      : modi.includes("train") ? "train" : modi[0])
-    : "alles";
-  const chips: ModusChip[] = modi.map(modaliteitChip);
+  const multimodaalStation = modi.includes("train") && (modi.includes("bus") || modi.includes("tram"));
+  const tabModi = multimodaalStation ? ["alles", ...modi] : modi;
+  const actieveModus = multimodaalStation && !handmatigeModus ? "alles"
+    : meerdereModi
+      ? (tabModi.includes(gekozenModus) ? gekozenModus
+        : gevraagdeModus && tabModi.includes(gevraagdeModus) ? gevraagdeModus
+        : modi.includes("train") ? "train" : modi[0])
+      : "alles";
+  const chips: ModusChip[] = tabModi.map(modaliteitChip);
   const vertrekken = (h?.vertrekken || []).filter(v => actieveModus === "alles" || v.modus === actieveModus);
 
   // Alleen horizontale gebaren (geen verticale scroll) wisselen het tabblad.
@@ -91,11 +98,14 @@ export default function Haltebord() {
     onPanResponderRelease: (_event, gesture) => {
       if (!meerdereModi || Math.abs(gesture.dx) < 65
         || Math.abs(gesture.dx) < Math.abs(gesture.dy) * 1.4) return;
-      const huidig = modi.indexOf(actieveModus);
+      const huidig = tabModi.indexOf(actieveModus);
       const volgende = huidig + (gesture.dx < 0 ? 1 : -1);
-      if (volgende >= 0 && volgende < modi.length) setGekozenModus(modi[volgende]);
+      if (volgende >= 0 && volgende < tabModi.length) {
+        setHandmatigeModus(true);
+        setGekozenModus(tabModi[volgende]);
+      }
     }
-  }), [meerdereModi, actieveModus, modi.join("|")]);
+  }), [meerdereModi, actieveModus, tabModi.join("|")]);
   const titel = naam;
   const haltegroep = String(p.groep || "").trim();
   const plaatsSub = plaats && !naam.toLowerCase().includes(plaats.toLowerCase())
@@ -180,11 +190,13 @@ export default function Haltebord() {
       />
       {meerdereModi ? (
 <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          {modi.length <= 3 ? (
-            <Chips<string> opties={chips} waarde={actieveModus} onKies={setGekozenModus} vol />
+          {tabModi.length <= 3 ? (
+            <Chips<string> opties={chips} waarde={actieveModus}
+              onKies={v => { setHandmatigeModus(true); setGekozenModus(v); }} vol />
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <Chips<string> opties={chips} waarde={actieveModus} onKies={setGekozenModus} />
+              <Chips<string> opties={chips} waarde={actieveModus}
+                onKies={v => { setHandmatigeModus(true); setGekozenModus(v); }} />
             </ScrollView>
           )}
         </View>
@@ -192,9 +204,13 @@ export default function Haltebord() {
       <ScrollView
         {...swipeResponder.panHandlers}
         contentContainerStyle={s.inhoud}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => {
-          void poll.verversen();
-          if (heeftBusstationAanvullingNodig(hoofd)) void busPoll.verversen();
+        refreshControl={<RefreshControl refreshing={ververst} onRefresh={() => {
+          if (ververst) return;
+          setVervers(true);
+          void Promise.all([
+            poll.verversen(),
+            isStation ? stationPoll.verversen() : Promise.resolve()
+          ]).finally(() => setVervers(false));
         }} colors={[colors.accent]} />}
       >
         {storingen.length ? (

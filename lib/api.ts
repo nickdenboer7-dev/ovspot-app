@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { Dichtbij, Filter, Halte, Rit, RitRef, LiveRitVoertuigAntwoord, StoringenAntwoord, Zoek } from "./types";
+import type { Dichtbij, Filter, Halte, Rit, RitRef, LiveRitVoertuigAntwoord, StoringenAntwoord, Zoek, StationVertrektijden } from "./types";
 import { freshApiUrl } from "./freshRequest";
 import { dichtbijPad } from "./dichtbijQuery";
 
@@ -69,6 +69,14 @@ export const api = {
   // Vertrek[].kleur/tekstkleur uit GTFS; oude Live-antwoorden hebben lijn_kleur/lijn_tekstkleur.
   halte: (id: string, modus: Filter = "alles", max = 30) =>
     get<Halte>(`/halte/${encodeURIComponent(id)}?modus=${modus}&max=${max}`),
+  // Stationsbord: alle GTFS-quays binnen 350m, chronologisch + nacht-fallback.
+  // fetch gebruikt altijd no-store en een unieke _fresh-parameter.
+  stationVertrektijden: (id: string, max = 60) =>
+    get<StationVertrektijden>(
+      `/vertrektijden?halte_id=${encodeURIComponent(id)}&max=${max}`,
+      12000,
+      API_V2_BASE
+    ),
   rit: (ref: RitRef) => get<Rit>(`/rit?${ritParams(ref)}`),
   // Exacte GTFS-rit + dienstdatum; de API weigert onzekere voertuigkoppelingen.
   liveRitVoertuig: (ritId: string, datum: string) =>

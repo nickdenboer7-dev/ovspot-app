@@ -77,6 +77,26 @@ export type Halte = {
   storingen: Storing[];
 };
 
+/** /app/v2/vertrektijden: echte fysieke haltes binnen 350 m van het station. */
+export type StationVertrektijden = {
+  ok: boolean;
+  halte_id: string | null;
+  naam: string;
+  lat: number;
+  lon: number;
+  cluster_straal_m: number;
+  types: Modus[];
+  bijgewerkt: string;
+  nacht_fallback: boolean;
+  aantal: number;
+  haltes: { id: string; naam: string; afstand_m: number; perron: string }[];
+  vertrekken: (Vertrek & {
+    type: Modus; lijnnummer: string; stop_id: string;
+    halte: string; haltepaal: string | null; perron: string | null;
+    planned_departure: string; expected_departure: string;
+  })[];
+};
+
 export type DichtbijHalte = {
   id: string;
   naam: string;

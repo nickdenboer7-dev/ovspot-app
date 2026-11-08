@@ -53,8 +53,8 @@ test('haltebord heeft Trein/Bus-modusknoppen en horizontale swipe zonder vertica
   const code=readFileSync(new URL('../app/halte/[id].tsx',import.meta.url),'utf8');
   assert.match(code,/PanResponder\.create/);
   assert.match(code,/Math\.abs\(gesture\.dx\) > Math\.abs\(gesture\.dy\) \* 1\.4/);
-  assert.match(code,/setGekozenModus\(modi\[volgende\]\)/);
-  assert.match(code,/modi\.map\(modaliteitChip\)/);
+  assert.match(code,/setGekozenModus\(tabModi\[volgende\]\)/);
+  assert.match(code,/tabModi\.map\(modaliteitChip\)/);
   assert.match(code,/const volgorde = \["train", "metro", "tram", "bus", "ferry"\]/);
   assert.match(code,/\bvol \/>/);
   assert.match(code,/v\.modus === actieveModus/);

@@ -1,4 +1,17 @@
-import type { Halte, ZoekResultaat, Vertrek } from "./types";
+import type { Halte, ZoekResultaat, StationVertrektijden, Vertrek } from "./types";
+
+/** Het native stationsbord gebruikt de complete 350m-v2-vertrekken, niet
+ * alleen de treinquays uit /halte. Metro en veerboot behouden hun eigen
+ * bestaande bron, omdat /vertrektijden deze modi bewust niet ophaalt.
+ */
+export function voegStationVertrektijdenToe(station: Halte, cluster: StationVertrektijden | null): Halte {
+  if (!cluster?.ok || cluster.halte_id !== station.id) return station;
+  const overige = station.vertrekken.filter(v => v.modus === "metro" || v.modus === "ferry");
+  const vertrekken = [...cluster.vertrekken, ...overige]
+    .sort((a,b) => (a.vertrek_ms ?? 0) - (b.vertrek_ms ?? 0));
+  const modi = [...new Set([...station.modi, ...cluster.types, ...vertrekken.map(v => v.modus)])];
+  return { ...station, bijgewerkt: cluster.bijgewerkt, vertrekken, modi };
+}
 
 /**
  * Compatibiliteit voor oude API-v2 instanties die alleen het treinperron van

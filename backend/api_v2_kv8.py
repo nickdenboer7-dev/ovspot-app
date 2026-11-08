@@ -28,7 +28,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from kv8_normalisatie import TZ, normaliseer, ritverloop_haltes
 
-VERSION = "2.0.17-rit-shape-stops"
+VERSION = "2.0.18-harlingen-radius350"
 KV8_DB = os.environ.get("OVSPOT_KV8_DB", "/var/lib/ovspot-app-kv8/kv8.db")
 GTFS_DB = os.environ.get("OVSPOT_GTFS_DB", "/home/ubuntu/kv15-bot/gtfs.db")
 HOST = os.environ.get("OVSPOT_API_HOST", "127.0.0.1")
@@ -340,7 +340,7 @@ def _app_halte_antwoord(stop, qs, con=None, gtfs=None):
 
 
 def _app_vertrektijden_antwoord(qs, con=None, gtfs=None):
-    """200m multimodaal vertrekbord met automatische eerstvolgende-10 fallback."""
+    """350m multimodaal vertrekbord met automatische eerstvolgende-10 fallback."""
     stop_id = str(next((
         (qs.get(name) or [""])[0]
         for name in ("halte_id", "stop_id", "id") if (qs.get(name) or [""])[0]
