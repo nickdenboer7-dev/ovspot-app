@@ -97,6 +97,8 @@ export type Halte = {
   modi: Modus[];
   bijgewerkt: string;
   verouderd: boolean;
+  /** Volledig statisch GTFS-routeoverzicht voor deze halte, ook zonder vertrek nu. */
+  lijncatalogus?: ZoekLijn[];
   vertrekken: Vertrek[];
   storingen: Storing[];
 };
@@ -112,6 +114,8 @@ export type StationVertrektijden = {
   types: Modus[];
   bijgewerkt: string;
   nacht_fallback: boolean;
+  /** Alle GTFS-routekoppelingen op echte perrons binnen de 350m-cluster. */
+  lijncatalogus?: ZoekLijn[];
   aantal: number;
   haltes: { id: string; naam: string; afstand_m: number; perron: string }[];
   vertrekken: (Vertrek & {

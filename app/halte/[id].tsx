@@ -12,7 +12,7 @@ import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { storingPastBijModus } from "../../lib/storingPerModus";
 import { klok } from "../../lib/format";
-import { filterHalteVertrekken, uniekeHalteLijnen } from "../../lib/halteLijnFilter";
+import { filterHalteVertrekken, zichtbareStatischeLijnen } from "../../lib/halteLijnFilter";
 import { voegStationVertrektijdenToe } from "../../lib/stationGroups";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Vertrek } from "../../lib/types";
@@ -73,9 +73,17 @@ export default function Haltebord() {
     if (id) zetFeedbackContext({ view: "halte", stop_id: id, stop_name: naam });
   }, [id, naam, zetFeedbackContext]);
   const fav = isFavoriet(id);
+  // Een zoekkaart levert alvast de statische GTFS-routelijst mee;
+  // de live API levert de volledige halte-/350m-stationscatalogus.
+  const lijnCatalogus = useMemo(() => {
+    try { return geldigeLijnen(JSON.parse(String(p.lijnen || "[]")), 250); }
+    catch { return []; }
+  }, [p.lijnen]);
+  const statischeLijnen = h?.lijncatalogus?.length ? h.lijncatalogus : lijnCatalogus;
   // De gekozen zoekkaart blijft filterbaar, zelfs als die modus momenteel
   // geen vertrektijden in het API-tijdvenster heeft (bijv. laatste pont).
-  const modi = [...new Set([...(h?.modi || []), ...(h?.vertrekken || []).map(v => v.modus),
+  const modi = [...new Set([...(h?.modi || []), ...statischeLijnen.map(v => v.modus),
+    ...(h?.vertrekken || []).map(v => v.modus),
     ...(gevraagdeModus ? [gevraagdeModus] : [])].filter((m): m is string =>
       typeof m === "string" && m.trim().length > 0))]
     .sort((a, b) => {
@@ -95,29 +103,19 @@ export default function Haltebord() {
         : modi.includes("train") ? "train" : modi[0])
       : "alles";
   const chips: ModusChip[] = tabModi.map(modaliteitChip);
-  const uniekeLijnen = useMemo(() => uniekeHalteLijnen(h?.vertrekken ?? []), [h?.vertrekken]);
+  const uniekeLijnen = useMemo(
+    () => zichtbareStatischeLijnen(statischeLijnen, actieveModus),
+    [statischeLijnen, actieveModus]
+  );
   // Na een GTFS-refresh kan een lijn verdwijnen: voorkom een verouderd leeg filter.
   const geselecteerdeLijn = selectedLine && uniekeLijnen.some(v => v.lijn === selectedLine)
     ? selectedLine : null;
   const vertrekken = filterHalteVertrekken(h?.vertrekken ?? [], actieveModus, geselecteerdeLijn);
 
   const kiesLijn = (lijn: string | null) => {
-    if (lijn === null || lijn === geselecteerdeLijn) {
-      setSelectedLine(null);
-      return;
-    }
-    // Wissel zo nodig naar de bijbehorende modaliteit, zodat een buscategorie
-    // niet per ongeluk een leeg treinbord toont (en omgekeerd).
-    if (actieveModus !== "alles"
-      && !(h?.vertrekken ?? []).some(v => v.lijn.trim() === lijn && v.modus === actieveModus)) {
-      const passendeModus = h?.vertrekken.find(v => v.lijn.trim() === lijn)?.modus;
-      const volgendeModus = tabModi.includes("alles") ? "alles" : passendeModus;
-      if (volgendeModus && tabModi.includes(volgendeModus)) {
-        setHandmatigeModus(true);
-        setGekozenModus(volgendeModus);
-      }
-    }
-    setSelectedLine(lijn);
+    // Chips zijn al gefilterd op de actieve modaliteit.
+    // Nogmaals op dezelfde chip tikken brengt 'Alles' terug.
+    setSelectedLine(lijn === geselecteerdeLijn ? null : lijn);
   };
 
   // Alleen horizontale gebaren (geen verticale scroll) wisselen het tabblad.
@@ -142,9 +140,6 @@ export default function Haltebord() {
   const plaatsSub = plaats && !naam.toLowerCase().includes(plaats.toLowerCase())
     && plaats.toLowerCase() !== haltegroep.toLowerCase() ? plaats : "";
   const groepSub = [plaatsSub, haltegroep].filter(Boolean).join(" · ");
-  let lijnCatalogus: ReturnType<typeof geldigeLijnen> = [];
-  try { lijnCatalogus = geldigeLijnen(JSON.parse(String(p.lijnen || "[]"))); } catch { /* Navigatieparameter is optioneel. */ }
-
   const openRit = (v: Vertrek) => {
     if (!v.rit) return;
     router.push({
@@ -223,6 +218,19 @@ export default function Haltebord() {
           />
         }
       />
+      {meerdereModi ? (
+        <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          {tabModi.length <= 3 ? (
+            <Chips<string> opties={chips} waarde={actieveModus}
+              onKies={v => { setHandmatigeModus(true); setGekozenModus(v); setSelectedLine(null); }} vol />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <Chips<string> opties={chips} waarde={actieveModus}
+                onKies={v => { setHandmatigeModus(true); setGekozenModus(v); setSelectedLine(null); }} />
+            </ScrollView>
+          )}
+        </View>
+      ) : null}
       {uniekeLijnen.length >= 2 ? (
         <View style={[s.lijnFilterBalk, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
@@ -244,10 +252,10 @@ export default function Haltebord() {
               const actief = geselecteerdeLijn === lijn.lijn;
               const palet = lijnKleur(
                 lijn.lijn, lijn.modus, lijn.vervoerder,
-                lijn.kleur || lijn.lijn_kleur, lijn.tekstkleur || lijn.lijn_tekstkleur
+                lijn.kleur, lijn.tekstkleur
               );
               return (
-                <Pressable key={lijn.lijn}
+                <Pressable key={`${lijn.modus}:${lijn.lijn}`}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: actief }}
                   accessibilityLabel={`Filter op lijn ${lijn.lijn}`}
@@ -266,19 +274,6 @@ export default function Haltebord() {
               );
             })}
           </ScrollView>
-        </View>
-      ) : null}
-      {meerdereModi ? (
-        <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          {tabModi.length <= 3 ? (
-            <Chips<string> opties={chips} waarde={actieveModus}
-              onKies={v => { setHandmatigeModus(true); setGekozenModus(v); setSelectedLine(null); }} vol />
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <Chips<string> opties={chips} waarde={actieveModus}
-                onKies={v => { setHandmatigeModus(true); setGekozenModus(v); setSelectedLine(null); }} />
-            </ScrollView>
-          )}
         </View>
       ) : null}
       <ScrollView

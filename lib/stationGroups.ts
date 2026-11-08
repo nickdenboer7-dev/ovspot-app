@@ -9,8 +9,15 @@ export function voegStationVertrektijdenToe(station: Halte, cluster: StationVert
   const overige = station.vertrekken.filter(v => v.modus === "metro" || v.modus === "ferry");
   const vertrekken = [...cluster.vertrekken, ...overige]
     .sort((a,b) => (a.vertrek_ms ?? 0) - (b.vertrek_ms ?? 0));
-  const modi = [...new Set([...station.modi, ...cluster.types, ...vertrekken.map(v => v.modus)])];
-  return { ...station, bijgewerkt: cluster.bijgewerkt, vertrekken, modi };
+  // De stationscluster bevat de volledige statische GTFS-trein/bus/tram-lijnen;
+  // metro en veerboot behouden hun eigen bron uit het oude halte-endpoint.
+  const lijncatalogus = cluster.lijncatalogus
+    ? [...cluster.lijncatalogus, ...(station.lijncatalogus ?? [])
+        .filter(v => v.modus === "metro" || v.modus === "ferry")]
+    : station.lijncatalogus;
+  const modi = [...new Set([...station.modi, ...cluster.types,
+    ...(lijncatalogus ?? []).map(v => v.modus), ...vertrekken.map(v => v.modus)])];
+  return { ...station, bijgewerkt: cluster.bijgewerkt, vertrekken, modi, lijncatalogus };
 }
 
 /**

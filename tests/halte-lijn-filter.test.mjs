@@ -55,20 +55,20 @@ test("Routekleuren en GTFS-kleur worden meegenomen zonder ongeldige lege chips",
 
 test("Een chip wordt opnieuw Alles bij tweede tik; na moduswissel reset selectie",()=>{
   assert.match(bron,/const \[selectedLine, setSelectedLine\] = useState<string \| null>\(null\)/);
-  assert.match(bron,/if \(lijn === null \|\| lijn === geselecteerdeLijn\) \{\s*setSelectedLine\(null\)/);
-  assert.match(bron,/setSelectedLine\(lijn\)/);
+  assert.match(bron,/setSelectedLine\(lijn === geselecteerdeLijn \? null : lijn\)/);
+  assert.match(bron,/zichtbareStatischeLijnen\(statischeLijnen, actieveModus\)/);
   assert.match(bron,/const geselecteerdeLijn = selectedLine && uniekeLijnen.some/);
   assert.match(bron,/filterHalteVertrekken\(h\?\.vertrekken \?\? \[\], actieveModus, geselecteerdeLijn\)/);
   assert.match(bron,/setGekozenModus\(tabModi\[volgende\]\);\s*setSelectedLine\(null\)/);
   assert.match(bron,/setGekozenModus\(v\); setSelectedLine\(null\)/);
-  assert.match(bron,/const volgendeModus = tabModi.includes\("alles"\) \? "alles" : passendeModus/);
+  assert.doesNotMatch(bron,/const volgendeModus = tabModi.includes\("alles"\) \? "alles" : passendeModus/);
 });
 
 test("Scrollbare chipbalk onder Bijgewerkt-header, kleurcontrast en toegankelijkheid",()=>{
   const vanafHeader=bron.search(/<Kop\s+terug/);
-  const vanafLijn=bron.indexOf("{uniekeLijnen.length >= 2 ? (",vanafHeader);
-  const vanafModus=bron.indexOf("{meerdereModi ? (",vanafLijn);
-  assert.ok(vanafHeader>=0 && vanafLijn>vanafHeader && vanafModus>vanafLijn);
+  const vanafModus=bron.indexOf("{meerdereModi ? (",vanafHeader);
+  const vanafLijn=bron.indexOf("{uniekeLijnen.length >= 2 ? (",vanafModus);
+  assert.ok(vanafHeader>=0 && vanafModus>vanafHeader && vanafLijn>vanafModus);
   assert.match(bron,/ScrollView horizontal showsHorizontalScrollIndicator=\{false\}/);
   assert.match(bron,/accessibilityLabel="Alle lijnen"/);
   assert.match(bron,/accessibilityLabel=\{\x60Filter op lijn \$\{lijn.lijn\}\x60\}/);
@@ -77,5 +77,5 @@ test("Scrollbare chipbalk onder Bijgewerkt-header, kleurcontrast en toegankelijk
   assert.match(bron,/borderColor: actief \? colors.accent : colors.border/);
   assert.match(bron,/backgroundColor: palet.bg/);
   assert.match(bron,/color: palet.fg/);
-  assert.match(bron,/kleur \|\| lijn.lijn_kleur, lijn.tekstkleur \|\| lijn.lijn_tekstkleur/);
+  assert.match(bron,/lijn.kleur, lijn.tekstkleur/);
 });

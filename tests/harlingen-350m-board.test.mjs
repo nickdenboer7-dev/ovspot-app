@@ -63,7 +63,7 @@ test("Stationscherm haalt verse multimodale vertrektijden via expliciete v2-url"
   const back=readFileSync(new URL("../backend/board_v2.py",import.meta.url),"utf8");
   const server=readFileSync(new URL("../backend/api_v2_kv8.py",import.meta.url),"utf8");
   assert.match(back,/CLUSTER_RADIUS_M = 350/);
-  assert.match(server,/2\.0\.18-harlingen-radius350/);
+  assert.match(server,/2\.0\.19-static-haltelijnen/);
   assert.match(api,/stationVertrektijden: \(id: string, max = 60\)/);
   assert.match(api,/\/vertrektijden\?halte_id=\$\{encodeURIComponent\(id\)\}/);
   assert.match(api,/get<StationVertrektijden>\([\s\S]*?API_V2_BASE/);

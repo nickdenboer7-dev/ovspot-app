@@ -57,5 +57,5 @@ test('haltebord heeft Trein/Bus-modusknoppen en horizontale swipe zonder vertica
   assert.match(code,/tabModi\.map\(modaliteitChip\)/);
   assert.match(code,/const volgorde = \["train", "metro", "tram", "bus", "ferry"\]/);
   assert.match(code,/\bvol \/>/);
-  assert.match(code,/v\.modus === actieveModus/);
+  assert.match(code,/filterHalteVertrekken\(h\?\.vertrekken \?\? \[\], actieveModus, geselecteerdeLijn\)/);
 });

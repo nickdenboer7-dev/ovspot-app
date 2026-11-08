@@ -38,6 +38,7 @@ LOCK = threading.Lock()
 HALTE_CACHE = {}
 NEARBY_CACHE = {}
 ROUTE_CATALOG_CACHE = {}
+STATIC_ROUTE_LINES_CACHE = {}
 NS_CACHE = {"at":0.0,"data":{}}
 _GTFS_MAX_AGE = 72 * 3600
 
@@ -569,7 +570,8 @@ def _halte_uncached(stop_id,modus,limit,gtfs,kv8,now,ns):
     if stop is None:
         return None
     rows=_schedule(gtfs,stop["ids"],now,limit=max(90,int(limit)*4))
-    modes=sorted({r["mode"] for r in rows})  # v1: modi vóór het vertrekfilter bepalen
+    lijncatalogus=_static_route_lines(gtfs, stop["ids"])
+    modes=sorted({r["mode"] for r in rows}|{x["modus"] for x in lijncatalogus})
     if modus=="trein":
         rows=[r for r in rows if r["mode"]=="train"]
     elif modus=="bus":
@@ -598,6 +600,7 @@ def _halte_uncached(stop_id,modus,limit,gtfs,kv8,now,ns):
         notices=[]
     return {"id":str(stop_id),"naam":name,"plaats":city,
             "lat":stop["lat"],"lon":stop["lon"],"modi":modes,
+            "lijncatalogus":lijncatalogus,
             "bijgewerkt":_now_iso(now),"verouderd":bool(age>_GTFS_MAX_AGE),
             "vertrekken":_balanced_departures(deps,limit) if modus=="alles" else deps[:limit],
             "storingen":notices}
@@ -707,11 +710,13 @@ def vertrektijden(gtfs,kv8,stop_id=None,lat=None,lon=None,limit=30,now=None):
     resolved_id,name,base_lat,base_lon=spot
     quays=_quays_within_radius(gtfs,base_lat,base_lon)
     ids=[q["id"] for q in quays]
+    lijncatalogus=[l for l in _static_route_lines(gtfs,ids) if l["modus"] in BOARD_TYPES]
     modes=("bus","train","tram")
     if not ids:
         return {
             "halte_id":resolved_id,"naam":name,"lat":base_lat,"lon":base_lon,
             "cluster_straal_m":CLUSTER_RADIUS_M,"haltes":quays,"types":[],
+            "lijncatalogus":[],
             "bijgewerkt":_now_iso(now),"venster_min":120,
             "nacht_fallback":False,"aantal":0,"vertrekken":[]
         }
@@ -733,10 +738,11 @@ def vertrektijden(gtfs,kv8,stop_id=None,lat=None,lon=None,limit=30,now=None):
             found=_vertrektijden_items(rows,gtfs,kv8,now,want)
             if len(found)>=want:
                 break
-    types=sorted({dep["type"] for dep in found})
+    types=sorted({dep["type"] for dep in found}|{l["modus"] for l in lijncatalogus})
     return {
         "halte_id":resolved_id,"naam":name,"lat":base_lat,"lon":base_lon,
         "cluster_straal_m":CLUSTER_RADIUS_M,"haltes":quays,"types":types,
+        "lijncatalogus":lijncatalogus,
         "bijgewerkt":_now_iso(now),"venster_min":120,
         "nacht_fallback":fallback,"zoekhorizon_uren":round(horizon/3600,2),
         "aantal":len(found),"vertrekken":found
@@ -851,6 +857,57 @@ def _nearby_stops(con,lat,lon,straal):
         if old is None or distance<old[0]:
             groups[key]=(distance,str(sid),str(name or ""))
     return sorted(groups.values(),key=lambda x:(x[0],x[1]))
+
+
+def _static_route_lines(gtfs, stop_ids):
+    """Statische GTFS-routekoppelingen; bevat ook lijnen zonder huidig vertrek.
+
+    De cache hangt af van de GTFS-databaseversie én de exacte halte-ID's.
+    Een station vraagt alle quays binnen 350m op, een losse halte zijn _resolve IDs.
+    """
+    ids=tuple(sorted({str(i) for i in stop_ids if i}))
+    if not ids:
+        return []
+    def build():
+        catalog={}
+        for start in range(0,len(ids),200):
+            batch=ids[start:start+200]
+            marks=",".join("?" for _ in batch)
+            sql=("SELECT DISTINCT r.line,r.route_type,r.agency_id,"
+                 "r.route_color,r.route_text_color "
+                 "FROM stop_times st INDEXED BY idx_stop_times_stop "
+                 "JOIN trips t ON t.trip_id=st.trip_id "
+                 "JOIN routes r ON r.route_id=t.route_id "
+                 "WHERE st.stop_id IN ("+marks+")")
+            for raw_line,typ,agency,color,text_color in gtfs.execute(sql,batch):
+                modus=MODES.get(typ)
+                if not modus or not str(raw_line or "").strip():
+                    continue
+                line=_line_name(raw_line,modus)
+                carrier=CARRIERS.get(str(agency or ""),str(agency or ""))
+                key=(modus,line,carrier)
+                def css_color(v):
+                    s=str(v or "").strip().lstrip("#").upper()
+                    return "#"+s if re.fullmatch("[0-9A-F]{6}",s) else None
+                palette=(css_color(color),css_color(text_color))
+                previous=catalog.get(key)
+                if previous is None or sum(bool(c) for c in palette)>sum(bool(c) for c in previous):
+                    catalog[key]=palette
+        order={"train":0,"metro":1,"tram":2,"bus":3,"ferry":4}
+        def sorting(k):
+            mode,line,carrier=k
+            match=re.fullmatch(r"N?(\d+)",line,re.I)
+            return (order.get(mode,9), 0 if match else 1,
+                    int(match.group(1)) if match else 0,line.casefold(),carrier)
+        results=[]
+        for mode,line,carrier in sorted(catalog,key=sorting):
+            bg,fg=catalog[(mode,line,carrier)]
+            item={"lijn":line,"modus":mode,"vervoerder":carrier}
+            if bg:item["kleur"]=bg
+            if fg:item["tekstkleur"]=fg
+            results.append(item)
+        return results
+    return _cached(STATIC_ROUTE_LINES_CACHE,(_db_sig(),ids),600,build)
 
 
 def _route_catalog(con, stop_ids):

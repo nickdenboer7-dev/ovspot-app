@@ -28,7 +28,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from kv8_normalisatie import TZ, normaliseer, ritverloop_haltes
 
-VERSION = "2.0.18-harlingen-radius350"
+VERSION = "2.0.19-static-haltelijnen"
 KV8_DB = os.environ.get("OVSPOT_KV8_DB", "/var/lib/ovspot-app-kv8/kv8.db")
 GTFS_DB = os.environ.get("OVSPOT_GTFS_DB", "/home/ubuntu/kv15-bot/gtfs.db")
 HOST = os.environ.get("OVSPOT_API_HOST", "127.0.0.1")

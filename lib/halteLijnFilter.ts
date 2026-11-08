@@ -1,4 +1,23 @@
-import type { Vertrek } from "./types";
+import type { Vertrek, ZoekLijn } from "./types";
+
+/** Alleen statische GTFS-routekoppelingen; nooit afhangen van het huidige vertrekvenster. */
+export function zichtbareStatischeLijnen(
+  lijncatalogus: readonly ZoekLijn[], actieveModus: string
+): ZoekLijn[] {
+  const uniek = new Map<string, ZoekLijn>();
+  for (const item of lijncatalogus) {
+    if (!item || typeof item.lijn !== "string" || typeof item.modus !== "string") continue;
+    const lijn = item.lijn.trim();
+    if (!lijn || (actieveModus !== "alles" && item.modus !== actieveModus)) continue;
+    const key = item.modus + ":" + lijn;
+    const bestaand = uniek.get(key);
+    if (!bestaand || (!bestaand.kleur && item.kleur)) {
+      uniek.set(key, { ...item, lijn });
+    }
+  }
+  return [...uniek.values()];
+}
+
 
 /** Afgeleide lijnen uit de echte API-vertrekken, niet uit een geplande lijnencatalogus. */
 export type HalteLijnFilter = Pick<Vertrek, "lijn" | "modus" | "vervoerder" | "kleur" | "tekstkleur" | "lijn_kleur" | "lijn_tekstkleur">;
