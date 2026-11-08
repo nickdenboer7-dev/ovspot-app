@@ -186,15 +186,17 @@ export function LiveRitKaart({
             anchor={{ x: 0.5, y: 0.5 }}
             tracksViewChanges={false}
           >
-            <View style={[s.voertuigMarker, {
-              backgroundColor: colors.accent,
-              borderColor: colors.surface
-            }]}>
-              <Ionicons name="navigate" color={colors.onAccent} size={18} />
-              <Text style={[s.markerLijn, { color: colors.onAccent }]}
-                numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
-                {lijnnummer || positie.lijnnummer}
-              </Text>
+            <View style={s.voertuigMarkerContainer}>
+              <View style={[s.richtingSnavel, { borderBottomColor: colors.accent }]} />
+              <View style={[s.voertuigMarker, {
+                backgroundColor: colors.accent,
+                borderColor: colors.surface
+              }]}>
+                <Text style={[s.markerLijn, { color: "#FFFFFF" }]}
+                  numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+                  {lijnnummer || positie.lijnnummer}
+                </Text>
+              </View>
             </View>
           </Marker.Animated>
         ) : null}
@@ -241,7 +243,7 @@ export function LiveRitKaart({
         </Text>
         <Text style={[s.statusSub, { color: colors.sub }]} numberOfLines={2}>
           {positie
-            ? `Lijn ${lijnnummer || positie.lijnnummer} · NDOV · ${positie.leeftijd_s} sec geleden`
+            ? `Lijn ${lijnnummer || positie.lijnnummer} · ${positie.leeftijd_s} sec geleden`
             : "We controleren elke 5 seconden of deze rit een live voertuig heeft."}
         </Text>
 
@@ -267,12 +269,21 @@ const s = StyleSheet.create({
     borderRadius: 25, borderWidth: 1, alignItems: "center", justifyContent: "center",
     elevation: 4, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 7
   },
+  // Buitenste marker is rondom het hart van de cirkel gecentreerd.
+  // Native Marker rotation draait het snaveltje (noord/bearing=0 bovenaan) mee.
+  voertuigMarkerContainer: { width: 44, height: 52, alignItems: "center", justifyContent: "center" },
+  richtingSnavel: {
+    position: "absolute", left: 18, top: 0, width: 0, height: 0,
+    borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 9,
+    borderLeftColor: "transparent", borderRightColor: "transparent"
+  },
   voertuigMarker: {
-    minWidth: 59, height: 59, borderRadius: 30, paddingHorizontal: 5,
-    borderWidth: 3, alignItems: "center", justifyContent: "center",
+    position: "absolute", top: 8, left: 4,
+    width: 36, height: 36, borderRadius: 18,
+    borderWidth: 2, alignItems: "center", justifyContent: "center",
     elevation: 4
   },
-  markerLijn: { fontSize: 13, fontWeight: "900", textAlign: "center", maxWidth: 51 },
+  markerLijn: { fontSize: 13, fontWeight: "bold", textAlign: "center", maxWidth: 30, includeFontPadding: false },
   halteDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3 },
   halteKomend: { backgroundColor: "#FFFFFF", borderColor: "#1E3A8A" },
   halteGepasseerd: { backgroundColor: "#9CA3AF", borderColor: "#6B7280" },
