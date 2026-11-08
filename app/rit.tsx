@@ -175,7 +175,7 @@ export default function Ritverloop() {
               style={[s.rij, scheiding]}
               onLayout={huidig || naderend ? (e) => scrollNaar(e.nativeEvent.layout.y) : undefined}
               accessible
-              accessibilityLabel={`${h.naam}${h.plaats ? `, ${h.plaats}` : ""}, ${h.vervalt ? "vervalt" : h.verwacht}${vertraagd ? `, gepland ${h.gepland}` : ""}${geweest ? ", geweest" : ""}${huidig ? (bevestigd ? ", halteert nu" : ", verwachte positie") : ""}`}
+              accessibilityLabel={`${h.naam}${h.plaats ? `, ${h.plaats}` : ""}, ${h.vervalt ? "vervalt" : h.verwacht}${aanVertrek ? `, ${aanVertrek}` : ""}${vertraagd ? `, gepland ${h.gepland}` : ""}${geweest ? ", geweest" : ""}${huidig ? (bevestigd ? ", halteert nu" : ", verwachte positie") : ""}`}
             >
               <View style={s.tijdKol}>
                 <Text style={[s.tijd, { color: tijdKleur, textDecorationLine: h.vervalt ? "line-through" : "none" }]}>
@@ -238,7 +238,7 @@ export default function Ritverloop() {
                 ) : null}
 
                 {aanVertrek ? (
-                  <Text style={[s.wacht, { color: colors.sub }]} numberOfLines={1}>
+                  <Text style={[s.wacht, { color: colors.sub }]} numberOfLines={0}>
                     {aanVertrek}
                   </Text>
                 ) : null}
@@ -421,7 +421,9 @@ const s = StyleSheet.create({
   naamRij: { flexDirection: "row", alignItems: "center", gap: 8 },
   naam: { fontSize: 17, fontWeight: "700", flexShrink: 1 },
   plaats: { fontSize: 14, marginTop: 2 },
-  wacht: { fontSize: 13, marginTop: 1 },
+  // Aankomst + vertrek krijgen de volledige breedte van de flexibele naamkolom
+  // en lopen bij smalle schermen op een volgende regel door (geen ellips).
+  wacht: { fontSize: 13, lineHeight: 19, marginTop: 2, flexWrap: "wrap", alignSelf: "stretch", flexShrink: 1 },
   liveVast: { paddingHorizontal: 10, paddingTop: 10 },
   spoor: { fontSize: 13, alignSelf: "center", paddingLeft: 6 },
   nuTitel: { fontSize: 17, fontWeight: "800" },
