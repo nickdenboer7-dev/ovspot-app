@@ -20,11 +20,12 @@ test("Opnieuw formatteren voegt nooit dubbele zero-width spaces toe", () => {
   assert.equal(stationsnaamMetBreekpunten(eenKeer), eenKeer);
 });
 
-test("Tijdlijn gebruikt simple Android-textlayout en expliciete koppeltekenbreekpunten", () => {
+test("Tijdlijn toont haltes voortaan altijd op één regel en gebruikt tail-ellips", () => {
   const code = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
-  assert.match(code, /numberOfLines=\{2\}\s+textBreakStrategy="simple"/);
-  assert.match(code, /\{stationsnaamMetBreekpunten\(h\.naam\)\}/);
-  assert.match(code, /naamTitel: \{[^}]*flex: 1, minWidth: 0, paddingRight: 8/);
+  assert.match(code, /numberOfLines=\{1\}\s+ellipsizeMode="tail"/);
+  assert.match(code, /\{h\.naam\}/);
+  assert.doesNotMatch(code, /stationsnaamMetBreekpunten\(h\.naam\)/);
+  assert.match(code, /naamTitel: \{[^}]*flex: 1, flexShrink: 1, minWidth: 0, paddingRight: 8/);
   assert.match(code, /naamRij: \{[^}]*justifyContent: "space-between"/);
   assert.match(code, /spoor: \{[^}]*flexShrink: 0/);
 });

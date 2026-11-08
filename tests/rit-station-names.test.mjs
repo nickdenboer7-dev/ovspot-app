@@ -4,11 +4,12 @@ import { readFileSync } from "node:fs";
 
 const code = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
 
-test("Lansingerland-Zoetermeer behoudt volledige woorden met maximaal twee regels", () => {
-  assert.match(code, /<Text\s+style=\{\[\s*s\.naam,[\s\S]*?numberOfLines=\{2\}\s+textBreakStrategy="simple"\s+adjustsFontSizeToFit=\{true\}\s+minimumFontScale=\{0\.8\}/);
-  assert.match(code, /\{stationsnaamMetBreekpunten\(h\.naam\)\}\s*<\/Text>/);
-  assert.match(code, /naam: \{[^}]*flexShrink: 1, flexWrap: "wrap"/);
-  assert.match(code, /naamTitel: \{[^}]*flex: 1, minWidth: 0, paddingRight: 8/);
+test("Haltenamen blijven op één regel en krijgen een nette ellips, zonder losse laatste letter", () => {
+  assert.match(code, /<Text\s+style=\{\[\s*s\.naam,[\s\S]*?numberOfLines=\{1\}\s+ellipsizeMode="tail"/);
+  assert.match(code, /\{h\.naam\}\s*<\/Text>/);
+  assert.doesNotMatch(code, /stationsnaamMetBreekpunten\(h\.naam\)/);
+  assert.match(code, /naam: \{[^}]*flexShrink: 1/);
+  assert.match(code, /naamTitel: \{[^}]*flex: 1, flexShrink: 1, minWidth: 0, paddingRight: 8/);
 });
 
 test("Spoor staat rechts in de stationsnaamrij, met eigen ruimte zonder krimp", () => {

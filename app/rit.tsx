@@ -10,7 +10,6 @@ import { useApp } from "../context/AppProvider";
 import type { Palette } from "../constants/theme";
 import { api } from "../lib/api";
 import { bestemmingVoorWeergave, isTrein, ritNummer } from "../lib/format";
-import { stationsnaamMetBreekpunten } from "../lib/stationsnaam";
 import { usePolling } from "../lib/hooks";
 import { markeerRitHaltes } from "../lib/liveRitKaart";
 import { positieBevestigd, positieTekst, ritBannerTitel, ritBronLabel } from "../lib/wayfindingV2";
@@ -233,17 +232,12 @@ export default function Ritverloop() {
                       style={[
                         s.naam,
                         { color: geweest || h.vervalt ? colors.muted : colors.text, textDecorationLine: h.vervalt ? "line-through" : "none" },
-                        (huidig || naderend || beginhalte || kv8Volgende) ? {
-                          fontWeight: "800", color: bevestigd && huidig ? colors.live
-                            : (huidig || naderend || kv8Volgende) ? colors.infoText : colors.text
-                        } : null
+                        (huidig || naderend || beginhalte || kv8Volgende) ? { fontWeight: "800" } : null
                       ]}
-                      numberOfLines={2}
-                      textBreakStrategy="simple"
-                      adjustsFontSizeToFit={true}
-                      minimumFontScale={0.8}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
                     >
-                      {stationsnaamMetBreekpunten(h.naam)}
+                      {h.naam}
                     </Text>
                   </View>
                   {h.spoor && trein ? (
@@ -377,9 +371,10 @@ export default function Ritverloop() {
                 <Text style={[s.liveText, { color: isLive ? colors.live : colors.infoText }]}>
                   {bannerTitel}
                 </Text>
-                {rit.vertraging_min > 0 ? (
-                  <Text style={[s.liveVertraging, { color: colors.delay }]}>
-                    +{rit.vertraging_min} min
+                {Number.isFinite(rit.vertraging_min) ? (
+                  <Text style={[s.liveVertraging, { color: rit.vertraging_min > 0 ? colors.delay : colors.live }]}>
+                    {rit.vertraging_min > 0 ? `· +${rit.vertraging_min} min`
+                      : rit.vertraging_min === 0 ? "· Op tijd" : `· ${rit.vertraging_min} min`}
                   </Text>
                 ) : null}
               </View>
@@ -485,8 +480,8 @@ const s = StyleSheet.create({
   // Spoor rechts in dezelfde rij; de naam krijgt de rest van de breedte.
   // Eindhalte/Beginhalte-badges staan afzonderlijk eronder.
   naamRij: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", minWidth: 0 },
-  naamTitel: { flex: 1, minWidth: 0, paddingRight: 8 },
-  naam: { fontSize: 17, fontWeight: "700", flexShrink: 1, flexWrap: "wrap" },
+  naamTitel: { flex: 1, flexShrink: 1, minWidth: 0, paddingRight: 8 },
+  naam: { fontSize: 17, fontWeight: "700", flexShrink: 1 },
   kenmerken: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 5 },
   plaats: { fontSize: 14, marginTop: 2 },
   // Aankomst + vertrek krijgen de volledige breedte van de flexibele naamkolom
