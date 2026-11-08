@@ -9,6 +9,7 @@ import { useApp } from "../context/AppProvider";
 import type { Palette } from "../constants/theme";
 import { api } from "../lib/api";
 import { bestemmingVoorWeergave, isTrein, ritNummer } from "../lib/format";
+import { stationsnaamMetBreekpunten } from "../lib/stationsnaam";
 import { usePolling } from "../lib/hooks";
 import { positieBevestigd, positieTekst, ritBannerTitel, ritBronLabel } from "../lib/wayfindingV2";
 import type { Rit, RitHalte } from "../lib/types";
@@ -217,10 +218,11 @@ export default function Ritverloop() {
                         } : null
                       ]}
                       numberOfLines={2}
+                      textBreakStrategy="simple"
                       adjustsFontSizeToFit={true}
                       minimumFontScale={0.8}
                     >
-                      {h.naam}
+                      {stationsnaamMetBreekpunten(h.naam)}
                     </Text>
                   </View>
                   {h.spoor && trein ? (
