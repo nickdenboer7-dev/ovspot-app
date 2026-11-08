@@ -83,10 +83,57 @@ export default function Dichtbij() {
   const oudeData = vorigeHaltes && vorigeHaltes.key === key && Date.now() - vorigeHaltes.ts < 90_000
     ? vorigeHaltes.data : null;
   const gegevens = poll.data ?? oudeData;
-  const haltes = gegevens?.haltes ?? [];
+  // Paginering voorkomt een limiet op de eerste 8 haltes en houdt het laden snel.
+  // Bij verder scrollen worden de volgende GTFS-haltes binnen dezelfde radius opgehaald.
+  const [vervolg, setVervolg] = useState<{
+    key: string; haltes: DichtbijData["haltes"]; heeft_meer: boolean; volgende_offset: number | null;
+  } | null>(null);
+  const [meerLaden, setMeerLaden] = useState(false);
+  const [meerFout, setMeerFout] = useState<string | null>(null);
+  const paginaBezig = useRef(false);
+  const actueleKey = useRef(key);
+  actueleKey.current = key;
+  const heeftMeer = vervolg?.key === key ? vervolg.heeft_meer : !!gegevens?.heeft_meer;
+  const volgendeOffset = vervolg?.key === key ? vervolg.volgende_offset : gegevens?.volgende_offset;
+  const haltes = useMemo(() => {
+    const items = [...(gegevens?.haltes ?? []), ...(vervolg?.key === key ? vervolg.haltes : [])];
+    return [...new Map(items.map(item => [item.id, item])).values()]
+      .sort((a, b) => a.afstand_m - b.afstand_m);
+  }, [gegevens?.haltes, vervolg, key]);
   // Alleen de Dichtbij-weergave clustert; alle originele IDs blijven beschikbaar
   // voor storingen, ritlinks en de afzonderlijke halteborden.
-  const halteGroepen = useMemo(() => groepeerDichtbijHaltes(gegevens?.haltes ?? []), [gegevens?.haltes]);
+  const halteGroepen = useMemo(() => groepeerDichtbijHaltes(haltes), [haltes]);
+
+  const laadMeer = useCallback(async () => {
+    if (!pos || !heeftMeer || volgendeOffset == null || paginaBezig.current) return;
+    paginaBezig.current = true;
+    setMeerLaden(true);
+    const begonnenMet = key;
+    try {
+      const pagina = await binnenLocatieTimeout(
+        () => api.dichtbij(pos.lat, pos.lon, instellingen.straal, volgendeOffset), 12_000
+      );
+      if (actueleKey.current !== begonnenMet) return;
+      setVervolg(oud => {
+        const bewaarde = oud?.key === begonnenMet ? oud.haltes : [];
+        const uniek = new Map([...bewaarde, ...pagina.haltes].map(item => [item.id, item]));
+        return {
+          key: begonnenMet,
+          haltes: [...uniek.values()],
+          heeft_meer: !!pagina.heeft_meer,
+          volgende_offset: pagina.volgende_offset ?? null
+        };
+      });
+      setMeerFout(null);
+    } catch (e: any) {
+      if (actueleKey.current === begonnenMet) {
+        setMeerFout(e?.message || "Meer haltes laden lukt nu niet");
+      }
+    } finally {
+      paginaBezig.current = false;
+      setMeerLaden(false);
+    }
+  }, [pos, key, instellingen.straal, heeftMeer, volgendeOffset]);
 
   useEffect(() => {
     if (poll.data && key !== "geen") vorigeHaltes = { key, data: poll.data, ts: Date.now() };
@@ -172,10 +219,20 @@ export default function Dichtbij() {
       </View>
       <ScrollView
         contentContainerStyle={s.lijst}
+        scrollEventThrottle={250}
+        onScroll={({ nativeEvent }) => {
+          const { contentOffset, layoutMeasurement, contentSize } = nativeEvent;
+          if (heeftMeer && !meerLaden && contentOffset.y > 0
+            && layoutMeasurement.height + contentOffset.y >= contentSize.height - 240) {
+            void laadMeer();
+          }
+        }}
         refreshControl={
           <RefreshControl
             refreshing={false}
             onRefresh={() => {
+              setVervolg(null);
+              setMeerFout(null);
               void zoekLocatie();
               void poll.verversen();
             }}
@@ -185,7 +242,7 @@ export default function Dichtbij() {
       >
         <View style={s.titelRij}>
           <Text style={[s.titel, { color: colors.text }]} accessibilityRole="header">
-            Haltes in de buurt
+            Haltes binnen {afstand(instellingen.straal)}
           </Text>
           {pos ? (
             <View style={[s.locatieChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -203,6 +260,21 @@ export default function Dichtbij() {
         ) : null}
         {poll.fout && gegevens ? <FoutBalk tekst={poll.fout} /> : null}
         {inhoud}
+        {meerFout ? <FoutBalk tekst={meerFout} /> : null}
+        {heeftMeer && gegevens ? (
+          <Pressable
+            disabled={meerLaden}
+            onPress={() => void laadMeer()}
+            style={[s.meerKnop, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            accessibilityRole="button"
+            accessibilityLabel={meerLaden ? "Meer haltes laden" : "Meer haltes binnen de ingestelde afstand tonen"}
+          >
+            <Ionicons name={meerLaden ? "ellipsis-horizontal" : "chevron-down"} size={19} color={colors.accent} />
+            <Text style={[s.meerTekst, { color: colors.accent }]}>
+              {meerLaden ? "Meer haltes laden…" : `Meer haltes binnen ${afstand(instellingen.straal)} tonen`}
+            </Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -216,5 +288,7 @@ const s = StyleSheet.create({
   titelRij: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2, gap: 10, marginBottom: 1 },
   titel: { fontSize: 18, fontWeight: "700", letterSpacing: -0.2, flexShrink: 1 },
   bron: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
-  locatieChip: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, maxWidth: "49%" }
+  locatieChip: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, maxWidth: "49%" },
+  meerKnop: { borderWidth: 1, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 },
+  meerTekst: { fontSize: 14, fontWeight: "700" }
 });

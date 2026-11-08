@@ -604,7 +604,7 @@ def _nearby_stops(con,lat,lon,straal):
         """SELECT stop_id,stop_name,lat,lon,parent_station
            FROM stops INDEXED BY idx_stops_latlon
            WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?
-             AND location_type=0 LIMIT 1500""",
+             AND location_type=0""",
         (lat-dy,lat+dy,lon-dx,lon+dx)
     ).fetchall()
     groups={}
@@ -673,18 +673,22 @@ def _route_catalog(con, stop_ids):
     return result
 
 
-def dichtbij(lat,lon,straal,max_haltes,gtfs,kv8,now=None):
+def dichtbij(lat,lon,straal,max_haltes,gtfs,kv8,now=None,offset=0):
     now=time.time() if now is None else now
     sig=_db_sig()
-    key=(sig,round(lat,4),round(lon,4),int(straal),int(max_haltes))
+    key=(sig,round(lat,4),round(lon,4),int(straal),int(max_haltes),int(offset))
     def build():
         nearby=_nearby_stops(gtfs,lat,lon,straal)
         items=[]
         selected_physical_ids=set()
         ns=None
-        for distance,sid,rawname in nearby:
+        begin=max(0,int(offset))
+        volgend=begin
+        for idx in range(begin,len(nearby)):
             if len(items)>=max_haltes:
                 break
+            volgend=idx+1
+            distance,sid,rawname=nearby[idx]
             resolved=_resolve(gtfs,sid)
             source_ids=(resolved["ids"] if resolved else [sid])
             if selected_physical_ids.intersection(source_ids):
@@ -740,5 +744,10 @@ def dichtbij(lat,lon,straal,max_haltes,gtfs,kv8,now=None):
                 side=("zuidzijde" if index==0 else "noordzijde" if index==len(ordered)-1 else "midden") if use_lat else (
                     "westzijde" if index==0 else "oostzijde" if index==len(ordered)-1 else "midden")
                 item["sub"]=kind+" · "+side
-        return {"bijgewerkt":_now_iso(now),"haltes":items}
+        # Offset verwijst naar de gesorteerde GTFS-kandidaten, niet naar het
+        # aantal afgeleverde kaarten: ook lege en samengevoegde haltes tellen
+        # mee. Zo worden verder gelegen haltes niet overgeslagen bij scrollen.
+        return {"bijgewerkt":_now_iso(now),"haltes":items,
+                "radius":int(straal),"heeft_meer":volgend<len(nearby),
+                "volgende_offset":volgend if volgend<len(nearby) else None}
     return _cached(NEARBY_CACHE,key,20,build)

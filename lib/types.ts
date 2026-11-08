@@ -68,7 +68,14 @@ export type DichtbijHalte = {
   fout: string | null;
 };
 
-export type Dichtbij = { ok: boolean; bijgewerkt: string; haltes: DichtbijHalte[] };
+export type Dichtbij = {
+  ok: boolean;
+  bijgewerkt: string;
+  haltes: DichtbijHalte[];
+  radius?: number;
+  heeft_meer?: boolean;
+  volgende_offset?: number | null;
+};
 
 export type HalteState = "PASSED" | "ARRIVED" | "APPROACHING" | "SCHEDULED";
 export type RitStatus = "DRIVING" | "ARRIVED" | "SCHEDULED" | "PASSED" | "INCOMING" | string;

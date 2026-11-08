@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
 import type { Dichtbij, Filter, Halte, Rit, RitRef, StoringenAntwoord, Zoek } from "./types";
 import { freshApiUrl } from "./freshRequest";
+import { dichtbijPad } from "./dichtbijQuery";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiBase?: string };
 export const API_BASE = (extra.apiBase || "https://ovspot.nl/app/v1").replace(/\/$/, "");
@@ -61,8 +62,8 @@ export function ritParams(ref: RitRef): string {
 }
 
 export const api = {
-  dichtbij: (lat: number, lon: number, straal: number) =>
-    get<Dichtbij>(`/dichtbij?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}&straal=${Math.round(straal)}&max=8`),
+  dichtbij: (lat: number, lon: number, straal: number, offset = 0) =>
+    get<Dichtbij>(dichtbijPad(lat, lon, straal, offset)),
   // Vertrek[].kleur/tekstkleur uit GTFS; oude Live-antwoorden hebben lijn_kleur/lijn_tekstkleur.
   halte: (id: string, modus: Filter = "alles", max = 30) =>
     get<Halte>(`/halte/${encodeURIComponent(id)}?modus=${modus}&max=${max}`),
