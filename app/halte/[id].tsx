@@ -67,7 +67,12 @@ export default function Haltebord() {
   // geen vertrektijden in het API-tijdvenster heeft (bijv. laatste pont).
   const modi = [...new Set([...(h?.modi || []), ...(h?.vertrekken || []).map(v => v.modus),
     ...(gevraagdeModus ? [gevraagdeModus] : [])].filter((m): m is string =>
-      typeof m === "string" && m.trim().length > 0))];
+      typeof m === "string" && m.trim().length > 0))]
+    .sort((a, b) => {
+      const volgorde = ["train", "metro", "tram", "bus", "ferry"];
+      const aIndex = volgorde.indexOf(a), bIndex = volgorde.indexOf(b);
+      return (aIndex < 0 ? 99 : aIndex) - (bIndex < 0 ? 99 : bIndex);
+    });
   const meerdereModi = modi.length >= 2;
   const actieveModus = meerdereModi
     ? (modi.includes(gekozenModus) ? gekozenModus
