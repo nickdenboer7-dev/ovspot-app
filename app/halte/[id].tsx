@@ -12,6 +12,7 @@ import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { storingPastBijModus } from "../../lib/storingPerModus";
 import { klok } from "../../lib/format";
+import { filterHalteVertrekken, uniekeHalteLijnen } from "../../lib/halteLijnFilter";
 import { voegStationVertrektijdenToe } from "../../lib/stationGroups";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Vertrek } from "../../lib/types";
@@ -41,6 +42,8 @@ export default function Haltebord() {
   const [gekozenModus, setGekozenModus] = useState<string>(
     gevraagdeModus || (instellingen.filter === "trein" ? "train" : instellingen.filter)
   );
+  const [selectedLine, setSelectedLine] = useState<string | null>(null);
+  React.useEffect(() => setSelectedLine(null), [id]);
   const [storingenOpen, setStoringenOpen] = useState(false);
   const [handmatigeModus, setHandmatigeModus] = useState(false);
   const [ververst, setVervers] = useState(false);
@@ -91,7 +94,30 @@ export default function Haltebord() {
         : modi.includes("train") ? "train" : modi[0])
       : "alles";
   const chips: ModusChip[] = tabModi.map(modaliteitChip);
-  const vertrekken = (h?.vertrekken || []).filter(v => actieveModus === "alles" || v.modus === actieveModus);
+  const uniekeLijnen = useMemo(() => uniekeHalteLijnen(h?.vertrekken ?? []), [h?.vertrekken]);
+  // Na een GTFS-refresh kan een lijn verdwijnen: voorkom een verouderd leeg filter.
+  const geselecteerdeLijn = selectedLine && uniekeLijnen.some(v => v.lijn === selectedLine)
+    ? selectedLine : null;
+  const vertrekken = filterHalteVertrekken(h?.vertrekken ?? [], actieveModus, geselecteerdeLijn);
+
+  const kiesLijn = (lijn: string | null) => {
+    if (lijn === null || lijn === geselecteerdeLijn) {
+      setSelectedLine(null);
+      return;
+    }
+    // Wissel zo nodig naar de bijbehorende modaliteit, zodat een buscategorie
+    // niet per ongeluk een leeg treinbord toont (en omgekeerd).
+    if (actieveModus !== "alles"
+      && !(h?.vertrekken ?? []).some(v => v.lijn.trim() === lijn && v.modus === actieveModus)) {
+      const passendeModus = h?.vertrekken.find(v => v.lijn.trim() === lijn)?.modus;
+      const volgendeModus = tabModi.includes("alles") ? "alles" : passendeModus;
+      if (volgendeModus && tabModi.includes(volgendeModus)) {
+        setHandmatigeModus(true);
+        setGekozenModus(volgendeModus);
+      }
+    }
+    setSelectedLine(lijn);
+  };
 
   // Alleen horizontale gebaren (geen verticale scroll) wisselen het tabblad.
   const swipeResponder = useMemo(() => PanResponder.create({
@@ -106,6 +132,7 @@ export default function Haltebord() {
       if (volgende >= 0 && volgende < tabModi.length) {
         setHandmatigeModus(true);
         setGekozenModus(tabModi[volgende]);
+        setSelectedLine(null);
       }
     }
   }), [meerdereModi, actieveModus, tabModi.join("|")]);
@@ -161,7 +188,11 @@ export default function Haltebord() {
         <View style={[s.geenInformatie, { backgroundColor: colors.infoBg }]}>
           <Ionicons name="information-circle-outline" size={22} color={colors.infoText} />
           <Text style={[s.geenTekst, { color: colors.infoText }]}>
-            {actieveModus === "alles" ? "Momenteel geen vertrekken in de komende tijd." : `Geen ${modaliteitChip(actieveModus).label.toLowerCase()}vertrekken in de komende tijd.`}
+            {geselecteerdeLijn
+              ? `Geen vertrekken voor lijn ${geselecteerdeLijn} in de komende tijd.`
+              : actieveModus === "alles"
+                ? "Momenteel geen vertrekken in de komende tijd."
+                : `Geen ${modaliteitChip(actieveModus).label.toLowerCase()}vertrekken in de komende tijd.`}
           </Text>
         </View>
       </Kaart>
@@ -191,15 +222,60 @@ export default function Haltebord() {
           />
         }
       />
+      {uniekeLijnen.length >= 2 ? (
+        <View style={[s.lijnFilterBalk, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.lijnFilterInhoud} accessibilityRole="tablist">
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: geselecteerdeLijn === null }}
+              accessibilityLabel="Alle lijnen"
+              onPress={() => kiesLijn(null)}
+              style={[s.lijnFilterChip, {
+                backgroundColor: geselecteerdeLijn === null ? colors.accent : "transparent",
+                borderColor: geselecteerdeLijn === null ? colors.accent : colors.border
+              }]}>
+              <Text style={[s.lijnFilterAlles, {
+                color: geselecteerdeLijn === null ? colors.onAccent : colors.sub
+              }]}>Alles</Text>
+            </Pressable>
+            {uniekeLijnen.map(lijn => {
+              const actief = geselecteerdeLijn === lijn.lijn;
+              const palet = lijnKleur(
+                lijn.lijn, lijn.modus, lijn.vervoerder,
+                lijn.kleur || lijn.lijn_kleur, lijn.tekstkleur || lijn.lijn_tekstkleur
+              );
+              return (
+                <Pressable key={lijn.lijn}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: actief }}
+                  accessibilityLabel={`Filter op lijn ${lijn.lijn}`}
+                  onPress={() => kiesLijn(lijn.lijn)}
+                  style={[s.lijnFilterChip, {
+                    backgroundColor: actief ? colors.accent : "transparent",
+                    borderColor: actief ? colors.accent : colors.border
+                  }]}>
+                  <View style={[s.lijnFilterBadge, { backgroundColor: palet.bg },
+                    lijnBadgeHeeftRand(palet) && { borderWidth: 1, borderColor: colors.border }]}>
+                    <Text style={[s.lijnFilterNummer, { color: palet.fg }]} numberOfLines={1}>
+                      {lijn.lijn}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
       {meerdereModi ? (
-<View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
           {tabModi.length <= 3 ? (
             <Chips<string> opties={chips} waarde={actieveModus}
-              onKies={v => { setHandmatigeModus(true); setGekozenModus(v); }} vol />
+              onKies={v => { setHandmatigeModus(true); setGekozenModus(v); setSelectedLine(null); }} vol />
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <Chips<string> opties={chips} waarde={actieveModus}
-                onKies={v => { setHandmatigeModus(true); setGekozenModus(v); }} />
+                onKies={v => { setHandmatigeModus(true); setGekozenModus(v); setSelectedLine(null); }} />
             </ScrollView>
           )}
         </View>
@@ -243,6 +319,19 @@ export default function Haltebord() {
 }
 
 const s = StyleSheet.create({
+  lijnFilterBalk: { borderBottomWidth: StyleSheet.hairlineWidth },
+  lijnFilterInhoud: { paddingHorizontal: 14, paddingVertical: 9, alignItems: "center", gap: 8 },
+  lijnFilterChip: {
+    minHeight: 37, minWidth: 49, paddingHorizontal: 10,
+    borderRadius: 19, borderWidth: 1,
+    alignItems: "center", justifyContent: "center"
+  },
+  lijnFilterAlles: { fontSize: 13, fontWeight: "800" },
+  lijnFilterBadge: {
+    minWidth: 29, minHeight: 23, borderRadius: 7,
+    paddingHorizontal: 6, justifyContent: "center", alignItems: "center"
+  },
+  lijnFilterNummer: { fontSize: 13, fontWeight: "800", maxWidth: 75 },
   chips: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth },
   inhoud: { padding: 14, gap: 13, paddingBottom: 28 },
   storing: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, minHeight: 46, paddingVertical: 10 },
