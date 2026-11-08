@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { Dichtbij, Filter, Halte, Rit, RitRef, LiveRitVoertuigAntwoord, StoringenAntwoord, Zoek, StationVertrektijden, FeedbackInzending } from "./types";
+import type { Dichtbij, Filter, Halte, Rit, RitRef, LiveRitVoertuigAntwoord, StoringenAntwoord, Zoek, StationVertrektijden, LijnVertrekken, FeedbackInzending } from "./types";
 import { freshApiUrl } from "./freshRequest";
 import { dichtbijPad } from "./dichtbijQuery";
 
@@ -105,6 +105,14 @@ export const api = {
   stationVertrektijden: (id: string, max = 60) =>
     get<StationVertrektijden>(
       `/vertrektijden?halte_id=${encodeURIComponent(id)}&max=${max}`,
+      12000,
+      API_V2_BASE
+    ),
+  // Alleen na het kiezen van een lijn: alle resterende ritten van vandaag,
+  // niet beperkt tot het gewone vertrekbord van 60-120 minuten.
+  lijnVertrekken: (id: string, lijn: string, modus: string, cluster: boolean) =>
+    get<LijnVertrekken>(
+      `/lijnvertrekken?halte_id=${encodeURIComponent(id)}&line=${encodeURIComponent(lijn)}&modus=${encodeURIComponent(modus)}&cluster=${cluster ? "1" : "0"}`,
       12000,
       API_V2_BASE
     ),

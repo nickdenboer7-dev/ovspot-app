@@ -126,7 +126,21 @@ export default function Haltebord() {
   // Na een GTFS-refresh kan een lijn verdwijnen: voorkom een verouderd leeg filter.
   const geselecteerdeLijn = selectedLine && uniekeLijnen.some(v => v.lijn === selectedLine)
     ? selectedLine : null;
-  const vertrekken = filterHalteVertrekken(h?.vertrekken ?? [], actieveModus, geselecteerdeLijn);
+  // Een geselecteerde chip krijgt een eigen GTFS-opvraag voor de volledige
+  // resterende dienstdag. Het normale stationsbord behoudt zijn snelle 2u-venster.
+  const lijnPoll = usePolling(
+    `lijn-hele-dag:${id}:${geselecteerdeLijn || "alles"}:${actieveModus}:${isStation}`,
+    () => geselecteerdeLijn
+      ? api.lijnVertrekken(id, geselecteerdeLijn, actieveModus, isStation)
+      : Promise.resolve(null),
+    instellingen.databesparing ? 90_000 : 45_000
+  );
+  // Bij snel wisselen tussen chips geen oude API-respons van een andere lijn tonen.
+  const lijnData = geselecteerdeLijn && lijnPoll.data?.lijn === geselecteerdeLijn
+    && lijnPoll.data?.modus === actieveModus && lijnPoll.data?.halte_id === id
+    ? lijnPoll.data : null;
+  const basisVertrekken = filterHalteVertrekken(h?.vertrekken ?? [], actieveModus, geselecteerdeLijn);
+  const vertrekken = geselecteerdeLijn ? (lijnData?.vertrekken ?? []) : basisVertrekken;
 
   const kiesLijn = (lijn: string | null) => {
     // Chips zijn al gefilterd op de actieve modaliteit.
@@ -184,6 +198,10 @@ export default function Haltebord() {
   if (poll.laden && !h) lijst = <Laden />;
   else if (!h && poll.fout)
     lijst = <Leeg icoon="cloud-offline-outline" titel="Kan vertrektijden niet laden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />;
+  else if (geselecteerdeLijn && !lijnData && !lijnPoll.fout)
+    lijst = <Laden />;
+  else if (geselecteerdeLijn && !lijnData && lijnPoll.fout)
+    lijst = <Leeg icoon="cloud-offline-outline" titel="Volledige dienstregeling niet bereikbaar" tekst={lijnPoll.fout} knop={{ label: "Opnieuw", onPress: () => void lijnPoll.verversen() }} />;
   else if (h && !vertrekken.length)
     lijst = (
       <Kaart style={s.geenVertrekken}>
@@ -206,7 +224,9 @@ export default function Haltebord() {
           <Ionicons name="information-circle-outline" size={22} color={colors.infoText} />
           <Text style={[s.geenTekst, { color: colors.infoText }]}>
             {geselecteerdeLijn
-              ? `Geen vertrekken voor lijn ${geselecteerdeLijn} in de komende tijd.`
+              ? lijnData?.volgende_rit?.rit?.datum
+                ? `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}. Volgende rit: ${new Date(`${lijnData.volgende_rit.rit.datum}T12:00:00`).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })} om ${lijnData.volgende_rit.gepland}.`
+                : `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}.`
               : actieveModus === "alles"
                 ? "Momenteel geen vertrekken in de komende tijd."
                 : `Geen ${modaliteitChip(actieveModus).label.toLowerCase()}vertrekken in de komende tijd.`}
@@ -342,7 +362,8 @@ export default function Haltebord() {
           setVervers(true);
           void Promise.all([
             poll.verversen(),
-            isStation ? stationPoll.verversen() : Promise.resolve()
+            isStation ? stationPoll.verversen() : Promise.resolve(),
+            geselecteerdeLijn ? lijnPoll.verversen() : Promise.resolve()
           ]).finally(() => setVervers(false));
         }} colors={[colors.accent]} />}
       >

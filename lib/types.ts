@@ -125,6 +125,19 @@ export type StationVertrektijden = {
   })[];
 };
 
+/** /app/v2/lijnvertrekken: volledige gekozen lijn voor deze GTFS-dienstdag. */
+export type LijnVertrekken = {
+  ok: boolean;
+  halte_id: string;
+  lijn: string;
+  modus: Modus | "alles";
+  datum: string;
+  bijgewerkt: string;
+  aantal: number;
+  vertrekken: Vertrek[];
+  volgende_rit: Vertrek | null;
+};
+
 export type DichtbijHalte = {
   id: string;
   naam: string;
