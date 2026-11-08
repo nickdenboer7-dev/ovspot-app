@@ -40,7 +40,7 @@ test("Zwevende ritstatus, vertraging, terug naar lijst en hercentreerknop zijn g
 });
 
 test("Realtime coördinaten: vier seconden animatie, richting en lijnbadge, polling opruimen", () => {
-  assert.match(kaart, /duration: duur/);
+  assert.match(kaart, /duration: LIVE_MAP_ANIMATION_MS/);
   assert.match(kaart, /useNativeDriver: false/);
   assert.match(kaart, /<Marker\.Animated/);
   assert.match(kaart, /flat=\{true\}/);

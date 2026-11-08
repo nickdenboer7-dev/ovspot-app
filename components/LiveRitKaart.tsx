@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
 import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { api } from "../lib/api";
-import { geldigeKaartPunten, geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS, ritRouteKleur } from "../lib/liveRitKaart";
+import { geldigeKaartPunten, geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS, moetVoertuigSnappen, ritRouteKleur } from "../lib/liveRitKaart";
+import type { VorigeLiveKaartFix } from "../lib/liveRitKaart";
 import type { LiveRitPositie, RitKaartHalte, RitKaartPunt } from "../lib/types";
 import { useApp } from "../context/AppProvider";
 
@@ -57,7 +58,9 @@ export function LiveRitKaart({
   const mapRef = useRef<MapView>(null);
   const kaartKlaar = useRef(false);
   const volgVoertuig = useRef(true);
-  const eerdereFix = useRef(false);
+  const vorigeFix = useRef<VorigeLiveKaartFix | null>(null);
+  const skipAnimation = useRef(true);
+  const appStatus = useRef(AppState.currentState);
 
   useEffect(() => {
     let gesloten = false;
@@ -65,7 +68,7 @@ export function LiveRitKaart({
     setPositie(null);
 
     async function ophalen() {
-      if (bezig) return;
+      if (gesloten || bezig || appStatus.current !== "active") return;
       bezig = true;
       try {
         const antwoord = await api.liveRitVoertuig(ritId, datum);
@@ -81,30 +84,64 @@ export function LiveRitKaart({
 
     void ophalen();
     const interval = setInterval(() => void ophalen(), LIVE_MAP_POLL_MS);
+    const appStateListener = AppState.addEventListener("change", volgendeState => {
+      const vorig = appStatus.current;
+      appStatus.current = volgendeState;
+      if (volgendeState !== "active") {
+        // Geen animatie doortrekken in de achtergrond: volgende GPS-fix snapt.
+        skipAnimation.current = true;
+        coordinate.stopAnimation(() => {});
+        return;
+      }
+      if (vorig !== "active") {
+        // Bij terugkeer meteen een actuele GPS-update ophalen, niet 5s afwachten.
+        skipAnimation.current = true;
+        void ophalen();
+      }
+    });
     return () => {
       gesloten = true;
       clearInterval(interval);
+      appStateListener.remove();
     };
-  }, [ritId, datum]);
+  }, [ritId, datum, coordinate]);
 
   useEffect(() => {
-    if (!positie) {
-      eerdereFix.current = false;
+    if (!positie || !Number.isFinite(positie.lat) || !Number.isFinite(positie.lon)) {
+      vorigeFix.current = null;
+      skipAnimation.current = true;
+      coordinate.stopAnimation(() => {});
+      return;
+    }
+    if (appStatus.current !== "active") {
+      // Een achtergrond-GPS-update mag geen onzichtbare animatie starten.
+      skipAnimation.current = true;
       return;
     }
 
     try {
-      // Eerste GPS-fix meteen plaatsen; volgende punten in vier seconden interpoleren.
-      const duur = eerdereFix.current ? LIVE_MAP_ANIMATION_MS : 0;
-      coordinate.timing({
-        ...voertuigRegio(positie),
-        duration: duur,
-        useNativeDriver: false
-      } as unknown as Parameters<typeof coordinate.timing>[0]).start();
-      eerdereFix.current = true;
+      const ontvangenMs = Date.now();
+      const snap = moetVoertuigSnappen(vorigeFix.current, positie, ontvangenMs, skipAnimation.current);
+      const regio = voertuigRegio(positie);
+      // Stop een nog lopende 4s-interpolatie voordat een nieuwe fix binnenkomt.
+      coordinate.stopAnimation(() => {});
+      if (snap) {
+        // Geen zichtbare sprong bij >180m, >15s of na terugkeer uit achtergrond.
+        coordinate.setValue(regio);
+      } else {
+        coordinate.timing({
+          ...regio,
+          duration: LIVE_MAP_ANIMATION_MS,
+          useNativeDriver: false
+        } as unknown as Parameters<typeof coordinate.timing>[0]).start();
+      }
+      vorigeFix.current = {
+        lat: positie.lat, lon: positie.lon, timestamp: positie.timestamp, ontvangenMs
+      };
+      skipAnimation.current = false;
 
       if (kaartKlaar.current && volgVoertuig.current) {
-        mapRef.current?.animateToRegion(voertuigRegio(positie), duur || 450);
+        mapRef.current?.animateToRegion(regio, snap ? 0 : LIVE_MAP_ANIMATION_MS);
       }
     } catch (error) {
       console.error("[LiveRitKaart] Native Google Maps-animatie mislukt", error);

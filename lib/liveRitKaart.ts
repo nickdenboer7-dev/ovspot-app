@@ -32,6 +32,44 @@ export function markeerRitHaltes(stops: RitKaartHalte[] | undefined, haltes: Rit
 export const LIVE_MAP_POLL_MS = 5000;
 export const LIVE_MAP_ANIMATION_MS = 4000;
 export const LIVE_MAP_MAX_AGE_S = 180;
+export const LIVE_MAP_SNAP_DISTANCE_M = 180;
+export const LIVE_MAP_SNAP_GAP_MS = 15_000;
+
+export type VorigeLiveKaartFix = Pick<LiveRitPositie, "lat" | "lon" | "timestamp"> & {
+  ontvangenMs: number;
+};
+
+/** Geografische afstand tussen twee KV6-posities; geen schermpixel-schatting. */
+export function gpsAfstandMeter(
+  a: Pick<LiveRitPositie, "lat" | "lon">,
+  b: Pick<LiveRitPositie, "lat" | "lon">
+): number {
+  const rad = Math.PI / 180;
+  const latDelta = (b.lat - a.lat) * rad;
+  const lonDelta = (b.lon - a.lon) * rad;
+  const hav = Math.sin(latDelta / 2) ** 2
+    + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(lonDelta / 2) ** 2;
+  return 12_742_000 * Math.asin(Math.sqrt(Math.max(0, Math.min(1, hav))));
+}
+
+/** Snappen na pauze, bij een gemiste update of bij een grote positieversprong. */
+export function moetVoertuigSnappen(
+  vorige: VorigeLiveKaartFix | null,
+  volgende: Pick<LiveRitPositie, "lat" | "lon" | "timestamp">,
+  ontvangenMs: number,
+  skipAnimation = false
+): boolean {
+  if (skipAnimation || !vorige) return true;
+  if (!Number.isFinite(volgende.lat) || !Number.isFinite(volgende.lon)
+    || !Number.isFinite(vorige.lat) || !Number.isFinite(vorige.lon)) return true;
+  const tussenMs = ontvangenMs - vorige.ontvangenMs;
+  const bronGapMs = (volgende.timestamp - vorige.timestamp) * 1000;
+  return !Number.isFinite(tussenMs) || tussenMs < 0
+    || tussenMs > LIVE_MAP_SNAP_GAP_MS
+    || !Number.isFinite(bronGapMs) || bronGapMs < 0
+    || bronGapMs > LIVE_MAP_SNAP_GAP_MS
+    || gpsAfstandMeter(vorige, volgende) > LIVE_MAP_SNAP_DISTANCE_M;
+}
 
 export function geldigeRitPositie(
   antwoord: LiveRitVoertuigAntwoord,
