@@ -131,7 +131,7 @@ export default function Ritverloop() {
       : rit.haltes.findIndex(h => !h.vervalt && (h.state ? h.state !== "PASSED" : h.status !== "geweest"));
 
     tijdlijn = (
-      <Kaart style={{ paddingHorizontal: 13, paddingTop: 5, paddingBottom: 7 }}>
+      <Kaart style={{ paddingHorizontal: 13, paddingTop: 0, paddingBottom: 7 }}>
         {voorbij > 2 ? (
           <Pressable
             onPress={() => setToonGepasseerd((v) => !v)}
@@ -343,7 +343,7 @@ export default function Ritverloop() {
         ) : null}
       </View>
 
-      {rit && !isKaart ? (
+      {rit && !isKaart && (rit.live || rit.vervallen || isIncoming) ? (
         <View style={s.liveVast}>
           <View style={[s.liveBalk, {
             backgroundColor: isIncoming ? colors.infoBg : colors.surface,
@@ -385,9 +385,7 @@ export default function Ritverloop() {
                   </Text>
                 ) : null}
               </View>
-            ) : (
-              <Text style={[s.liveText, { color: colors.sub }]}>Dienstregeling</Text>
-            )}
+            ) : null}
             {!isIncoming && bronLabel ? (
               <>
                 <View style={[s.streepje, { backgroundColor: colors.border }]} />
@@ -408,7 +406,9 @@ export default function Ritverloop() {
       ) : null}
 
       {!isKaart ? (
-      <ScrollView ref={scrollRef} contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
+      <ScrollView ref={scrollRef}
+        contentContainerStyle={[s.inhoud, rit && !rit.live && !rit.vervallen && !isIncoming ? s.inhoudZonderStatus : null]}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
         {/* KV8-halteberichten sturen alleen de halterichting aan. Een groene
             GPS-voertuigstip verschijnt uitsluitend na exacte GPS-bevestiging. */}
         {poll.laden && !rit ? <Laden /> : null}
@@ -454,6 +454,7 @@ const s = StyleSheet.create({
   kopTitel: { fontSize: 20, lineHeight: 25, fontWeight: "800", letterSpacing: -0.4 },
   kopSub: { fontSize: 12, marginTop: 3 },
   inhoud: { padding: 14, gap: 13, paddingBottom: 28 },
+  inhoudZonderStatus: { paddingTop: 4 },
   infoBalk: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 12, padding: 13 },
   infoTitel: { fontSize: 14, fontWeight: "800" },
   infoTekst: { fontSize: 12, marginTop: 3, lineHeight: 17 },
