@@ -4,25 +4,31 @@ import { readFileSync } from "node:fs";
 
 const code = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
 
-test("Lansingerland-Zoetermeer schaalt op één regel zonder halverwege een woord af te breken", () => {
-  assert.match(code, /<Text\s+style=\{\[\s*s\.naam,[\s\S]*?numberOfLines=\{1\}\s+adjustsFontSizeToFit=\{true\}\s+minimumFontScale=\{0\.8\}/);
+test("Lansingerland-Zoetermeer behoudt volledige woorden met maximaal twee regels", () => {
+  assert.match(code, /<Text\s+style=\{\[\s*s\.naam,[\s\S]*?numberOfLines=\{2\}\s+adjustsFontSizeToFit=\{true\}\s+minimumFontScale=\{0\.8\}/);
   assert.match(code, /\{h\.naam\}\s*<\/Text>/);
-  assert.match(code, /naam: \{[^}]*flex: 1, minWidth: 0, flexShrink: 1/);
+  assert.match(code, /naam: \{[^}]*flexShrink: 1, flexWrap: "wrap"/);
+  assert.match(code, /naamTitel: \{[^}]*flex: 1, minWidth: 0, paddingRight: 8/);
 });
 
-test("Eindhalte en spoorlabels staan onder de titel en drukken Den Haag Centraal niet weg", () => {
-  const nameRow = code.match(/<View style=\{s\.naamRij\}>[\s\S]*?<\/View>/);
-  assert.ok(nameRow, "naamRij bestaat");
-  assert.doesNotMatch(nameRow[0], /<Label|Spoor|Eindhalte|Beginhalte/);
+test("Spoor staat rechts in de stationsnaamrij, met eigen ruimte zonder krimp", () => {
+  const nameRow = code.match(/<View style=\{s\.naamRij\}>[\s\S]*?<\/View>\s*\{h\.spoor && trein \? \([\s\S]*?\) : null\}\s*<\/View>/);
+  assert.ok(nameRow, "naamRij bevat zowel de naamcontainer als het spoornummer");
+  assert.match(nameRow[0], /<View style=\{s\.naamTitel\}>/);
+  assert.match(nameRow[0], /<Text style=\{\[s\.spoor, \{ color: colors\.sub \}\]\} numberOfLines=\{1\}>\s*Spoor \{h\.spoor\}/);
+  assert.match(code, /naamRij: \{[^}]*flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start"/);
+  assert.match(code, /spoor: \{[^}]*minWidth: 52, textAlign: "right", flexShrink: 0/);
+});
+
+test("Eindhalte- en Beginhalte-badges staan onder de naam, niet naast het spoor", () => {
+  const nameRowStart = code.indexOf("<View style={s.naamRij}>");
+  const nameRowEnd = code.indexOf("\n                </View>", nameRowStart);
+  const nameRow = code.slice(nameRowStart, nameRowEnd);
+  assert.doesNotMatch(nameRow, /<Label|Eindhalte|Beginhalte/);
   const badgePos = code.indexOf('<Label tekst="Eindhalte"');
-  assert.ok(badgePos > nameRow.index, "Eindhalte staat na naamRij");
+  assert.ok(badgePos > nameRowEnd, "Eindhalte staat onder de stationsnaamrij");
   assert.match(code, /<View style=\{s\.kenmerken\}>[\s\S]*?<Label tekst="Eindhalte"/);
   assert.match(code, /kenmerken: \{[^}]*flexWrap: "wrap"/);
-});
-
-test("Spoor wordt ook in de subregel getoond en niet rechts naast de naam", () => {
-  assert.match(code, /\{h\.spoor && trein \? <Text style=\{\[s\.spoor, \{ color: colors\.sub \}\]\}>Spoor \{h\.spoor\}<\/Text> : null\}/);
-  assert.doesNotMatch(code, /<\/View>\s*\{h\.spoor && trein \? <Text/);
 });
 
 test("Volledige aankomst- en vertrektijden blijven onbeperkt zichtbaar", () => {
