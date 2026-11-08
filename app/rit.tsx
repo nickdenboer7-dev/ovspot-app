@@ -66,7 +66,7 @@ export default function Ritverloop() {
 
   const [toonGepasseerd, setToonGepasseerd] = useState(false);
   const [weergave, setWeergave] = useState<"lijst" | "kaart">("lijst");
-  const { colors } = useApp();
+  const { colors, zetFeedbackContext } = useApp();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const gescrold = useRef(false);
@@ -75,6 +75,12 @@ export default function Ritverloop() {
   const rit = poll.data;
   const kaartHaltes = React.useMemo(() => markeerRitHaltes(rit?.stops, rit?.haltes ?? []),
     [rit?.stops, rit?.haltes]);
+
+  useEffect(() => {
+    if (rit?.id && rit?.datum) {
+      zetFeedbackContext({ view: "rit", rit_id: rit.id, rit_datum: rit.datum });
+    }
+  }, [rit?.id, rit?.datum, zetFeedbackContext]);
 
   const lijn = rit?.lijn || String(p.lijn || "");
   const bestemming = bestemmingVoorWeergave(lijn, rit?.bestemming || String(p.bestemming || "Rit"));

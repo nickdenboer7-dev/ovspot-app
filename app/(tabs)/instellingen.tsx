@@ -5,6 +5,7 @@ import * as Updates from "expo-updates";
 import React from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Chips, Kaart, Kop } from "../../components/ui";
+import { FeedbackModal } from "../../components/FeedbackModal";
 import { useApp } from "../../context/AppProvider";
 import { afstand } from "../../lib/format";
 import type { Filter, Thema } from "../../lib/types";
@@ -44,7 +45,18 @@ function Link({ icoon, label, onPress, gevaar }: { icoon: keyof typeof Ionicons.
 }
 
 export default function Instellingen() {
-  const { colors, instellingen, zetInstellingen } = useApp();
+  const { colors, instellingen, zetInstellingen, laatsteFeedbackContext } = useApp();
+  const [feedbackOpen, setFeedbackOpen] = React.useState(false);
+  const feedbackContext = laatsteFeedbackContext
+    && Date.now() - laatsteFeedbackContext.vastgelegdOp < 30 * 60 * 1000
+    ? {
+        view: laatsteFeedbackContext.view,
+        stop_id: laatsteFeedbackContext.stop_id,
+        stop_name: laatsteFeedbackContext.stop_name,
+        rit_id: laatsteFeedbackContext.rit_id,
+        rit_datum: laatsteFeedbackContext.rit_datum
+      }
+    : { view: "instellingen" as const };
   const versie = Constants.expoConfig?.version ?? "1.0.0";
   const update = Updates.updateId ? ` · update ${Updates.updateId.slice(0, 8)}` : "";
   const scheiding = { borderTopColor: colors.divider, borderTopWidth: StyleSheet.hairlineWidth * 2 };
@@ -109,7 +121,7 @@ export default function Instellingen() {
         <Sectie titel="OVER">
           <Link icoon="globe-outline" label="ovspot.nl — live OV-kaart" onPress={() => Linking.openURL("https://ovspot.nl")} />
           <View style={scheiding}>
-            <Link icoon="chatbubble-ellipses-outline" label="Feedback sturen" onPress={() => Linking.openURL("https://ovspot.nl/contact")} />
+            <Link icoon="chatbubble-ellipses-outline" label="Feedback sturen" onPress={() => setFeedbackOpen(true)} />
           </View>
           <View style={[s.regel, scheiding]}>
             <Text style={[s.uitleg, { color: colors.sub }]}>
@@ -120,6 +132,7 @@ export default function Instellingen() {
           </View>
         </Sectie>
       </ScrollView>
+      <FeedbackModal zichtbaar={feedbackOpen} onSluit={() => setFeedbackOpen(false)} context={feedbackContext} />
     </View>
   );
 }

@@ -3,7 +3,7 @@ import { AppState, useColorScheme } from "react-native";
 import { dark, light, type Palette } from "../constants/theme";
 import { api } from "../lib/api";
 import { bewaarFavorieten, bewaarInstellingen, leesFavorieten, leesInstellingen, STANDAARD } from "../lib/storage";
-import type { FavHalte, Instellingen } from "../lib/types";
+import type { FavHalte, Instellingen, FeedbackContext, RecentFeedbackContext } from "../lib/types";
 
 type AppContext = {
   klaar: boolean;
@@ -19,6 +19,8 @@ type AppContext = {
   dichtbijIds: string[];
   zetDichtbijIds: (ids: string[]) => void;
   storingenMijn: number;
+  laatsteFeedbackContext: RecentFeedbackContext | null;
+  zetFeedbackContext: (context: FeedbackContext) => void;
 };
 
 const Ctx = createContext<AppContext | null>(null);
@@ -30,6 +32,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [favorieten, setFavorieten] = useState<FavHalte[]>([]);
   const [dichtbijIds, zetDichtbijIds] = useState<string[]>([]);
   const [storingenMijn, setStoringenMijn] = useState(0);
+  const [laatsteFeedbackContext, setLaatsteFeedbackContext] = useState<RecentFeedbackContext | null>(null);
+  const zetFeedbackContext = useCallback((context: FeedbackContext) => {
+    setLaatsteFeedbackContext({ ...context, vastgelegdOp: Date.now() });
+  }, []);
 
   useEffect(() => {
     Promise.all([leesInstellingen(), leesFavorieten()]).then(([s, f]) => {
@@ -124,9 +130,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       verplaatsFavoriet,
       dichtbijIds,
       zetDichtbijIds,
-      storingenMijn
+      storingenMijn,
+      laatsteFeedbackContext,
+      zetFeedbackContext
     }),
-    [klaar, colors, scheme, instellingen, zetInstellingen, favorieten, isFavoriet, wisselFavoriet, verwijderFavoriet, verplaatsFavoriet, dichtbijIds, storingenMijn]
+    [klaar, colors, scheme, instellingen, zetInstellingen, favorieten, isFavoriet, wisselFavoriet, verwijderFavoriet, verplaatsFavoriet, dichtbijIds, storingenMijn, laatsteFeedbackContext, zetFeedbackContext]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

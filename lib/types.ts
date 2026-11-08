@@ -1,3 +1,27 @@
+export type FeedbackCategorie = "kaart_data" | "idee" | "bug" | "overig";
+
+export type FeedbackContext = {
+  view: "instellingen" | "halte" | "rit";
+  stop_id?: string;
+  stop_name?: string;
+  rit_id?: string;
+  rit_datum?: string;
+};
+
+export type RecentFeedbackContext = FeedbackContext & { vastgelegdOp: number };
+
+export type FeedbackInzending = {
+  client_id: string;
+  category: FeedbackCategorie;
+  message: string;
+  contact: string;
+  app_version: string;
+  ota_version: string;
+  os_version: string;
+  reported_at: string;
+  context: FeedbackContext;
+};
+
 export type Modus = "train" | "bus" | "tram" | "metro" | "ferry" | string;
 
 export type LiveRitPositie = {

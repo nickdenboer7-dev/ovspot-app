@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { Dichtbij, Filter, Halte, Rit, RitRef, LiveRitVoertuigAntwoord, StoringenAntwoord, Zoek, StationVertrektijden } from "./types";
+import type { Dichtbij, Filter, Halte, Rit, RitRef, LiveRitVoertuigAntwoord, StoringenAntwoord, Zoek, StationVertrektijden, FeedbackInzending } from "./types";
 import { freshApiUrl } from "./freshRequest";
 import { dichtbijPad } from "./dichtbijQuery";
 
@@ -51,6 +51,36 @@ async function get<T>(path: string, timeoutMs = 12000, base = API_BASE): Promise
   return body as T;
 }
 
+/** Native feedback gaat naar de reeds bestaande OVspot Flask/admin-inbox op /api/. */
+async function verstuurFeedback(payload: FeedbackInzending): Promise<{ ok: boolean; id: number; stored: boolean; telegram: boolean | "duplicate" }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const base = API_BASE.replace(/\/app\/v\d+$/, "");
+    const res = await fetch(`${base}/api/v2/feedback`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "Cache-Control": "no-store"
+      },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+      signal: controller.signal
+    });
+    const response = await res.json().catch(() => null);
+    if (!res.ok || !response?.ok || !response?.stored) {
+      throw new ApiError(response?.fout || "Feedback verzenden mislukt", res.status);
+    }
+    return response;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError("Geen verbinding. Probeer opnieuw.", 0);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function ritParams(ref: RitRef): string {
   const q = new URLSearchParams();
   if (ref.trip) q.set("trip", ref.trip);
@@ -64,6 +94,7 @@ export function ritParams(ref: RitRef): string {
 }
 
 export const api = {
+  feedback: (payload: FeedbackInzending) => verstuurFeedback(payload),
   dichtbij: (lat: number, lon: number, straal: number, offset = 0) =>
     get<Dichtbij>(dichtbijPad(lat, lon, straal, offset)),
   // Vertrek[].kleur/tekstkleur uit GTFS; oude Live-antwoorden hebben lijn_kleur/lijn_tekstkleur.

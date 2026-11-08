@@ -34,7 +34,7 @@ export default function Haltebord() {
   const p = useLocalSearchParams<{ id: string; van?: string; naam?: string; plaats?: string; groep?: string; lijnen?: string; modus?: string }>();
   const id = String(p.id || "");
   const van = isTab(p.van) ? p.van : "index";
-  const { colors, instellingen, isFavoriet, wisselFavoriet } = useApp();
+  const { colors, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext } = useApp();
   // De opgeslagen instelling blijft een voorkeur; op haltes zonder die modus tonen we alles.
   const gevraagdeModus = ["train", "metro", "tram", "bus", "ferry"].includes(String(p.modus))
     ? String(p.modus) : null;
@@ -65,6 +65,9 @@ export default function Haltebord() {
   );
   const naam = h?.naam || String(p.naam || "Halte");
   const plaats = h?.plaats || String(p.plaats || "");
+  React.useEffect(() => {
+    if (id) zetFeedbackContext({ view: "halte", stop_id: id, stop_name: naam });
+  }, [id, naam, zetFeedbackContext]);
   const fav = isFavoriet(id);
   // De gekozen zoekkaart blijft filterbaar, zelfs als die modus momenteel
   // geen vertrektijden in het API-tijdvenster heeft (bijv. laatste pont).
