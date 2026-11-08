@@ -1,10 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { FavHalte, Instellingen } from "./types";
+import { normaliseerInstellingen, STANDAARD_INSTELLINGEN } from "./instellingenDefaults";
 
 const FAV_KEY = "ovspot.favorieten.v1";
 const SET_KEY = "ovspot.instellingen.v1";
 
-export const STANDAARD: Instellingen = { thema: "systeem", filter: "alles", straal: 1500, thuis: null };
+export const STANDAARD: Instellingen = STANDAARD_INSTELLINGEN;
 
 async function lees<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -32,7 +33,7 @@ export const bewaarFavorieten = (list: FavHalte[]) => schrijf(FAV_KEY, list);
 
 export async function leesInstellingen(): Promise<Instellingen> {
   const s = await lees<Partial<Instellingen>>(SET_KEY, {});
-  return { ...STANDAARD, ...s };
+  return normaliseerInstellingen(s);
 }
 
 export const bewaarInstellingen = (s: Instellingen) => schrijf(SET_KEY, s);

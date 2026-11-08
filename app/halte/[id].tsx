@@ -51,7 +51,8 @@ export default function Haltebord() {
 
   // Houd de bestaande /halte-data voor meldingen, metro/ferry en compatibiliteit.
   // Bij een station komen de vertrekregels zelf direct van /app/v2/vertrektijden.
-  const poll = usePolling(`halte:${id}`, () => api.halte(id, "alles", 60), 15_000);
+  const poll = usePolling(`halte:${id}`, () => api.halte(id, "alles", 60),
+    instellingen.databesparing ? 45_000 : 15_000);
   const hoofd = poll.data;
   // Ook vanaf een afzonderlijke haltepaal met naam "Station"/"Busstation"
   // dezelfde fysieke 350m-cluster openen, niet uitsluitend vanaf het treinparent.
@@ -60,7 +61,7 @@ export default function Haltebord() {
   const stationPoll = usePolling(
     `station-350m:${id}:${isStation ? "station" : "geen-station"}`,
     () => isStation ? api.stationVertrektijden(id, 60) : Promise.resolve(null),
-    15_000
+    instellingen.databesparing ? 45_000 : 15_000
   );
   const h = useMemo(
     () => hoofd ? voegStationVertrektijdenToe(hoofd, stationPoll.data) : null,

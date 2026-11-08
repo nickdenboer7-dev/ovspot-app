@@ -9,7 +9,7 @@ import { usePolling } from "../../lib/hooks";
 type Bereik = "mijn" | "alles";
 
 export default function Storingen() {
-  const { colors, favorieten, dichtbijIds, storingenMijn } = useApp();
+  const { colors, favorieten, dichtbijIds, storingenMijn, instellingen } = useApp();
   const [bereik, setBereik] = useState<Bereik>("mijn");
 
   // "Mijn haltes" = favorieten. "Alles" = favorieten + haltes onder Dichtbij.
@@ -19,7 +19,7 @@ export default function Storingen() {
   }, [bereik, favorieten, dichtbijIds]);
 
   const key = `${bereik}:${ids.join(",")}`;
-  const poll = usePolling(key, () => (ids.length ? api.storingen(ids) : Promise.resolve(null)), 60_000);
+  const poll = usePolling(key, () => (ids.length ? api.storingen(ids) : Promise.resolve(null)), instellingen.databesparing ? 180_000 : 60_000);
   const lijst = poll.data?.storingen ?? [];
   const mislukt = poll.data?.niet_geladen ?? 0;
   const gecontroleerd = poll.data?.gecontroleerd ?? Math.max(0, ids.length - mislukt);

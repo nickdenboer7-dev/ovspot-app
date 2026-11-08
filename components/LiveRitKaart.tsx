@@ -46,7 +46,7 @@ export function LiveRitKaart({
   ritId, datum, lijnnummer, volgendeHalte, vertragingMin,
   shape, stops, routeColor, onderRuimte = 18, onLijst
 }: Props) {
-  const { colors, scheme } = useApp();
+  const { colors, scheme, instellingen } = useApp();
   const isDark = scheme === "dark";
   const routePunten = useMemo(() => geldigeKaartPunten(shape), [shape]);
   const lijnKleur = isDark ? ritRouteKleurDonker(routeColor) : ritRouteKleur(routeColor);
@@ -69,6 +69,7 @@ export function LiveRitKaart({
     let gesloten = false;
     let bezig = false;
     setPositie(null);
+    if (!instellingen.liveVoertuigen) return;
 
     async function ophalen() {
       if (gesloten || bezig || appStatus.current !== "active") return;
@@ -86,7 +87,8 @@ export function LiveRitKaart({
     }
 
     void ophalen();
-    const interval = setInterval(() => void ophalen(), LIVE_MAP_POLL_MS);
+    const interval = setInterval(() => void ophalen(),
+      instellingen.databesparing ? 15_000 : LIVE_MAP_POLL_MS);
     const appStateListener = AppState.addEventListener("change", volgendeState => {
       const vorig = appStatus.current;
       appStatus.current = volgendeState;
@@ -107,7 +109,7 @@ export function LiveRitKaart({
       clearInterval(interval);
       appStateListener.remove();
     };
-  }, [ritId, datum, coordinate]);
+  }, [ritId, datum, coordinate, instellingen.liveVoertuigen, instellingen.databesparing]);
 
   useEffect(() => {
     if (!positie || !Number.isFinite(positie.lat) || !Number.isFinite(positie.lon)) {

@@ -71,15 +71,15 @@ export default function Dichtbij() {
   // Terug naar dit scherm na een paar minuten: locatie opnieuw bepalen (je kunt verplaatst zijn).
   useFocusEffect(
     useCallback(() => {
-      if (laatsteLoc.current && Date.now() - laatsteLoc.current > 180_000) void zoekLocatie();
-    }, [zoekLocatie])
+      if (laatsteLoc.current && Date.now() - laatsteLoc.current > (instellingen.databesparing ? 600_000 : 180_000)) void zoekLocatie();
+    }, [zoekLocatie, instellingen.databesparing])
   );
 
   const key = pos ? `${pos.lat.toFixed(3)}:${pos.lon.toFixed(3)}:${instellingen.straal}` : "geen";
   const poll = usePolling(key, () => (pos
     ? binnenLocatieTimeout(() => api.dichtbij(pos.lat, pos.lon, instellingen.straal), 12_000)
         .catch(e => { if (e instanceof LocatieTimeoutFout) throw new Error("Haltes laden duurt te lang"); throw e; })
-    : Promise.resolve(null)), 20_000);
+    : Promise.resolve(null)), instellingen.databesparing ? 60_000 : 20_000);
   const oudeData = vorigeHaltes && vorigeHaltes.key === key && Date.now() - vorigeHaltes.ts < 90_000
     ? vorigeHaltes.data : null;
   const gegevens = poll.data ?? oudeData;

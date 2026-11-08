@@ -258,9 +258,16 @@ export type FavHalte = { id: string; naam: string; plaats: string };
 
 export type Thema = "systeem" | "licht" | "donker";
 export type Filter = "alles" | "trein" | "bus";
+export type Startscherm = "index" | "favorieten" | "storingen";
 
 export type Instellingen = {
   thema: Thema;
+  startscherm: Startscherm;
+  schermAanhouden: boolean;
+  liveVoertuigen: boolean;
+  databesparing: boolean;
+  storingenPush: boolean;
+  // Bestaande voorkeuren blijven beschikbaar voor GPS-fallback en halteborden.
   filter: Filter;
   straal: number;
   thuis: { naam: string; plaats: string; lat: number; lon: number } | null;

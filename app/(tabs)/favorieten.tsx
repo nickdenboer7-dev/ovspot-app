@@ -10,7 +10,9 @@ import { useNu, usePolling } from "../../lib/hooks";
 import type { FavHalte } from "../../lib/types";
 
 function FavKaart({ f, nu }: { f: FavHalte; nu: number }) {
-  const poll = usePolling(`fav:${f.id}`, () => api.halte(f.id, "alles", 3), 20_000);
+  const { instellingen } = useApp();
+  const poll = usePolling(`fav:${f.id}`, () => api.halte(f.id, "alles", 3),
+    instellingen.databesparing ? 60_000 : 20_000);
   const titel = f.plaats && !f.naam.startsWith("Station") ? `${f.plaats}, ${f.naam}` : f.naam;
   return (
     <HalteKaart

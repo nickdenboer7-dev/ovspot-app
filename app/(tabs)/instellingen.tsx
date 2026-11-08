@@ -2,51 +2,85 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import * as Updates from "expo-updates";
-import React from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Chips, Kaart, Kop } from "../../components/ui";
+import React, { useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FeedbackModal } from "../../components/FeedbackModal";
+import { Kop } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
-import { afstand } from "../../lib/format";
-import type { Filter, Thema } from "../../lib/types";
+import type { Startscherm, Thema } from "../../lib/types";
+
+type Icoon = keyof typeof Ionicons.glyphMap;
+type Kiezer = "thema" | "startscherm" | null;
+
+const THEMAS: { key: Thema; label: string; icoon: Icoon }[] = [
+  { key: "systeem", label: "Systeem", icoon: "phone-portrait-outline" },
+  { key: "licht", label: "Licht", icoon: "sunny-outline" },
+  { key: "donker", label: "Donker", icoon: "moon-outline" }
+];
+const STARTSCHERMEN: { key: Startscherm; label: string; icoon: Icoon }[] = [
+  { key: "index", label: "Dichtbij", icoon: "location-outline" },
+  { key: "favorieten", label: "Favorieten", icoon: "star-outline" },
+  { key: "storingen", label: "Storingen", icoon: "alert-circle-outline" }
+];
 
 function Sectie({ titel, children }: { titel: string; children: React.ReactNode }) {
-  const { colors } = useApp();
+  const { colors, scheme } = useApp();
   return (
-    <View style={{ gap: 8 }}>
-      <Text style={[s.sectieTitel, { color: colors.sub }]} accessibilityRole="header">
-        {titel}
-      </Text>
-      <Kaart style={s.sectieKaart}>{children}</Kaart>
+    <View style={s.sectie}>
+      <Text style={[s.sectieTitel, { color: colors.sub }]} accessibilityRole="header">{titel}</Text>
+      <View style={[s.kaart, { backgroundColor: scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
+        {children}
+      </View>
     </View>
   );
 }
 
-function Regel({ label, uitleg, children }: { label: string; uitleg?: string; children?: React.ReactNode }) {
-  const { colors } = useApp();
+function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatste = false }: {
+  icoon: Icoon;
+  titel: string;
+  uitleg: string;
+  waarde?: string;
+  onPress?: () => void;
+  schakel?: { value: boolean; onChange: (next: boolean) => void };
+  laatste?: boolean;
+}) {
+  const { colors, scheme } = useApp();
   return (
-    <View style={s.regel}>
-      <Text style={[s.label, { color: colors.text }]}>{label}</Text>
-      {uitleg ? <Text style={[s.uitleg, { color: colors.sub }]}>{uitleg}</Text> : null}
-      {children ? <View style={{ marginTop: 10 }}>{children}</View> : null}
-    </View>
-  );
-}
-
-function Link({ icoon, label, onPress, gevaar }: { icoon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; gevaar?: boolean }) {
-  const { colors } = useApp();
-  return (
-    <Pressable onPress={onPress} style={s.link} accessibilityRole="button" android_ripple={{ color: colors.divider }}>
-      <Ionicons name={icoon} size={22} color={gevaar ? colors.red : colors.accent} />
-      <Text style={[s.linkText, { color: gevaar ? colors.red : colors.text }]}>{label}</Text>
-      <Ionicons name="chevron-forward" size={18} color={colors.sub} />
+    <Pressable onPress={onPress} disabled={!onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={onPress ? `${titel}, ${waarde || uitleg}` : undefined}
+      style={[s.rij, !laatste && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+      <View style={[s.icoonAchtergrond, { backgroundColor: scheme === "dark" ? "#334155" : colors.surface2 }]}>
+        <Ionicons name={icoon} size={21} color={colors.accent} />
+      </View>
+      <View style={s.rijTekst}>
+        <Text style={[s.rijTitel, { color: colors.text }]}>{titel}</Text>
+        <Text style={[s.rijUitleg, { color: colors.sub }]}>{uitleg}</Text>
+      </View>
+      {schakel ? (
+        <Switch
+          accessibilityLabel={titel}
+          value={schakel.value}
+          onValueChange={schakel.onChange}
+          trackColor={{ false: colors.border, true: scheme === "dark" ? "#0E7490" : "#7DD3FC" }}
+          thumbColor={schakel.value ? colors.accent : colors.muted}
+        />
+      ) : (
+        <View style={s.rechterDeel}>
+          {waarde ? <Text style={[s.waarde, { color: colors.sub }]} numberOfLines={1}>{waarde}</Text> : null}
+          <Ionicons name="chevron-forward" size={19} color={colors.muted} />
+        </View>
+      )}
     </Pressable>
   );
 }
 
 export default function Instellingen() {
-  const { colors, instellingen, zetInstellingen, laatsteFeedbackContext } = useApp();
-  const [feedbackOpen, setFeedbackOpen] = React.useState(false);
+  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext } = useApp();
+  const insets = useSafeAreaInsets();
+  const [kiezer, zetKiezer] = useState<Kiezer>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const feedbackContext = laatsteFeedbackContext
     && Date.now() - laatsteFeedbackContext.vastgelegdOp < 30 * 60 * 1000
     ? {
@@ -57,93 +91,118 @@ export default function Instellingen() {
         rit_datum: laatsteFeedbackContext.rit_datum
       }
     : { view: "instellingen" as const };
-  const versie = Constants.expoConfig?.version ?? "1.0.0";
-  const update = Updates.updateId ? ` · update ${Updates.updateId.slice(0, 8)}` : "";
-  const scheiding = { borderTopColor: colors.divider, borderTopWidth: StyleSheet.hairlineWidth * 2 };
+  const versie = Constants.nativeAppVersion || Constants.expoConfig?.version || "1.0.0";
+  const otaId = Updates.updateId ? Updates.updateId.slice(0, 8) : "ingebouwd";
+  const opties = kiezer === "thema" ? THEMAS : STARTSCHERMEN;
+  const geselecteerd = kiezer === "thema" ? instellingen.thema : instellingen.startscherm;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: scheme === "dark" ? "#0F172A" : colors.background }}>
       <Kop groot titel="Instellingen" />
-      <ScrollView contentContainerStyle={s.lijst}>
-        <Sectie titel="WEERGAVE">
-          <Regel label="Thema" uitleg="Systeem volgt de instelling van je telefoon.">
-            <Chips<Thema>
-              opties={[
-                { key: "systeem", label: "Systeem", icoon: "phone-portrait-outline" },
-                { key: "licht", label: "Licht", icoon: "sunny-outline" },
-                { key: "donker", label: "Donker", icoon: "moon-outline" }
-              ]}
-              vol
-              waarde={instellingen.thema}
-              onKies={(thema) => zetInstellingen({ thema })}
-            />
-          </Regel>
+      <ScrollView showsVerticalScrollIndicator={false}
+        contentContainerStyle={[s.lijst, { paddingBottom: Math.max(insets.bottom, 12) + 28 }]}>
+        <Sectie titel="WEERGAVE & GEDRAG">
+          <InstellingsRij icoon="color-palette-outline" titel="Thema"
+            uitleg="Donker, licht of systeem" waarde={THEMAS.find(o => o.key === instellingen.thema)?.label || "Systeem"}
+            onPress={() => zetKiezer("thema")} />
+          <InstellingsRij icoon="apps-outline" titel="Startscherm"
+            uitleg="Kies welk scherm als eerste opstart"
+            waarde={STARTSCHERMEN.find(o => o.key === instellingen.startscherm)?.label || "Dichtbij"}
+            onPress={() => zetKiezer("startscherm")} />
+          <InstellingsRij icoon="phone-portrait-outline" titel="Scherm aanhouden"
+            uitleg="Voorkom dat het scherm uitgaat"
+            schakel={{ value: instellingen.schermAanhouden,
+              onChange: schermAanhouden => zetInstellingen({ schermAanhouden }) }} laatste />
         </Sectie>
 
-        <Sectie titel="HALTEBORD">
-          <Regel label="Standaard filter" uitleg="Hiermee opent een haltebord.">
-            <Chips<Filter>
-              opties={[
-                { key: "alles", label: "Alles" },
-                { key: "trein", label: "Trein", icoon: "train-outline" },
-                { key: "bus", label: "Bus", icoon: "bus-outline" }
-              ]}
-              vol
-              waarde={instellingen.filter}
-              onKies={(filter) => zetInstellingen({ filter })}
-            />
-          </Regel>
+        <Sectie titel="KAART & DATA">
+          <InstellingsRij icoon="bus-outline" titel="Live voertuigen"
+            uitleg="Toon bussen en treinen op de achtergrond"
+            schakel={{ value: instellingen.liveVoertuigen,
+              onChange: liveVoertuigen => zetInstellingen({ liveVoertuigen }) }} />
+          <InstellingsRij icoon="cellular-outline" titel="Databesparing"
+            uitleg="Minder vaak kaartgegevens en GPS verversen"
+            schakel={{ value: instellingen.databesparing,
+              onChange: databesparing => zetInstellingen({ databesparing }) }} />
+          <InstellingsRij icoon="options-outline" titel="Locatie & haltebord"
+            uitleg="Afstand, thuislocatie en standaardfilter"
+            onPress={() => router.push("/instellingen-geavanceerd")} laatste />
         </Sectie>
 
-        <Sectie titel="LOCATIE">
-          <Regel label="Afstand voor Dichtbij" uitleg={`Haltes tot ${afstand(instellingen.straal)} van je locatie.`}>
-            <Chips<string>
-              opties={[500, 1000, 1500, 3000].map((m) => ({ key: String(m), label: afstand(m) }))}
-              vol
-              waarde={String(instellingen.straal)}
-              onKies={(m) => zetInstellingen({ straal: Number(m) })}
-            />
-          </Regel>
-          <View style={scheiding}>
-            <Regel
-              label="Thuislocatie"
-              uitleg={
-                instellingen.thuis
-                  ? `${instellingen.thuis.naam}${instellingen.thuis.plaats ? `, ${instellingen.thuis.plaats}` : ""} — gebruikt als je locatie uit staat.`
-                  : "Niet ingesteld. Wordt gebruikt als je locatie uit staat."
-              }
-            />
-            <Link icoon="home-outline" label={instellingen.thuis ? "Andere halte kiezen" : "Kies een halte als thuislocatie"} onPress={() => router.push({ pathname: "/zoek", params: { doel: "thuis" } })} />
-            {instellingen.thuis ? <Link icoon="close-circle-outline" label="Thuislocatie wissen" onPress={() => zetInstellingen({ thuis: null })} gevaar /> : null}
-          </View>
+        <Sectie titel="MELDINGEN">
+          <InstellingsRij icoon="notifications-outline" titel="Storingen"
+            uitleg="Pushberichten bij vertragingen op favoriete lijnen"
+            schakel={{ value: instellingen.storingenPush,
+              onChange: storingenPush => zetInstellingen({ storingenPush }) }} laatste />
         </Sectie>
 
-        <Sectie titel="OVER">
-          <Link icoon="globe-outline" label="ovspot.nl — live OV-kaart" onPress={() => Linking.openURL("https://ovspot.nl")} />
-          <View style={scheiding}>
-            <Link icoon="chatbubble-ellipses-outline" label="Feedback sturen" onPress={() => setFeedbackOpen(true)} />
-          </View>
-          <View style={[s.regel, scheiding]}>
-            <Text style={[s.uitleg, { color: colors.sub }]}>
-              OVspot {versie}
-              {update}
-              {"\n"}Vertrektijden en ritinformatie via OVspot. Live posities uit open OV-data (NDOV), dienstregeling uit GTFS.
-            </Text>
-          </View>
+        <Sectie titel="OVER OVSPOT">
+          <InstellingsRij icoon="chatbubble-ellipses-outline" titel="Stuur feedback"
+            uitleg="Meld een bug of geef een suggestie"
+            onPress={() => setFeedbackOpen(true)} />
+          <InstellingsRij icoon="information-circle-outline" titel="Over de app"
+            uitleg="Licenties en algemene voorwaarden"
+            onPress={() => router.push("/info")} laatste />
         </Sectie>
+
+        <Text style={[s.versie, { color: colors.muted }]}>
+          Versie {versie} (OTA: {otaId})
+        </Text>
       </ScrollView>
+
+      <Modal visible={kiezer !== null} transparent animationType="fade"
+        onRequestClose={() => zetKiezer(null)}>
+        <View style={s.modalAchtergrond}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => zetKiezer(null)}
+            accessibilityRole="button" accessibilityLabel="Keuzemenu sluiten" />
+          <View style={[s.modalKaart, { backgroundColor: scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.modalTitel, { color: colors.text }]}>
+              {kiezer === "thema" ? "Kies thema" : "Kies startscherm"}
+            </Text>
+            {opties.map(item => {
+              const actief = item.key === geselecteerd;
+              return (
+                <Pressable key={item.key} accessibilityRole="radio"
+                  accessibilityState={{ checked: actief }}
+                  onPress={() => {
+                    if (kiezer === "thema") zetInstellingen({ thema: item.key as Thema });
+                    else zetInstellingen({ startscherm: item.key as Startscherm });
+                    zetKiezer(null);
+                  }}
+                  style={[s.modalOptie, { borderColor: colors.border },
+                    actief && { backgroundColor: colors.infoBg }]}>
+                  <Ionicons name={item.icoon} size={21} color={actief ? colors.accent : colors.sub} />
+                  <Text style={[s.modalOptieTekst, { color: colors.text }]}>{item.label}</Text>
+                  {actief ? <Ionicons name="checkmark-circle" size={22} color={colors.accent} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
+
       <FeedbackModal zichtbaar={feedbackOpen} onSluit={() => setFeedbackOpen(false)} context={feedbackContext} />
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  lijst: { padding: 16, gap: 20, paddingBottom: 34 },
-  sectieTitel: { fontSize: 11, fontWeight: "800", letterSpacing: 1.05, paddingHorizontal: 4 },
-  sectieKaart: { borderRadius: 16 },
-  regel: { paddingHorizontal: 16, paddingVertical: 17 },
-  label: { fontSize: 15, fontWeight: "700" },
-  uitleg: { fontSize: 13, marginTop: 4, lineHeight: 19 },
-  link: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 54, paddingHorizontal: 16 },
-  linkText: { flex: 1, fontSize: 15, fontWeight: "500" }
+  lijst: { padding: 16, gap: 22 },
+  sectie: { gap: 10 },
+  sectieTitel: { fontSize: 11, fontWeight: "800", letterSpacing: 1.2, marginLeft: 6 },
+  kaart: { borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  rij: { flexDirection: "row", alignItems: "center", minHeight: 75, paddingHorizontal: 14, paddingVertical: 13, gap: 12 },
+  icoonAchtergrond: { height: 39, width: 39, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  rijTekst: { flex: 1, minWidth: 0, gap: 4 },
+  rijTitel: { fontSize: 15, fontWeight: "700" },
+  rijUitleg: { fontSize: 12, lineHeight: 17 },
+  rechterDeel: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: 112 },
+  waarde: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
+  versie: { marginTop: 0, textAlign: "center", fontSize: 11, lineHeight: 18 },
+  modalAchtergrond: { flex: 1, justifyContent: "center", paddingHorizontal: 28, backgroundColor: "rgba(2,6,23,0.65)" },
+  modalKaart: { borderRadius: 20, borderWidth: 1, padding: 18, gap: 10, elevation: 12 },
+  modalTitel: { fontSize: 18, fontWeight: "800", marginBottom: 8 },
+  modalOptie: { flexDirection: "row", alignItems: "center", gap: 13, minHeight: 51,
+    borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 13 },
+  modalOptieTekst: { flex: 1, fontSize: 15, fontWeight: "600" }
 });

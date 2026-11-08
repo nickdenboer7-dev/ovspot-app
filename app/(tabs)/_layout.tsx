@@ -4,9 +4,10 @@ import { isTab, OnderBalk } from "../../components/OnderBalk";
 import { useApp } from "../../context/AppProvider";
 
 export default function TabsLayout() {
-  const { colors } = useApp();
+  const { colors, instellingen } = useApp();
   return (
     <Tabs
+      initialRouteName={instellingen.startscherm}
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.background }, tabBarHideOnKeyboard: true }}
       tabBar={(props) => {
         const naam = props.state.routes[props.state.index]?.name;

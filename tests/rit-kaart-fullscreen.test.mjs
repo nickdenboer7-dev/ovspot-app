@@ -46,7 +46,7 @@ test("Realtime coördinaten: vier seconden animatie, richting en lijnbadge, poll
   assert.match(kaart, /flat=\{true\}/);
   assert.match(kaart, /rotation=\{heading\}/);
   assert.match(kaart, /\{lijnnummer \|\| positie\.lijnnummer\}/);
-  assert.match(kaart, /setInterval\(\(\) => void ophalen\(\), LIVE_MAP_POLL_MS\)/);
+  assert.match(kaart, /setInterval\(\(\) => void ophalen\(\),\s*instellingen\.databesparing \? 15_000 : LIVE_MAP_POLL_MS\)/);
   assert.match(kaart, /clearInterval\(interval\)/);
   assert.match(kaart, /gesloten = true/);
   assert.match(kaart, /console\.error\("\[LiveRitKaart\] Native Google Maps-animatie mislukt"/);

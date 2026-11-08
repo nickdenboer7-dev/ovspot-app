@@ -7,7 +7,7 @@ import { ritRouteKleur, ritRouteKleurDonker } from "../lib/liveRitKaart.ts";
 const kaart = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
 
 test("Google Maps volgt exact de centrale app-scheme en schakelt runtime tussen licht en donker", () => {
-  assert.match(kaart, /const \{ colors, scheme \} = useApp\(\)/);
+  assert.match(kaart, /const \{ colors, scheme, instellingen \} = useApp\(\)/);
   assert.match(kaart, /const isDark = scheme === "dark"/);
   assert.match(kaart, /customMapStyle=\{isDark \? darkMapStyle : \[\]\}/);
   assert.match(kaart, /provider=\{PROVIDER_GOOGLE\}/);
