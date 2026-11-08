@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { PanResponder, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { isTab, OnderBalk } from "../../components/OnderBalk";
 import { StoringKaart } from "../../components/StoringKaart";
 import { Chips, FoutBalk, Kaart, Kop, KopKnop, Laden, Leeg } from "../../components/ui";
@@ -11,6 +11,7 @@ import { api } from "../../lib/api";
 import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { klok } from "../../lib/format";
+import { busstationZoekterm, heeftBusstationAanvullingNodig, kiesGekoppeldBusstation, voegBusstationToe } from "../../lib/stationGroups";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Vertrek } from "../../lib/types";
 
@@ -44,19 +45,51 @@ export default function Haltebord() {
   // Haal alle modaliteiten op: de API kent nog geen afzonderlijk tram- of metrofilter.
   // Zo blijven de mogelijke chips stabiel bij het wisselen van filter.
   const poll = usePolling(`halte:${id}`, () => api.halte(id, "alles", 60), 15_000);
-  const h = poll.data;
+  const hoofd = poll.data;
+  // Compatibiliteitsaanvulling zolang de live API nog niet alle fysieke
+  // parent_station- en busstationclusters aan het stationsbord koppelt.
+  // Onafhankelijke polling: treinvertrekken blijven direct zichtbaar.
+  const busPoll = usePolling(
+    `station-bus:${hoofd?.id || "geen"}:${hoofd?.plaats || ""}:${heeftBusstationAanvullingNodig(hoofd) ? "ja" : "nee"}`,
+    async () => {
+      if (!heeftBusstationAanvullingNodig(hoofd)) return null;
+      const gevonden = await api.zoek(busstationZoekterm(hoofd));
+      const busstation = kiesGekoppeldBusstation(hoofd, gevonden.resultaten);
+      return busstation ? api.halte(busstation.id, "alles", 60) : null;
+    },
+    45_000
+  );
+  const h = useMemo(() => hoofd ? voegBusstationToe(hoofd, busPoll.data) : null, [hoofd, busPoll.data]);
   const naam = h?.naam || String(p.naam || "Halte");
   const plaats = h?.plaats || String(p.plaats || "");
   const fav = isFavoriet(id);
   // De gekozen zoekkaart blijft filterbaar, zelfs als die modus momenteel
   // geen vertrektijden in het API-tijdvenster heeft (bijv. laatste pont).
-  const modi = [...new Set([...(h?.modi || []).filter((m) => typeof m === "string" && m.trim().length > 0),
-    ...(gevraagdeModus ? [gevraagdeModus] : [])])];
+  const modi = [...new Set([...(h?.modi || []), ...(h?.vertrekken || []).map(v => v.modus),
+    ...(gevraagdeModus ? [gevraagdeModus] : [])].filter((m): m is string =>
+      typeof m === "string" && m.trim().length > 0))];
   const meerdereModi = modi.length >= 2;
-  const actieveModus = modi.includes(gekozenModus) && (meerdereModi || gevraagdeModus === gekozenModus)
-    ? gekozenModus : "alles";
-  const chips: ModusChip[] = [{ key: "alles", label: "Alles" }, ...modi.map(modaliteitChip)];
-  const vertrekken = (h?.vertrekken || []).filter((v) => actieveModus === "alles" || v.modus === actieveModus);
+  const actieveModus = meerdereModi
+    ? (modi.includes(gekozenModus) ? gekozenModus
+      : gevraagdeModus && modi.includes(gevraagdeModus) ? gevraagdeModus
+      : modi.includes("train") ? "train" : modi[0])
+    : "alles";
+  const chips: ModusChip[] = modi.map(modaliteitChip);
+  const vertrekken = (h?.vertrekken || []).filter(v => actieveModus === "alles" || v.modus === actieveModus);
+
+  // Alleen horizontale gebaren (geen verticale scroll) wisselen het tabblad.
+  const swipeResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_event, gesture) =>
+      meerdereModi && Math.abs(gesture.dx) > 25 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.4,
+    onPanResponderRelease: (_event, gesture) => {
+      if (!meerdereModi || Math.abs(gesture.dx) < 65
+        || Math.abs(gesture.dx) < Math.abs(gesture.dy) * 1.4) return;
+      const huidig = modi.indexOf(actieveModus);
+      const volgende = huidig + (gesture.dx < 0 ? 1 : -1);
+      if (volgende >= 0 && volgende < modi.length) setGekozenModus(modi[volgende]);
+    }
+  }), [meerdereModi, actieveModus, modi.join("|")]);
   const titel = naam;
   const haltegroep = String(p.groep || "").trim();
   const plaatsSub = plaats && !naam.toLowerCase().includes(plaats.toLowerCase())
@@ -137,14 +170,23 @@ export default function Haltebord() {
       />
       {meerdereModi ? (
 <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <Chips<string>
-            opties={chips}
-            waarde={actieveModus}
-            onKies={setGekozenModus}
-          />
+          {modi.length <= 3 ? (
+            <Chips<string> opties={chips} waarde={actieveModus} onKies={setGekozenModus} vol />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <Chips<string> opties={chips} waarde={actieveModus} onKies={setGekozenModus} />
+            </ScrollView>
+          )}
         </View>
       ) : null}
-      <ScrollView contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
+      <ScrollView
+        {...swipeResponder.panHandlers}
+        contentContainerStyle={s.inhoud}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => {
+          void poll.verversen();
+          if (heeftBusstationAanvullingNodig(hoofd)) void busPoll.verversen();
+        }} colors={[colors.accent]} />}
+      >
         {storingen.length ? (
           <View style={{ gap: 10 }}>
             <Pressable
