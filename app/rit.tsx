@@ -65,6 +65,7 @@ export default function Ritverloop() {
   };
 
   const [toonGepasseerd, setToonGepasseerd] = useState(false);
+  const [weergave, setWeergave] = useState<"lijst" | "kaart">("lijst");
   const { colors } = useApp();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
@@ -77,6 +78,11 @@ export default function Ritverloop() {
   const bestemming = bestemmingVoorWeergave(lijn, rit?.bestemming || String(p.bestemming || "Rit"));
   const vervoerder = rit?.vervoerder || String(p.vervoerder || "");
   const trein = isTrein(rit?.modus || String(p.modus || ""));
+  const kaartBeschikbaar = !!rit && !trein && !rit.vervallen;
+  const isKaart = kaartBeschikbaar && weergave === "kaart";
+  const volgendeHalte = rit?.nu_hier?.volgende_naam
+    || rit?.haltes.find(h => h.status !== "geweest" && !h.vervalt)?.naam
+    || rit?.bestemming || "";
   const ritnr = rit ? ritNummer(rit.id) : "";
   const kopSub = [vervoerder, rit?.lijn_naam && rit.lijn_naam !== lijn ? rit.lijn_naam : "", ritnr].filter(Boolean).join(" · ");
 
@@ -276,6 +282,14 @@ export default function Ritverloop() {
   const inkomendSoort = trein ? "Trein" : rit?.modus === "tram" ? "Tram" : rit?.modus === "metro" ? "Metro" : "Bus";
 
   useEffect(() => {
+    if (!kaartBeschikbaar && weergave === "kaart") setWeergave("lijst");
+  }, [kaartBeschikbaar, weergave]);
+
+  useEffect(() => {
+    if (weergave === "lijst") gescrold.current = false;
+  }, [weergave]);
+
+  useEffect(() => {
     if (rit?.rit_status !== "INCOMING") return;
     // Een inkomende bus heeft de eerste halte nog niet bereikt.
     gescrold.current = false;
@@ -312,7 +326,34 @@ export default function Ritverloop() {
         </Pressable>
       </View>
 
-      {rit ? (
+      {kaartBeschikbaar ? (
+        <View style={[s.weergaveRij, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
+          <View style={[s.weergaveKeuze, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
+            <Pressable
+              onPress={() => setWeergave("lijst")}
+              accessibilityRole="tab"
+              accessibilityLabel="Toon de haltelijst"
+              accessibilityState={{ selected: !isKaart }}
+              style={[s.weergaveKnop, !isKaart ? { backgroundColor: colors.surface } : null]}
+            >
+              <Ionicons name="list-outline" size={19} color={!isKaart ? colors.accent : colors.sub} />
+              <Text style={[s.weergaveTekst, { color: !isKaart ? colors.text : colors.sub }]}>Lijst</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setWeergave("kaart")}
+              accessibilityRole="tab"
+              accessibilityLabel="Toon de live voertuigkaart"
+              accessibilityState={{ selected: isKaart }}
+              style={[s.weergaveKnop, isKaart ? { backgroundColor: colors.surface } : null]}
+            >
+              <Ionicons name="map-outline" size={19} color={isKaart ? colors.accent : colors.sub} />
+              <Text style={[s.weergaveTekst, { color: isKaart ? colors.text : colors.sub }]}>Kaart</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      {rit && !isKaart ? (
         <View style={s.liveVast}>
           <View style={[s.liveBalk, {
             backgroundColor: isIncoming ? colors.infoBg : colors.surface,
@@ -375,6 +416,7 @@ export default function Ritverloop() {
         </View>
       ) : null}
 
+      {!isKaart ? (
       <ScrollView ref={scrollRef} contentContainerStyle={s.inhoud} refreshControl={<RefreshControl refreshing={false} onRefresh={() => void poll.verversen()} colors={[colors.accent]} />}>
         {/* KV8-halteberichten sturen alleen de halterichting aan. Een groene
             GPS-voertuigstip verschijnt uitsluitend na exacte GPS-bevestiging. */}
@@ -382,12 +424,22 @@ export default function Ritverloop() {
         {!rit && poll.fout && !poll.laden ? (
           <Leeg icoon="git-commit-outline" titel="Rit niet gevonden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />
         ) : null}
-        {rit && !trein && !rit.vervallen ? (
-          <LiveRitKaart ritId={rit.id} datum={rit.datum} />
-        ) : null}
         {tijdlijn}
       </ScrollView>
-      <OnderBalk actief={van} />
+      ) : null}
+      {isKaart && rit ? (
+        <LiveRitKaart
+          key={`${rit.id}:${rit.datum}`}
+          ritId={rit.id}
+          datum={rit.datum}
+          lijnnummer={rit.lijn}
+          volgendeHalte={volgendeHalte}
+          vertragingMin={rit.vertraging_min}
+          onderRuimte={insets.bottom + 12}
+          onLijst={() => setWeergave("lijst")}
+        />
+      ) : null}
+      {!isKaart ? <OnderBalk actief={van} /> : null}
     </View>
   );
 }
@@ -403,6 +455,13 @@ function Label({ tekst, bg, fg }: { tekst: string; bg: string; fg: string }) {
 const s = StyleSheet.create({
   kop: { flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 14, paddingRight: 12, paddingLeft: 4, borderBottomWidth: 1 },
   kopKnop: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  weergaveRij: { paddingHorizontal: 14, paddingTop: 5, paddingBottom: 10, borderBottomWidth: 1 },
+  weergaveKeuze: { flexDirection: "row", borderWidth: 1, borderRadius: 16, padding: 4 },
+  weergaveKnop: {
+    flex: 1, flexDirection: "row", minHeight: 41,
+    justifyContent: "center", alignItems: "center", gap: 9, borderRadius: 12
+  },
+  weergaveTekst: { fontSize: 14, fontWeight: "800" },
   lijnVak: { minWidth: 48, height: 38, paddingHorizontal: 10, borderWidth: 1, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   lijnVakText: { fontSize: 17, fontWeight: "800" },
   kopTitel: { fontSize: 20, lineHeight: 25, fontWeight: "800", letterSpacing: -0.4 },

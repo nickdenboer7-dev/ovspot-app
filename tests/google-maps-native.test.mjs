@@ -69,5 +69,5 @@ test("OSM URL-/tegelrendering is verwijderd uit het live voertuigkaart-scherm", 
   assert.match(code, /provider=\{PROVIDER_GOOGLE\}/);
   assert.match(code, /mapType="standard"/);
   assert.match(code, /<Marker\.Animated/);
-  assert.match(code, /animateCamera/);
+  assert.match(code, /animateToRegion/);
 });

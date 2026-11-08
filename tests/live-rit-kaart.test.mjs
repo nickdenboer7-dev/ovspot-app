@@ -39,24 +39,29 @@ test("De kaart update iedere 5 seconden en animeert posities in 4 seconden", () 
   assert.match(component, /<Marker\.Animated\s+coordinate=/);
   assert.match(component, /flat=\{true\}/);
   assert.match(component, /rotation=\{positie\.richting \?\? 0\}/);
-  assert.match(component, /height: 250, overflow: "hidden"/);
+  assert.match(component, /scherm: \{ flex: 1, overflow: "hidden" \}/);
 });
 
 test("Native Google Maps direct zonder versiecheck, stille fallback of OSM-tegels", () => {
   const component = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
   assert.match(component, /import MapView, \{ AnimatedRegion, Marker, PROVIDER_GOOGLE \} from "react-native-maps"/);
-  assert.match(component, /<MapView ref=\{mapRef\}[\s\S]*?provider=\{PROVIDER_GOOGLE\}/);
+  assert.match(component, /<MapView\s+ref=\{mapRef\}[\s\S]*?provider=\{PROVIDER_GOOGLE\}/);
   assert.match(component, /<Marker\.Animated/);
   assert.match(component, /mapType="standard"/);
   assert.match(component, /console\.error\("\[LiveRitKaart\] Native Google Maps-animatie mislukt"/);
   assert.doesNotMatch(component, /nativeBuildVersion|nativeMaps\(|!maps|TegelKaart|UrlTile|tile\.openstreetmap\.org|Live kaart beschikbaar na installatie/);
 });
 
-test("Kaart is boven het ritverloop en wordt nooit op trein- of vervallen rit getoond", () => {
+test("Rit is een keuzescherm Lijst of Kaart; geen inline kaart die de tijdlijn verschuift", () => {
   const app = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
-  assert.match(app, /\{rit && !trein && !rit\.vervallen \? \(/);
-  assert.match(app, /<LiveRitKaart ritId=\{rit\.id\} datum=\{rit\.datum\} \/>/);
-  assert.ok(app.indexOf("<LiveRitKaart ritId=") < app.indexOf("{tijdlijn}"));
+  assert.match(app, /useState<"lijst" \| "kaart">\("lijst"\)/);
+  assert.match(app, /kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
+  assert.match(app, /accessibilityLabel="Toon de haltelijst"/);
+  assert.match(app, /accessibilityLabel="Toon de live voertuigkaart"/);
+  assert.match(app, /\{!isKaart \? \(\s*<ScrollView/);
+  assert.match(app, /\{isKaart && rit \? \(\s*<LiveRitKaart/);
+  assert.match(app, /onLijst=\{\(\) => setWeergave\("lijst"\)\}/);
+  assert.match(app, /\{!isKaart \? <OnderBalk actief=\{van\} \/>/);
   const api = readFileSync(new URL("../lib/api.ts", import.meta.url), "utf8");
   assert.match(api, /liveRitVoertuig: \(ritId: string, datum: string\)/);
   assert.match(api, /\/voertuig\?rit_id=/);
