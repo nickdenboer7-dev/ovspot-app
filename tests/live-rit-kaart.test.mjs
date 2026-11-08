@@ -56,8 +56,7 @@ test("Rit is een keuzescherm Lijst of Kaart; geen inline kaart die de tijdlijn v
   const app = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
   assert.match(app, /useState<"lijst" \| "kaart">\("lijst"\)/);
   assert.match(app, /kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
-  assert.match(app, /accessibilityLabel="Toon de haltelijst"/);
-  assert.match(app, /accessibilityLabel="Toon de live voertuigkaart"/);
+  assert.match(app, /accessibilityLabel=\{isKaart \? "Toon de haltelijst" : "Toon de live voertuigkaart"\}/);
   assert.match(app, /\{!isKaart \? \(\s*<ScrollView/);
   assert.match(app, /\{isKaart && rit \? \(\s*<LiveRitKaart/);
   assert.match(app, /onLijst=\{\(\) => setWeergave\("lijst"\)\}/);

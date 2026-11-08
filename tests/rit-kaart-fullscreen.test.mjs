@@ -5,15 +5,13 @@ import { readFileSync } from "node:fs";
 const app = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
 const kaart = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
 
-test("Segment-toggle Lijst/Kaart bovenin rit; list zichtbaar als default en kaart alleen bij geschikte rit", () => {
+test("Header toont één dynamische Kaart/Lijst-knop; geen tweede balk of instellingenknop", () => {
   assert.match(app, /useState<"lijst" \| "kaart">\("lijst"\)/);
-  assert.match(app, /<Text[^>]*>Lijst<\/Text>/);
-  assert.match(app, /<Text[^>]*>Kaart<\/Text>/);
-  assert.match(app, /name="list-outline"/);
-  assert.match(app, /name="map-outline"/);
-  assert.match(app, /setWeergave\("lijst"\)/);
-  assert.match(app, /setWeergave\("kaart"\)/);
   assert.match(app, /kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
+  assert.match(app, /onPress=\{\(\) => setWeergave\(isKaart \? "lijst" : "kaart"\)\}/);
+  assert.match(app, /accessibilityLabel=\{isKaart \? "Toon de haltelijst" : "Toon de live voertuigkaart"\}/);
+  assert.match(app, /name=\{isKaart \? "list-outline" : "map-outline"\}/);
+  assert.doesNotMatch(app, /settings-outline|weergaveRij|weergaveKeuze|weergaveKnop/);
   assert.match(app, /if \(!kaartBeschikbaar && weergave === "kaart"\) setWeergave\("lijst"\)/);
 });
 
@@ -31,7 +29,7 @@ test("Kaart is full-screen binnen ritweergave, zonder inline kaart of onderste t
 
 test("Zwevende ritstatus, vertraging, terug naar lijst en hercentreerknop zijn gekoppeld", () => {
   assert.match(kaart, /Onderweg naar \$\{volgendeHalte/);
-  assert.match(kaart, /\+\{vertragingMin\} min/);
+  assert.match(kaart, /\+\$\{vertragingMin\} min/);
   assert.match(kaart, /Nog geen bevestigde voertuiglocatie/);
   assert.match(kaart, /statusKaart: \{\s*position: "absolute"/);
   assert.match(kaart, /accessibilityLabel="Terug naar de haltelijst"/);

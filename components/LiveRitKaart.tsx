@@ -203,10 +203,11 @@ export function LiveRitKaart({
             tracksViewChanges={markerTracksViewChanges}
           >
             <View style={s.voertuigMarkerContainer}>
+              <View style={s.snavelRand} />
               <View style={[s.richtingSnavel, { borderBottomColor: colors.accent }]} />
               <View style={[s.voertuigMarker, {
                 backgroundColor: colors.accent,
-                borderColor: colors.surface
+                borderColor: "#FFFFFF"
               }]}>
                 <Text style={[s.markerLijn, { color: "#FFFFFF" }]}
                   numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
@@ -245,10 +246,16 @@ export function LiveRitKaart({
               {positie ? "LIVE VOERTUIG" : "GEEN ACTUELE GPS"}
             </Text>
           </View>
-          {positie && vertragingMin > 0 ? (
-            <Text style={[s.vertraging, { color: colors.delay }]}>
-              +{vertragingMin} min
-            </Text>
+          {Number.isFinite(vertragingMin) ? (
+            <View style={[s.punctualiteitBadge, {
+              backgroundColor: vertragingMin > 0 ? colors.warnBg : colors.liveGlow
+            }]}>
+              <Text style={[s.punctualiteitTekst, {
+                color: vertragingMin > 0 ? colors.delay : colors.live
+              }]}>
+                {vertragingMin > 0 ? `+${vertragingMin} min` : vertragingMin === 0 ? "Op tijd" : `${vertragingMin} min`}
+              </Text>
+            </View>
           ) : null}
         </View>
 
@@ -288,6 +295,13 @@ const s = StyleSheet.create({
   // Buitenste marker is rondom het hart van de cirkel gecentreerd.
   // Native Marker rotation draait het snaveltje (noord/bearing=0 bovenaan) mee.
   voertuigMarkerContainer: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
+  // Witte onderliggende driehoek creëert een scherpe outline op donkere routes.
+  snavelRand: {
+    position: "absolute", left: 18, top: -2, width: 0, height: 0,
+    borderLeftWidth: 6, borderRightWidth: 6, borderBottomWidth: 13,
+    borderLeftColor: "transparent", borderRightColor: "transparent",
+    borderBottomColor: "#FFFFFF"
+  },
   richtingSnavel: {
     position: "absolute", left: 20, top: 0, width: 0, height: 0,
     borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 9,
@@ -319,7 +333,8 @@ const s = StyleSheet.create({
   },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   statusPillTekst: { fontSize: 10, fontWeight: "800", letterSpacing: 0.55 },
-  vertraging: { fontSize: 14, fontWeight: "800" },
+  punctualiteitBadge: { paddingHorizontal: 11, paddingVertical: 6, borderRadius: 18 },
+  punctualiteitTekst: { fontSize: 13, fontWeight: "800" },
   statusTitel: { fontSize: 19, fontWeight: "800", lineHeight: 25, letterSpacing: -0.3 },
   statusSub: { fontSize: 12, marginTop: 6, lineHeight: 17 },
   terugKnop: {

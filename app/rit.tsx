@@ -118,6 +118,11 @@ export default function Ritverloop() {
     });
     if (nh && !nh.bij_halte && nh.na_index < 0) rijen.unshift({ soort: "nu" });
     const laatste = rit.haltes.length - 1;
+    // Markeer alleen de eerstvolgende echte halte, zonder tweede "Volgende halte"-label.
+    const eerstvolgendeIndex = nh && nh.volgende_index >= 0
+      && nh.volgende_index < rit.haltes.length && !rit.haltes[nh.volgende_index].vervalt
+      ? nh.volgende_index
+      : rit.haltes.findIndex(h => !h.vervalt && (h.state ? h.state !== "PASSED" : h.status !== "geweest"));
 
     tijdlijn = (
       <Kaart style={{ paddingHorizontal: 13, paddingTop: 5, paddingBottom: 7 }}>
@@ -173,6 +178,7 @@ export default function Ritverloop() {
             rit.nu_hier.volgende_index === i && !geweest && rit.rit_status !== "INCOMING";
           const beginhalte = rit.rit_status === "INCOMING" && i === 0;
           const vertraagd = h.vertraging_min > 0;
+          const eersteVolgende = i === eerstvolgendeIndex && !geweest && !h.vervalt;
 
           const tijdKleur = geweest || h.vervalt ? colors.muted : vertraagd ? colors.delay : rit.live && h.live_tijd ? colors.live : colors.text;
           const sub = vertraagd ? h.gepland : "";
@@ -183,15 +189,20 @@ export default function Ritverloop() {
           return (
             <View
               key={`${h.id}-${i}`}
-              style={[s.rij, scheiding]}
+              style={[s.rij, scheiding, eersteVolgende ? { backgroundColor: colors.infoBg, borderRadius: 12 } : null]}
               onLayout={huidig || naderend ? (e) => scrollNaar(e.nativeEvent.layout.y) : undefined}
               accessible
               accessibilityLabel={`${h.naam}${h.plaats ? `, ${h.plaats}` : ""}, ${h.vervalt ? "vervalt" : h.verwacht}${aanVertrek ? `, ${aanVertrek}` : ""}${vertraagd ? `, gepland ${h.gepland}` : ""}${geweest ? ", geweest" : ""}${huidig ? (bevestigd ? ", halteert nu" : ", verwachte positie") : ""}`}
             >
               <View style={s.tijdKol}>
-                <Text style={[s.tijd, { color: tijdKleur, textDecorationLine: h.vervalt ? "line-through" : "none" }]}>
-                  {h.verwacht || h.gepland}
-                </Text>
+                <View style={s.tijdRij}>
+                  <Text style={[s.tijd, { color: tijdKleur, textDecorationLine: h.vervalt ? "line-through" : "none" }]}>
+                    {h.verwacht || h.gepland}
+                  </Text>
+                  {vertraagd && !h.vervalt ? (
+                    <Text style={[s.tijdVertraging, { color: colors.delay }]}>+{h.vertraging_min}</Text>
+                  ) : null}
+                </View>
                 {sub ? (
                   <Text style={[s.tijdSub, vertraagd ? { color: colors.muted, textDecorationLine: "line-through" } : { color: colors.live }]}>
                     {sub}
@@ -241,12 +252,6 @@ export default function Ritverloop() {
                     </Text>
                   ) : null}
                 </View>
-
-                {huidig || kv8Volgende || naderend ? (
-                  <Text style={[s.nuTitelKlein, { color: huidig && bevestigd ? colors.live : colors.infoText }]}>
-                    {naderend && bevestigd ? "Volgende halte" : voortgangLabel || "Volgende halte (KV8)"}
-                  </Text>
-                ) : null}
 
                 {onderregel ? (
                   <Text style={[s.plaats, { color: colors.sub }]} numberOfLines={1}>
@@ -323,38 +328,19 @@ export default function Ritverloop() {
             </Text>
           ) : null}
         </View>
-        <Pressable onPress={() => router.push("/instellingen")} accessibilityRole="button"
-          accessibilityLabel="Instellingen" style={s.kopKnop} hitSlop={8}>
-          <Ionicons name="settings-outline" size={23} color={colors.headerSub} />
-        </Pressable>
+        {kaartBeschikbaar ? (
+          <Pressable
+            onPress={() => setWeergave(isKaart ? "lijst" : "kaart")}
+            accessibilityRole="button"
+            accessibilityLabel={isKaart ? "Toon de haltelijst" : "Toon de live voertuigkaart"}
+            accessibilityHint={isKaart ? "Schakel van kaart naar lijst" : "Schakel van lijst naar kaart"}
+            style={s.kopKnop}
+            hitSlop={8}
+          >
+            <Ionicons name={isKaart ? "list-outline" : "map-outline"} size={25} color={colors.headerText} />
+          </Pressable>
+        ) : null}
       </View>
-
-      {kaartBeschikbaar ? (
-        <View style={[s.weergaveRij, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
-          <View style={[s.weergaveKeuze, { backgroundColor: colors.surface2, borderColor: colors.border }]}>
-            <Pressable
-              onPress={() => setWeergave("lijst")}
-              accessibilityRole="tab"
-              accessibilityLabel="Toon de haltelijst"
-              accessibilityState={{ selected: !isKaart }}
-              style={[s.weergaveKnop, !isKaart ? { backgroundColor: colors.surface } : null]}
-            >
-              <Ionicons name="list-outline" size={19} color={!isKaart ? colors.accent : colors.sub} />
-              <Text style={[s.weergaveTekst, { color: !isKaart ? colors.text : colors.sub }]}>Lijst</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setWeergave("kaart")}
-              accessibilityRole="tab"
-              accessibilityLabel="Toon de live voertuigkaart"
-              accessibilityState={{ selected: isKaart }}
-              style={[s.weergaveKnop, isKaart ? { backgroundColor: colors.surface } : null]}
-            >
-              <Ionicons name="map-outline" size={19} color={isKaart ? colors.accent : colors.sub} />
-              <Text style={[s.weergaveTekst, { color: isKaart ? colors.text : colors.sub }]}>Kaart</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
 
       {rit && !isKaart ? (
         <View style={s.liveVast}>
@@ -461,13 +447,6 @@ function Label({ tekst, bg, fg }: { tekst: string; bg: string; fg: string }) {
 const s = StyleSheet.create({
   kop: { flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 14, paddingRight: 12, paddingLeft: 4, borderBottomWidth: 1 },
   kopKnop: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  weergaveRij: { paddingHorizontal: 14, paddingTop: 5, paddingBottom: 10, borderBottomWidth: 1 },
-  weergaveKeuze: { flexDirection: "row", borderWidth: 1, borderRadius: 16, padding: 4 },
-  weergaveKnop: {
-    flex: 1, flexDirection: "row", minHeight: 41,
-    justifyContent: "center", alignItems: "center", gap: 9, borderRadius: 12
-  },
-  weergaveTekst: { fontSize: 14, fontWeight: "800" },
   lijnVak: { minWidth: 48, height: 38, paddingHorizontal: 10, borderWidth: 1, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   lijnVakText: { fontSize: 17, fontWeight: "800" },
   kopTitel: { fontSize: 20, lineHeight: 25, fontWeight: "800", letterSpacing: -0.4 },
@@ -491,8 +470,10 @@ const s = StyleSheet.create({
   ververst: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 },
   ververstText: { fontSize: 13, flexShrink: 1 },
   rij: { flexDirection: "row", alignItems: "stretch", minHeight: 57 },
-  tijdKol: { width: 62, justifyContent: "center", paddingLeft: 4 },
+  tijdKol: { width: 85, justifyContent: "center", paddingLeft: 4 },
+  tijdRij: { flexDirection: "row", alignItems: "baseline", gap: 4 },
   tijd: { fontSize: 17, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  tijdVertraging: { fontSize: 12, fontWeight: "800", fontVariant: ["tabular-nums"] },
   tijdSub: { fontSize: 13, fontWeight: "500", marginTop: 1, fontVariant: ["tabular-nums"] },
   rail: { width: 32, alignItems: "center", justifyContent: "center" },
   lijnBoven: { position: "absolute", top: 0, height: "50%", width: 4, left: 14 },
@@ -514,7 +495,6 @@ const s = StyleSheet.create({
   liveVast: { paddingHorizontal: 10, paddingTop: 10 },
   spoor: { fontSize: 13, minWidth: 52, textAlign: "right", flexShrink: 0, paddingTop: 3 },
   nuTitel: { fontSize: 17, fontWeight: "800" },
-  nuTitelKlein: { fontSize: 13, fontWeight: "700", marginTop: 1 },
   nuSub: { fontSize: 13, marginTop: 1 },
   passeerKnop: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   passeerText: { fontSize: 13, fontWeight: "700" },
