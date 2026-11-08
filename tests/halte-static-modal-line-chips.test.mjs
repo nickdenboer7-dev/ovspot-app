@@ -20,7 +20,7 @@ test("Statische lijnen hebben ook zonder vertrek binnen 2 uur altijd een chip",(
   const alle=zichtbareStatischeLijnen(databaseLijnen,"alles");
   assert.deepEqual(alle.map(x=>x.lijn),["RS2","RE1","21","25","350","1"]);
   assert.equal(filterHalteVertrekken([],"alles","350").length,0);
-  assert.match(source,/const statischeLijnen = h\?\.lijncatalogus\?\.length \? h\.lijncatalogus : lijnCatalogus/);
+  assert.match(source,/combineerStatischeLijnen\(\s*stationPoll\.data\?\.lijncatalogus, h\?\.lijncatalogus, lijnCatalogus/);
   assert.match(source,/zichtbareStatischeLijnen\(statischeLijnen, actieveModus\)/);
   assert.doesNotMatch(source,/uniekeHalteLijnen\(h\?\.vertrekken/);
 });
@@ -44,7 +44,7 @@ test("GTFS catalogus uit echte stationhaltes behoudt de modaliteit ook zonder ve
     types:["train","bus"],vertrekken:[],lijncatalogus:databaseLijnen
   };
   const station=voegStationVertrektijdenToe(basis,cluster);
-  assert.deepEqual(station.lijncatalogus.map(x=>x.lijn),["RS2","RE1","21","25","350","350","1"]);
+  assert.deepEqual(station.lijncatalogus.map(x=>x.lijn),["RS2","RE1","21","25","350","1"]);
   assert.ok(station.modi.includes("bus"));
   assert.deepEqual(zichtbareStatischeLijnen(station.lijncatalogus,"bus").map(x=>x.lijn),["21","25","350"]);
   assert.equal(station.vertrekken.length,0);
@@ -53,12 +53,13 @@ test("GTFS catalogus uit echte stationhaltes behoudt de modaliteit ook zonder ve
 test("Visuele volgorde is modaliteitskeuze, daarna lijnchips, dan vertrektijden",()=>{
   const header=source.search(/<Kop\s+terug/);
   const modality=source.indexOf("{meerdereModi ? (",header);
-  const lines=source.indexOf("{uniekeLijnen.length >= 2 ? (",modality);
+  const lines=source.indexOf("{uniekeLijnen.length >= 1 ? (",modality);
   const departures=source.indexOf("{...swipeResponder.panHandlers}",lines);
   assert.ok(header>=0 && modality>header && lines>modality && departures>lines);
   assert.match(source,/const geselecteerdeLijn = selectedLine && uniekeLijnen.some/);
-  assert.match(source,/setGekozenModus\(v\); setSelectedLine\(null\)/);
-  assert.match(source,/setGekozenModus\(tabModi\[volgende\]\);\s*setSelectedLine\(null\)/);
+  assert.match(source,/onKies=\{wisselModus\}/);
+  assert.match(source,/wisselModus\(tabModi\[volgende\]\)/);
+  assert.match(source,/setGekozenModus\(modus\);\s*setSelectedLine\(null\);\s*setLijnZoektekst\(""\)/);
   assert.match(source,/setSelectedLine\(lijn === geselecteerdeLijn \? null : lijn\)/);
   assert.match(source,/filterHalteVertrekken\(h\?\.vertrekken \?\? \[\], actieveModus, geselecteerdeLijn\)/);
 });

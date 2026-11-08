@@ -13,12 +13,12 @@ const vertrek = (lijn, modus="bus", tijd=0, extra={}) => ({
   rit:{trip:String(tijd),datum:"2026-11-08"}, ...extra
 });
 
-test("Eén unieke lijn na meerdere ritten: lijnfilterbalk blijft verborgen", () => {
+test("Eén unieke vaste lijn blijft als chip zichtbaar, ook zonder vertrek", () => {
   const vertrekTabel = [vertrek("71", "bus", 1), vertrek("71", "bus", 2)];
   const lijnen = uniekeHalteLijnen(vertrekTabel);
   assert.equal(lijnen.length,1);
   assert.equal(lijnen[0].lijn,"71");
-  assert.match(bron,/\{uniekeLijnen.length >= 2 \? \(/);
+  assert.match(bron,/\{uniekeLijnen.length >= 1 \? \(/);
   assert.equal(uniekeHalteLijnen([]).length,0);
 });
 
@@ -59,15 +59,16 @@ test("Een chip wordt opnieuw Alles bij tweede tik; na moduswissel reset selectie
   assert.match(bron,/zichtbareStatischeLijnen\(statischeLijnen, actieveModus\)/);
   assert.match(bron,/const geselecteerdeLijn = selectedLine && uniekeLijnen.some/);
   assert.match(bron,/filterHalteVertrekken\(h\?\.vertrekken \?\? \[\], actieveModus, geselecteerdeLijn\)/);
-  assert.match(bron,/setGekozenModus\(tabModi\[volgende\]\);\s*setSelectedLine\(null\)/);
-  assert.match(bron,/setGekozenModus\(v\); setSelectedLine\(null\)/);
+  assert.match(bron,/wisselModus\(tabModi\[volgende\]\)/);
+  assert.match(bron,/onKies=\{wisselModus\}/);
+  assert.match(bron,/setGekozenModus\(modus\);\s*setSelectedLine\(null\);\s*setLijnZoektekst\(""\)/);
   assert.doesNotMatch(bron,/const volgendeModus = tabModi.includes\("alles"\) \? "alles" : passendeModus/);
 });
 
 test("Scrollbare chipbalk onder Bijgewerkt-header, kleurcontrast en toegankelijkheid",()=>{
   const vanafHeader=bron.search(/<Kop\s+terug/);
   const vanafModus=bron.indexOf("{meerdereModi ? (",vanafHeader);
-  const vanafLijn=bron.indexOf("{uniekeLijnen.length >= 2 ? (",vanafModus);
+  const vanafLijn=bron.indexOf("{uniekeLijnen.length >= 1 ? (",vanafModus);
   assert.ok(vanafHeader>=0 && vanafModus>vanafHeader && vanafLijn>vanafModus);
   assert.match(bron,/ScrollView horizontal showsHorizontalScrollIndicator=\{false\}/);
   assert.match(bron,/accessibilityLabel="Alle lijnen"/);

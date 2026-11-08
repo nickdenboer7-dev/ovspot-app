@@ -1,5 +1,38 @@
 import type { Vertrek, ZoekLijn } from "./types";
 
+/** Combineer volledige vaste routekoppelingen van halte, station en zoekkaart.
+ * Een kortere respons van één bron mag nooit andere GTFS-lijnen laten verdwijnen.
+ */
+export function combineerStatischeLijnen(
+  ...catalogi: Array<readonly ZoekLijn[] | null | undefined>
+): ZoekLijn[] {
+  const lijnen = new Map<string, ZoekLijn>();
+  for (const catalogus of catalogi) {
+    for (const item of catalogus ?? []) {
+      if (!item || typeof item.lijn !== "string" || typeof item.modus !== "string") continue;
+      const lijn = item.lijn.trim();
+      if (!lijn) continue;
+      const key = item.modus + ":" + lijn;
+      const bestaand = lijnen.get(key);
+      if (!bestaand || (!bestaand.kleur && item.kleur)) {
+        lijnen.set(key, { ...item, lijn });
+      }
+    }
+  }
+  return [...lijnen.values()];
+}
+
+/** Zoek in de volledige statische catalogus, ook als er vandaag geen rit is. */
+export function zoekStatischeLijnen(
+  lijnen: readonly ZoekLijn[], term: string
+): ZoekLijn[] {
+  const zoekterm = term.trim().toLocaleLowerCase("nl");
+  return zoekterm ? lijnen.filter(v =>
+    v.lijn.toLocaleLowerCase("nl").includes(zoekterm)
+    || (v.vervoerder || "").toLocaleLowerCase("nl").includes(zoekterm)
+  ) : [...lijnen];
+}
+
 /** Alleen statische GTFS-routekoppelingen; nooit afhangen van het huidige vertrekvenster. */
 export function zichtbareStatischeLijnen(
   lijncatalogus: readonly ZoekLijn[], actieveModus: string

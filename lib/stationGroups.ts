@@ -1,4 +1,5 @@
 import type { Halte, ZoekResultaat, StationVertrektijden, Vertrek } from "./types";
+import { combineerStatischeLijnen } from "./halteLijnFilter.ts";
 
 /** Het native stationsbord gebruikt de complete 350m-v2-vertrekken, niet
  * alleen de treinquays uit /halte. Metro en veerboot behouden hun eigen
@@ -9,12 +10,11 @@ export function voegStationVertrektijdenToe(station: Halte, cluster: StationVert
   const overige = station.vertrekken.filter(v => v.modus === "metro" || v.modus === "ferry");
   const vertrekken = [...cluster.vertrekken, ...overige]
     .sort((a,b) => (a.vertrek_ms ?? 0) - (b.vertrek_ms ?? 0));
-  // De stationscluster bevat de volledige statische GTFS-trein/bus/tram-lijnen;
-  // metro en veerboot behouden hun eigen bron uit het oude halte-endpoint.
-  const lijncatalogus = cluster.lijncatalogus
-    ? [...cluster.lijncatalogus, ...(station.lijncatalogus ?? [])
-        .filter(v => v.modus === "metro" || v.modus === "ferry")]
-    : station.lijncatalogus;
+  // Combineer beide statische GTFS-catalogi: ook buslijnen die pas later rijden
+  // blijven bestaan wanneer één van de endpoints minder routekoppelingen kent.
+  const lijncatalogus = combineerStatischeLijnen(
+    cluster.lijncatalogus, station.lijncatalogus
+  );
   const modi = [...new Set([...station.modi, ...cluster.types,
     ...(lijncatalogus ?? []).map(v => v.modus), ...vertrekken.map(v => v.modus)])];
   return { ...station, bijgewerkt: cluster.bijgewerkt, vertrekken, modi, lijncatalogus };

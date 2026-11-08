@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { PanResponder, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { PanResponder, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { isTab, OnderBalk } from "../../components/OnderBalk";
 import { StoringKaart } from "../../components/StoringKaart";
 import { Chips, FoutBalk, Kaart, Kop, KopKnop, Laden, Leeg } from "../../components/ui";
@@ -12,7 +12,7 @@ import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { storingPastBijModus } from "../../lib/storingPerModus";
 import { klok } from "../../lib/format";
-import { filterHalteVertrekken, zichtbareStatischeLijnen } from "../../lib/halteLijnFilter";
+import { combineerStatischeLijnen, filterHalteVertrekken, zoekStatischeLijnen, zichtbareStatischeLijnen } from "../../lib/halteLijnFilter";
 import { voegStationVertrektijdenToe } from "../../lib/stationGroups";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Vertrek } from "../../lib/types";
@@ -43,7 +43,13 @@ export default function Haltebord() {
     gevraagdeModus || (instellingen.filter === "trein" ? "train" : instellingen.filter)
   );
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
-  React.useEffect(() => setSelectedLine(null), [id]);
+  const [lijnZoektekst, setLijnZoektekst] = useState("");
+  const [zoekveldOpen, setZoekveldOpen] = useState(false);
+  React.useEffect(() => {
+    setSelectedLine(null);
+    setLijnZoektekst("");
+    setZoekveldOpen(false);
+  }, [id]);
   const [storingenOpen, setStoringenOpen] = useState(false);
   const [handmatigeModus, setHandmatigeModus] = useState(false);
   const [ververst, setVervers] = useState(false);
@@ -79,7 +85,12 @@ export default function Haltebord() {
     try { return geldigeLijnen(JSON.parse(String(p.lijnen || "[]")), 250); }
     catch { return []; }
   }, [p.lijnen]);
-  const statischeLijnen = h?.lijncatalogus?.length ? h.lijncatalogus : lijnCatalogus;
+  const statischeLijnen = useMemo(
+    () => combineerStatischeLijnen(
+      stationPoll.data?.lijncatalogus, h?.lijncatalogus, lijnCatalogus
+    ),
+    [stationPoll.data?.lijncatalogus, h?.lijncatalogus, lijnCatalogus]
+  );
   // De gekozen zoekkaart blijft filterbaar, zelfs als die modus momenteel
   // geen vertrektijden in het API-tijdvenster heeft (bijv. laatste pont).
   const modi = [...new Set([...(h?.modi || []), ...statischeLijnen.map(v => v.modus),
@@ -107,6 +118,11 @@ export default function Haltebord() {
     () => zichtbareStatischeLijnen(statischeLijnen, actieveModus),
     [statischeLijnen, actieveModus]
   );
+  // Zoeken beïnvloedt alleen welke chips zichtbaar zijn, nooit de statische databron.
+  const getoondeLijnChips = useMemo(
+    () => zoekStatischeLijnen(uniekeLijnen, lijnZoektekst),
+    [uniekeLijnen, lijnZoektekst]
+  );
   // Na een GTFS-refresh kan een lijn verdwijnen: voorkom een verouderd leeg filter.
   const geselecteerdeLijn = selectedLine && uniekeLijnen.some(v => v.lijn === selectedLine)
     ? selectedLine : null;
@@ -116,6 +132,13 @@ export default function Haltebord() {
     // Chips zijn al gefilterd op de actieve modaliteit.
     // Nogmaals op dezelfde chip tikken brengt 'Alles' terug.
     setSelectedLine(lijn === geselecteerdeLijn ? null : lijn);
+    if (lijn === null) setLijnZoektekst("");
+  };
+  const wisselModus = (modus: string) => {
+    setHandmatigeModus(true);
+    setGekozenModus(modus);
+    setSelectedLine(null);
+    setLijnZoektekst("");
   };
 
   // Alleen horizontale gebaren (geen verticale scroll) wisselen het tabblad.
@@ -129,9 +152,7 @@ export default function Haltebord() {
       const huidig = tabModi.indexOf(actieveModus);
       const volgende = huidig + (gesture.dx < 0 ? 1 : -1);
       if (volgende >= 0 && volgende < tabModi.length) {
-        setHandmatigeModus(true);
-        setGekozenModus(tabModi[volgende]);
-        setSelectedLine(null);
+        wisselModus(tabModi[volgende]);
       }
     }
   }), [meerdereModi, actieveModus, tabModi.join("|")]);
@@ -222,17 +243,51 @@ export default function Haltebord() {
         <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
           {tabModi.length <= 3 ? (
             <Chips<string> opties={chips} waarde={actieveModus}
-              onKies={v => { setHandmatigeModus(true); setGekozenModus(v); setSelectedLine(null); }} vol />
+              onKies={wisselModus} vol />
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <Chips<string> opties={chips} waarde={actieveModus}
-                onKies={v => { setHandmatigeModus(true); setGekozenModus(v); setSelectedLine(null); }} />
+                onKies={wisselModus} />
             </ScrollView>
           )}
         </View>
       ) : null}
-      {uniekeLijnen.length >= 2 ? (
+      {uniekeLijnen.length >= 1 ? (
         <View style={[s.lijnFilterBalk, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          {uniekeLijnen.length > 7 ? (
+            <View style={s.lijnFilterKop}>
+              <Text style={[s.lijnFilterHint, { color: colors.sub }]}>
+                {uniekeLijnen.length} lijnen · veeg voor meer
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={zoekveldOpen ? "Lijn zoeken sluiten" : "Lijnnummer zoeken"}
+                onPress={() => {
+                  setZoekveldOpen(v => !v);
+                  setLijnZoektekst("");
+                }}
+                style={[s.lijnZoekKnop, { borderColor: colors.border }]}>
+                <Ionicons name={zoekveldOpen ? "close" : "search-outline"} size={18} color={colors.accent} />
+              </Pressable>
+            </View>
+          ) : null}
+          {zoekveldOpen ? (
+            <TextInput
+              value={lijnZoektekst}
+              onChangeText={setLijnZoektekst}
+              placeholder="Zoek lijnnummer, bijvoorbeeld 97"
+              placeholderTextColor={colors.muted}
+              keyboardType="default"
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel="Zoek in alle lijnen van deze halte"
+              style={[s.lijnZoekveld, {
+                color: colors.text,
+                backgroundColor: colors.surface,
+                borderColor: colors.border
+              }]}
+            />
+          ) : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             contentContainerStyle={s.lijnFilterInhoud} accessibilityRole="tablist">
             <Pressable
@@ -248,7 +303,7 @@ export default function Haltebord() {
                 color: geselecteerdeLijn === null ? colors.onAccent : colors.sub
               }]}>Alles</Text>
             </Pressable>
-            {uniekeLijnen.map(lijn => {
+            {getoondeLijnChips.map(lijn => {
               const actief = geselecteerdeLijn === lijn.lijn;
               const palet = lijnKleur(
                 lijn.lijn, lijn.modus, lijn.vervoerder,
@@ -273,6 +328,9 @@ export default function Haltebord() {
                 </Pressable>
               );
             })}
+            {getoondeLijnChips.length === 0 ? (
+              <Text style={[s.lijnFilterHint, { color: colors.sub }]}>Geen lijnen gevonden</Text>
+            ) : null}
           </ScrollView>
         </View>
       ) : null}
@@ -316,6 +374,13 @@ export default function Haltebord() {
 
 const s = StyleSheet.create({
   lijnFilterBalk: { borderBottomWidth: StyleSheet.hairlineWidth },
+  lijnFilterKop: { paddingHorizontal: 14, paddingTop: 7, flexDirection: "row",
+    alignItems: "center", justifyContent: "space-between", gap: 12 },
+  lijnFilterHint: { fontSize: 12, fontWeight: "600" },
+  lijnZoekKnop: { width: 34, height: 30, borderRadius: 10, borderWidth: 1,
+    alignItems: "center", justifyContent: "center" },
+  lijnZoekveld: { marginHorizontal: 14, marginTop: 7, height: 43, borderRadius: 12,
+    borderWidth: 1, paddingHorizontal: 13, fontSize: 14 },
   lijnFilterInhoud: { paddingHorizontal: 14, paddingVertical: 9, alignItems: "center", gap: 8 },
   lijnFilterChip: {
     minHeight: 37, minWidth: 49, paddingHorizontal: 10,
