@@ -14,7 +14,7 @@ test("Optie 2: compacte marker van exact 36px, wit lijnnummer centraal zonder pi
 
 test("Buitenrand-snaveltje draait met native bearing en de marker blijft vlak op de kaart", () => {
   assert.match(code, /richtingSnavel: \{[\s\S]*?borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 9/);
-  assert.match(code, /<View style=\{\[s.richtingSnavel, \{ borderBottomColor: colors.accent \}\]\} \/>/);
+  assert.match(code, /<View style=\{\[s.richtingSnavel, \{ borderBottomColor: voertuigKleur \}\]\} \/>/);
   assert.match(code, /flat=\{true\}/);
   assert.match(code, /rotation=\{heading\}/);
   assert.match(code, /anchor=\{\{ x: 0.5, y: 0.5 \}\}/);

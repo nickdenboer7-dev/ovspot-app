@@ -3,7 +3,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
 import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { api } from "../lib/api";
-import { geldigeKaartPunten, geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS, moetVoertuigSnappen, ritRouteKleur } from "../lib/liveRitKaart";
+import { darkMapStyle } from "../constants/darkMapStyle";
+import { geldigeKaartPunten, geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS, moetVoertuigSnappen, ritRouteKleur, ritRouteKleurDonker } from "../lib/liveRitKaart";
 import type { VorigeLiveKaartFix } from "../lib/liveRitKaart";
 import type { LiveRitPositie, RitKaartHalte, RitKaartPunt } from "../lib/types";
 import { useApp } from "../context/AppProvider";
@@ -45,9 +46,11 @@ export function LiveRitKaart({
   ritId, datum, lijnnummer, volgendeHalte, vertragingMin,
   shape, stops, routeColor, onderRuimte = 18, onLijst
 }: Props) {
-  const { colors } = useApp();
+  const { colors, scheme } = useApp();
+  const isDark = scheme === "dark";
   const routePunten = useMemo(() => geldigeKaartPunten(shape), [shape]);
-  const lijnKleur = ritRouteKleur(routeColor);
+  const lijnKleur = isDark ? ritRouteKleurDonker(routeColor) : ritRouteKleur(routeColor);
+  const voertuigKleur = isDark ? "#075985" : colors.accent;
   const [positie, setPositie] = useState<LiveRitPositie | null>(null);
   // Android moet eerst de custom marker inclusief tekst/snavel kunnen rasteren.
   const [markerTracksViewChanges, setMarkerTracksViewChanges] = useState(true);
@@ -183,6 +186,7 @@ export function LiveRitKaart({
         provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFill}
         mapType="standard"
+        customMapStyle={isDark ? darkMapStyle : []}
         initialRegion={STARTREGIO}
         scrollEnabled={true}
         zoomEnabled={true}
@@ -219,7 +223,7 @@ export function LiveRitKaart({
         ) : null}
         {(stops || []).map(stop => (
           <Marker
-            key={`${stop.stop_id}:${stop.stop_sequence}:${stop.gepasseerd ? "voorbij" : "komend"}`}
+            key={`${stop.stop_id}:${stop.stop_sequence}:${stop.gepasseerd ? "voorbij" : "komend"}:${scheme}`}
             coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
             tracksViewChanges={false}
             anchor={{ x: 0.5, y: 0.5 }}
@@ -227,7 +231,8 @@ export function LiveRitKaart({
           >
             <View style={[
               s.halteDot,
-              stop.gepasseerd ? s.halteGepasseerd : s.halteKomend
+              stop.gepasseerd ? s.halteGepasseerd : s.halteKomend,
+              isDark ? (stop.gepasseerd ? s.halteGepasseerdDonker : s.halteKomendDonker) : null
             ]} />
           </Marker>
         ))}
@@ -241,9 +246,9 @@ export function LiveRitKaart({
           >
             <View style={s.voertuigMarkerContainer}>
               <View style={s.snavelRand} />
-              <View style={[s.richtingSnavel, { borderBottomColor: colors.accent }]} />
+              <View style={[s.richtingSnavel, { borderBottomColor: voertuigKleur }]} />
               <View style={[s.voertuigMarker, {
-                backgroundColor: colors.accent,
+                backgroundColor: voertuigKleur,
                 borderColor: "#FFFFFF"
               }]}>
                 <Text style={[s.markerLijn, { color: "#FFFFFF" }]}
@@ -263,12 +268,12 @@ export function LiveRitKaart({
         accessibilityLabel="Centreer kaart op live voertuig"
         accessibilityState={{ disabled: !positie }}
         style={[s.centreerKnop, {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
+          backgroundColor: isDark ? "#1E293B" : colors.surface,
+          borderColor: isDark ? "#475569" : colors.border,
           opacity: positie ? 1 : 0.55
         }]}
       >
-        <Ionicons name="locate" size={23} color={colors.accent} />
+        <Ionicons name="locate" size={23} color={isDark ? "#FFFFFF" : colors.accent} />
       </Pressable>
 
       <View style={[s.statusKaart, {
@@ -354,6 +359,8 @@ const s = StyleSheet.create({
   halteDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3 },
   halteKomend: { backgroundColor: "#FFFFFF", borderColor: "#1E3A8A" },
   halteGepasseerd: { backgroundColor: "#9CA3AF", borderColor: "#6B7280" },
+  halteKomendDonker: { backgroundColor: "#FFFFFF", borderColor: "#38BDF8" },
+  halteGepasseerdDonker: { backgroundColor: "#94A3B8", borderColor: "#E2E8F0" },
   statusKaart: {
     position: "absolute", left: 16, right: 16,
     borderRadius: 22, borderWidth: 1, padding: 17,

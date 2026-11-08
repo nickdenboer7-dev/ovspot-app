@@ -11,6 +11,18 @@ export function ritRouteKleur(raw: string | undefined): string {
   return raw && /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : "#1E3A8A";
 }
 
+/** Licht uitsluitend te donkere GTFS-lijnkleuren op voor de navy-kaartondergrond. */
+export function ritRouteKleurDonker(raw: string | undefined): string {
+  const basis = ritRouteKleur(raw);
+  const rgb = [1, 3, 5].map(i => parseInt(basis.slice(i, i + 2), 16));
+  const helderheid = (rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722) / 255;
+  if (helderheid >= 0.58) return basis;
+  const lichtblauw = [191, 219, 254];
+  return "#" + rgb.map((v, i) =>
+    Math.round(v * 0.3 + lichtblauw[i] * 0.7).toString(16).padStart(2, "0")
+  ).join("").toUpperCase();
+}
+
 /** Match op (stop_id, volgorde); een lusrit kan dezelfde halte tweemaal aandoen. */
 export function markeerRitHaltes(stops: RitKaartHalte[] | undefined, haltes: RitHalte[]): RitKaartHalte[] {
   if (!Array.isArray(stops)) return [];
