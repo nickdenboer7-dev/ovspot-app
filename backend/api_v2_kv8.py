@@ -28,7 +28,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from kv8_normalisatie import TZ, normaliseer, ritverloop_haltes
 
-VERSION = "2.0.13-wayfinding-route-catalog"
+VERSION = "2.0.15-live-rit-kaart"
 KV8_DB = os.environ.get("OVSPOT_KV8_DB", "/var/lib/ovspot-app-kv8/kv8.db")
 GTFS_DB = os.environ.get("OVSPOT_GTFS_DB", "/home/ubuntu/kv15-bot/gtfs.db")
 HOST = os.environ.get("OVSPOT_API_HOST", "127.0.0.1")
@@ -384,6 +384,18 @@ def route(path, qs, con=None, gtfs=None):
     deel = [urllib.parse.unquote(d) for d in deel]
     if deel == ["health"]:
         return 200, {"versie": VERSION}
+    if deel == ["voertuigen"]:
+        from voertuigen_v2 import zoek_voertuigen
+        try:
+            return 200, zoek_voertuigen(qs)
+        except ValueError as exc:
+            raise BadRequest(str(exc)) from exc
+    if deel == ["voertuig"]:
+        from voertuigen_v2 import voertuig_bij_rit
+        try:
+            return 200, voertuig_bij_rit(qs, gtfs if gtfs is not None else gtfs_db())
+        except ValueError as exc:
+            raise BadRequest(str(exc)) from exc
     if deel == ["rit"]:
         return _app_rit_antwoord(qs, con, gtfs)
     if deel == ["storingen"]:

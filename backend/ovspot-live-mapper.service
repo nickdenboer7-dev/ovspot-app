@@ -1,0 +1,43 @@
+[Unit]
+Description=OVspot NDOV KV6 real-time voertuigmapper
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ovspotapp
+Group=ovspotapp
+WorkingDirectory=/opt/ovspot-live-mapper
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=OVSPOT_VOERTUIGEN_DB=/var/lib/ovspot-live-mapper/live_voertuigen.db
+ExecStart=/opt/ovspot-live-mapper/.venv/bin/python -s /opt/ovspot-live-mapper/ovspot-live-mapper.py
+StateDirectory=ovspot-live-mapper
+StateDirectoryMode=0750
+UMask=0027
+Restart=always
+RestartSec=4
+TimeoutStopSec=10
+MemoryMax=180M
+TasksMax=50
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

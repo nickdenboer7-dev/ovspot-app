@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "r
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isTab, OnderBalk } from "../components/OnderBalk";
 import { Kaart, Laden, Leeg, LiveStip } from "../components/ui";
+import { LiveRitKaart } from "../components/LiveRitKaart";
 import { useApp } from "../context/AppProvider";
 import type { Palette } from "../constants/theme";
 import { api } from "../lib/api";
@@ -380,6 +381,9 @@ export default function Ritverloop() {
         {poll.laden && !rit ? <Laden /> : null}
         {!rit && poll.fout && !poll.laden ? (
           <Leeg icoon="git-commit-outline" titel="Rit niet gevonden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />
+        ) : null}
+        {rit && !trein && !rit.vervallen ? (
+          <LiveRitKaart ritId={rit.id} datum={rit.datum} />
         ) : null}
         {tijdlijn}
       </ScrollView>

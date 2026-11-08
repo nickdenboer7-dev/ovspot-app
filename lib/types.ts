@@ -1,5 +1,25 @@
 export type Modus = "train" | "bus" | "tram" | "metro" | "ferry" | string;
 
+export type LiveRitPositie = {
+  voertuignummer: string;
+  lijnnummer: string;
+  lat: number;
+  lon: number;
+  timestamp: number;
+  leeftijd_s: number;
+  richting: number | null;
+};
+
+export type LiveRitVoertuigAntwoord = {
+  ok: boolean;
+  bron: string;
+  rit_id: string;
+  datum: string;
+  tijdstip: number;
+  beschikbaar: boolean;
+  voertuig: LiveRitPositie | null;
+};
+
 export type RitRef = {
   trip?: string; datum?: string; voertuig?: string;
   instap_halte?: string; instap_naam?: string; instap_ms?: number; richting?: string;

@@ -1,10 +1,12 @@
 import Constants from "expo-constants";
-import type { Dichtbij, Filter, Halte, Rit, RitRef, StoringenAntwoord, Zoek } from "./types";
+import type { Dichtbij, Filter, Halte, Rit, RitRef, LiveRitVoertuigAntwoord, StoringenAntwoord, Zoek } from "./types";
 import { freshApiUrl } from "./freshRequest";
 import { dichtbijPad } from "./dichtbijQuery";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiBase?: string };
 export const API_BASE = (extra.apiBase || "https://ovspot.nl/app/v1").replace(/\/$/, "");
+// De nieuwe voertuig-koppeling zit uitsluitend op de zelfstandige v2-API.
+export const API_V2_BASE = API_BASE.replace(/\/app\/v1$/, "/app/v2");
 
 export class ApiError extends Error {
   status: number;
@@ -15,8 +17,8 @@ export class ApiError extends Error {
 }
 
 // Geen eigen ETag-cache: elk vertrek-/rit-/zoekverzoek wordt opnieuw via HTTPS opgehaald.
-async function get<T>(path: string, timeoutMs = 12000): Promise<T> {
-  const url = freshApiUrl(API_BASE, path);
+async function get<T>(path: string, timeoutMs = 12000, base = API_BASE): Promise<T> {
+  const url = freshApiUrl(base, path);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
@@ -68,6 +70,13 @@ export const api = {
   halte: (id: string, modus: Filter = "alles", max = 30) =>
     get<Halte>(`/halte/${encodeURIComponent(id)}?modus=${modus}&max=${max}`),
   rit: (ref: RitRef) => get<Rit>(`/rit?${ritParams(ref)}`),
+  // Exacte GTFS-rit + dienstdatum; de API weigert onzekere voertuigkoppelingen.
+  liveRitVoertuig: (ritId: string, datum: string) =>
+    get<LiveRitVoertuigAntwoord>(
+      `/voertuig?rit_id=${encodeURIComponent(ritId)}&datum=${encodeURIComponent(datum)}`,
+      4500,
+      API_V2_BASE
+    ),
   storingen: (ids: string[]) => get<StoringenAntwoord>(`/storingen?haltes=${ids.map(encodeURIComponent).join(",")}`),
   // &lijnen=1 levert de optionele GTFS-kleuren (kleur/tekstkleur) mee met elke lijn.
   zoek: (q: string) => get<Zoek>(`/zoek?q=${encodeURIComponent(q)}&lijnen=1`, 8000)
