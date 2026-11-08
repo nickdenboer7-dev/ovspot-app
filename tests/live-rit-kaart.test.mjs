@@ -36,22 +36,20 @@ test("De kaart update iedere 5 seconden en animeert posities in 4 seconden", () 
   assert.match(component, /setInterval\(\(\) => void ophalen\(\), LIVE_MAP_POLL_MS\)/);
   assert.match(component, /coordinate\.timing\(\{/);
   assert.match(component, /useNativeDriver: false/);
-  assert.match(component, /<MarkerAnimated\s+coordinate=/);
+  assert.match(component, /<Marker\.Animated\s+coordinate=/);
   assert.match(component, /flat=\{true\}/);
   assert.match(component, /rotation=\{positie\.richting \?\? 0\}/);
   assert.match(component, /height: 250, overflow: "hidden"/);
 });
 
-test("Native Android Google Maps zonder OSM-tegels en met veilige oude-APK-melding", () => {
+test("Native Google Maps direct zonder versiecheck, stille fallback of OSM-tegels", () => {
   const component = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
-  assert.match(component, /Constants\.nativeBuildVersion/);
-  assert.match(component, /< 2\) return null/);
-  assert.match(component, /return require\("react-native-maps"\)/);
-  assert.match(component, /const \{ PROVIDER_GOOGLE \} = maps/);
-  assert.match(component, /<Map ref=\{mapRef\} provider=\{PROVIDER_GOOGLE\}/);
+  assert.match(component, /import MapView, \{ AnimatedRegion, Marker, PROVIDER_GOOGLE \} from "react-native-maps"/);
+  assert.match(component, /<MapView ref=\{mapRef\}[\s\S]*?provider=\{PROVIDER_GOOGLE\}/);
+  assert.match(component, /<Marker\.Animated/);
   assert.match(component, /mapType="standard"/);
-  assert.doesNotMatch(component, /UrlTile|TegelKaart|tile\.openstreetmap\.org|worldPixels|<Image/);
-  assert.match(component, /Live kaart beschikbaar na installatie/);
+  assert.match(component, /console\.error\("\[LiveRitKaart\] Native Google Maps-animatie mislukt"/);
+  assert.doesNotMatch(component, /nativeBuildVersion|nativeMaps\(|!maps|TegelKaart|UrlTile|tile\.openstreetmap\.org|Live kaart beschikbaar na installatie/);
 });
 
 test("Kaart is boven het ritverloop en wordt nooit op trein- of vervallen rit getoond", () => {

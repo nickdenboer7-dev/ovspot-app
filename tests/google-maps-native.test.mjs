@@ -68,6 +68,6 @@ test("OSM URL-/tegelrendering is verwijderd uit het live voertuigkaart-scherm", 
   assert.doesNotMatch(code, /tile\.openstreetmap|UrlTile|TegelKaart|new Image|worldPixels/);
   assert.match(code, /provider=\{PROVIDER_GOOGLE\}/);
   assert.match(code, /mapType="standard"/);
-  assert.match(code, /MarkerAnimated/);
+  assert.match(code, /<Marker\.Animated/);
   assert.match(code, /animateCamera/);
 });
