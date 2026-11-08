@@ -25,7 +25,7 @@ test("Tijdlijn toont haltes voortaan altijd op één regel en gebruikt tail-elli
   assert.match(code, /numberOfLines=\{1\}\s+ellipsizeMode="tail"/);
   assert.match(code, /\{h\.naam\}/);
   assert.doesNotMatch(code, /stationsnaamMetBreekpunten\(h\.naam\)/);
-  assert.match(code, /naamTitel: \{[^}]*flex: 1, flexShrink: 1, minWidth: 0, paddingRight: 8/);
-  assert.match(code, /naamRij: \{[^}]*justifyContent: "space-between"/);
+  assert.match(code, /naamTitel: \{[^}]*flex: 1, flexShrink: 1, minWidth: 0 \}/);
+  assert.match(code, /naamRij: \{[^}]*gap: 4/);
   assert.match(code, /spoor: \{[^}]*flexShrink: 0/);
 });

@@ -9,7 +9,9 @@ test("Haltenamen blijven op één regel en krijgen een nette ellips, zonder loss
   assert.match(code, /\{h\.naam\}\s*<\/Text>/);
   assert.doesNotMatch(code, /stationsnaamMetBreekpunten\(h\.naam\)/);
   assert.match(code, /naam: \{[^}]*flexShrink: 1/);
-  assert.match(code, /naamTitel: \{[^}]*flex: 1, flexShrink: 1, minWidth: 0, paddingRight: 8/);
+  assert.match(code, /naamTitel: \{[^}]*flex: 1, flexShrink: 1, minWidth: 0 \}/);
+  assert.doesNotMatch(code, /naamTitel: \{[^}]*paddingRight:|naamTitel: \{[^}]*maxWidth:/);
+  assert.match(code, /adjustsFontSizeToFit\s+minimumFontScale=\{0\.82\}/);
 });
 
 test("Spoor staat rechts in de stationsnaamrij, met eigen ruimte zonder krimp", () => {
@@ -17,8 +19,9 @@ test("Spoor staat rechts in de stationsnaamrij, met eigen ruimte zonder krimp", 
   assert.ok(nameRow, "naamRij bevat zowel de naamcontainer als het spoornummer");
   assert.match(nameRow[0], /<View style=\{s\.naamTitel\}>/);
   assert.match(nameRow[0], /<Text style=\{\[s\.spoor, \{ color: colors\.sub \}\]\} numberOfLines=\{1\}>\s*Spoor \{h\.spoor\}/);
-  assert.match(code, /naamRij: \{[^}]*flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start"/);
-  assert.match(code, /spoor: \{[^}]*minWidth: 52, textAlign: "right", flexShrink: 0/);
+  assert.match(code, /naamRij: \{[^}]*flexDirection: "row", alignItems: "flex-start", minWidth: 0, gap: 4/);
+  assert.match(code, /spoor: \{[^}]*textAlign: "right", flexShrink: 0/);
+  assert.doesNotMatch(code, /spoor: \{[^}]*minWidth:|spoor: \{[^}]*width:|spoor: \{[^}]*maxWidth:/);
 });
 
 test("Eindhalte- en Beginhalte-badges staan onder de naam, niet naast het spoor", () => {

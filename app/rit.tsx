@@ -243,6 +243,8 @@ export default function Ritverloop() {
                       ]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.82}
                     >
                       {h.naam}
                     </Text>
@@ -484,11 +486,11 @@ const s = StyleSheet.create({
   vinkBol: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   open: { width: 18, height: 18, borderRadius: 9, borderWidth: 3 },
   nuBol: { width: 32, height: 32, borderRadius: 16, borderWidth: 5, alignItems: "center", justifyContent: "center" },
-  naamKol: { flex: 1, minWidth: 0, justifyContent: "center", paddingLeft: 10, paddingVertical: 7 },
-  // Spoor rechts in dezelfde rij; de naam krijgt de rest van de breedte.
-  // Eindhalte/Beginhalte-badges staan afzonderlijk eronder.
-  naamRij: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", minWidth: 0 },
-  naamTitel: { flex: 1, flexShrink: 1, minWidth: 0, paddingRight: 8 },
+  naamKol: { flex: 1, minWidth: 0, justifyContent: "center", paddingLeft: 6, paddingVertical: 7 },
+  // De volledige GTFS-haltenaam benut alle ruimte tot aan het spoornummer.
+  // Alleen als zelfs verkleinen niet past, volgt de native tail-ellips.
+  naamRij: { flexDirection: "row", alignItems: "flex-start", minWidth: 0, gap: 4 },
+  naamTitel: { flex: 1, flexShrink: 1, minWidth: 0 },
   naam: { fontSize: 17, fontWeight: "700", flexShrink: 1 },
   kenmerken: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 5 },
   plaats: { fontSize: 14, marginTop: 2 },
@@ -496,7 +498,7 @@ const s = StyleSheet.create({
   // en lopen bij smalle schermen op een volgende regel door (geen ellips).
   wacht: { fontSize: 13, lineHeight: 19, marginTop: 2, flexWrap: "wrap", alignSelf: "stretch", flexShrink: 1 },
   liveVast: { paddingHorizontal: 10, paddingTop: 10 },
-  spoor: { fontSize: 13, minWidth: 52, textAlign: "right", flexShrink: 0, paddingTop: 3 },
+  spoor: { fontSize: 13, textAlign: "right", flexShrink: 0, paddingTop: 3 },
   nuTitel: { fontSize: 17, fontWeight: "800" },
   nuSub: { fontSize: 13, marginTop: 1 },
   passeerKnop: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
