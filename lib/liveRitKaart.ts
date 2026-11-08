@@ -1,4 +1,33 @@
-import type { LiveRitPositie, LiveRitVoertuigAntwoord } from "./types";
+import type { LiveRitPositie, LiveRitVoertuigAntwoord, RitHalte, RitKaartHalte, RitKaartPunt } from "./types";
+
+export function geldigeKaartPunten(points: RitKaartPunt[] | undefined): RitKaartPunt[] {
+  if (!Array.isArray(points)) return [];
+  return points.filter(p => p && Number.isFinite(p.latitude) && Number.isFinite(p.longitude)
+    && p.latitude >= -90 && p.latitude <= 90 && p.longitude >= -180 && p.longitude <= 180);
+}
+
+/** Alleen exacte GTFS route_color gebruiken; anders een rustige donkerblauwe lijn. */
+export function ritRouteKleur(raw: string | undefined): string {
+  return raw && /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : "#1E3A8A";
+}
+
+/** Match op (stop_id, volgorde); een lusrit kan dezelfde halte tweemaal aandoen. */
+export function markeerRitHaltes(stops: RitKaartHalte[] | undefined, haltes: RitHalte[]): RitKaartHalte[] {
+  if (!Array.isArray(stops)) return [];
+  let cursor = 0;
+  const out: RitKaartHalte[] = [];
+  for (const stop of stops) {
+    if (!stop || !Number.isFinite(stop.latitude) || !Number.isFinite(stop.longitude)
+      || stop.latitude < -90 || stop.latitude > 90 || stop.longitude < -180 || stop.longitude > 180) continue;
+    let match = -1;
+    for (let i = cursor; i < haltes.length; i++) {
+      if (haltes[i].id === stop.stop_id) { match = i; break; }
+    }
+    if (match !== -1) cursor = match + 1;
+    out.push({ ...stop, gepasseerd: match !== -1 && haltes[match].status === "geweest" });
+  }
+  return out;
+}
 
 export const LIVE_MAP_POLL_MS = 5000;
 export const LIVE_MAP_ANIMATION_MS = 4000;

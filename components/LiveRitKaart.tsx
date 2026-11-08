@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import MapView, { AnimatedRegion, Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { api } from "../lib/api";
-import { geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS } from "../lib/liveRitKaart";
-import type { LiveRitPositie } from "../lib/types";
+import { geldigeKaartPunten, geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS, ritRouteKleur } from "../lib/liveRitKaart";
+import type { LiveRitPositie, RitKaartHalte, RitKaartPunt } from "../lib/types";
 import { useApp } from "../context/AppProvider";
 
 const STARTREGIO = {
@@ -30,6 +30,9 @@ type Props = {
   lijnnummer: string;
   volgendeHalte: string;
   vertragingMin: number;
+  shape?: RitKaartPunt[];
+  stops?: RitKaartHalte[];
+  routeColor?: string;
   onderRuimte?: number;
   onLijst: () => void;
 };
@@ -39,9 +42,11 @@ type Props = {
  */
 export function LiveRitKaart({
   ritId, datum, lijnnummer, volgendeHalte, vertragingMin,
-  onderRuimte = 18, onLijst
+  shape, stops, routeColor, onderRuimte = 18, onLijst
 }: Props) {
   const { colors } = useApp();
+  const routePunten = useMemo(() => geldigeKaartPunten(shape), [shape]);
+  const lijnKleur = ritRouteKleur(routeColor);
   const [positie, setPositie] = useState<LiveRitPositie | null>(null);
   const [coordinate] = useState(() => new AnimatedRegion(STARTREGIO));
   const mapRef = useRef<MapView>(null);
@@ -133,12 +138,46 @@ export function LiveRitKaart({
         toolbarEnabled={false}
         onMapReady={() => {
           kaartKlaar.current = true;
-          if (positie && volgVoertuig.current) {
-            mapRef.current?.animateToRegion(voertuigRegio(positie), 450);
+          try {
+            if (positie && volgVoertuig.current) {
+              mapRef.current?.animateToRegion(voertuigRegio(positie), 450);
+            } else if (routePunten.length >= 2) {
+              // Geen GPS-fix: toon het gehele dienstregelingstracé.
+              mapRef.current?.fitToCoordinates(routePunten, {
+                edgePadding: { top: 70, right: 45, bottom: 270, left: 45 },
+                animated: true
+              });
+            }
+          } catch (error) {
+            console.error("[LiveRitKaart] Routekaart niet gecentreerd", error);
           }
         }}
         onPanDrag={() => { volgVoertuig.current = false; }}
       >
+        {routePunten.length >= 2 ? (
+          <Polyline
+            coordinates={routePunten}
+            strokeColor={lijnKleur}
+            strokeWidth={4}
+            lineJoin="round"
+            lineCap="round"
+            zIndex={1}
+          />
+        ) : null}
+        {(stops || []).map(stop => (
+          <Marker
+            key={`${stop.stop_id}:${stop.stop_sequence}:${stop.gepasseerd ? "voorbij" : "komend"}`}
+            coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
+            tracksViewChanges={false}
+            anchor={{ x: 0.5, y: 0.5 }}
+            zIndex={2}
+          >
+            <View style={[
+              s.halteDot,
+              stop.gepasseerd ? s.halteGepasseerd : s.halteKomend
+            ]} />
+          </Marker>
+        ))}
         {positie ? (
           <Marker.Animated
             coordinate={coordinate as unknown as { latitude: number; longitude: number }}
@@ -234,6 +273,9 @@ const s = StyleSheet.create({
     elevation: 4
   },
   markerLijn: { fontSize: 13, fontWeight: "900", textAlign: "center", maxWidth: 51 },
+  halteDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3 },
+  halteKomend: { backgroundColor: "#FFFFFF", borderColor: "#1E3A8A" },
+  halteGepasseerd: { backgroundColor: "#9CA3AF", borderColor: "#6B7280" },
   statusKaart: {
     position: "absolute", left: 16, right: 16,
     borderRadius: 22, borderWidth: 1, padding: 17,

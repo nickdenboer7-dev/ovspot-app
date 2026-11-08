@@ -28,7 +28,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from kv8_normalisatie import TZ, normaliseer, ritverloop_haltes
 
-VERSION = "2.0.15-live-rit-kaart"
+VERSION = "2.0.17-rit-shape-stops"
 KV8_DB = os.environ.get("OVSPOT_KV8_DB", "/var/lib/ovspot-app-kv8/kv8.db")
 GTFS_DB = os.environ.get("OVSPOT_GTFS_DB", "/home/ubuntu/kv15-bot/gtfs.db")
 HOST = os.environ.get("OVSPOT_API_HOST", "127.0.0.1")
@@ -294,6 +294,8 @@ def _app_rit_antwoord(qs, con=None, gtfs=None):
         antwoord=bouw_trein_rit(str(trip),datum,g)
         if antwoord is None:
             raise NotFound("Geen treinrit op deze GTFS-dienstdag")
+        from board_v2 import rit_kaart_geometrie
+        antwoord.update(rit_kaart_geometrie(g,str(trip)))
         return 200, antwoord
     from rit_compat import bouw_rit
     antwoord = bouw_rit(
@@ -301,6 +303,8 @@ def _app_rit_antwoord(qs, con=None, gtfs=None):
     )
     if antwoord is None:
         raise NotFound("Geen bus-, tram- of metrorit met GTFS-data")
+    from board_v2 import rit_kaart_geometrie
+    antwoord.update(rit_kaart_geometrie(g,str(trip)))
     return 200, antwoord
 
 
@@ -333,6 +337,31 @@ def _app_halte_antwoord(stop, qs, con=None, gtfs=None):
     if out is None:
         raise NotFound("Halte niet gevonden")
     return 200, out
+
+
+def _app_vertrektijden_antwoord(qs, con=None, gtfs=None):
+    """200m multimodaal vertrekbord met automatische eerstvolgende-10 fallback."""
+    stop_id = str(next((
+        (qs.get(name) or [""])[0]
+        for name in ("halte_id", "stop_id", "id") if (qs.get(name) or [""])[0]
+    ), "")).strip()
+    if stop_id and not re.fullmatch(r"[A-Za-z0-9:_.\-]{1,80}", stop_id):
+        raise BadRequest("halte_id is ongeldig")
+    if not stop_id:
+        lat = _number(qs,"lat",-90,90)
+        lon = _number(qs,"lon",-180,180)
+    else:
+        lat = lon = None
+    limit = int(_number(qs,"max",1,60,30))
+    from board_v2 import vertrektijden
+    result = vertrektijden(
+        gtfs if gtfs is not None else gtfs_db(),
+        con if con is not None else db(),
+        stop_id=stop_id or None,lat=lat,lon=lon,limit=limit
+    )
+    if result is None:
+        raise NotFound("Halte niet gevonden of coördinaten ontbreken")
+    return 200,result
 
 
 def _app_dichtbij_antwoord(qs, con=None, gtfs=None):
@@ -402,6 +431,8 @@ def route(path, qs, con=None, gtfs=None):
         return _app_storingen_antwoord(qs, gtfs)
     if deel == ["zoek"]:
         return _app_zoek_antwoord(qs, gtfs)
+    if deel == ["vertrektijden"]:
+        return _app_vertrektijden_antwoord(qs, con, gtfs)
     if deel == ["dichtbij"]:
         return _app_dichtbij_antwoord(qs, con, gtfs)
     if len(deel) == 2 and deel[0] == "halte":

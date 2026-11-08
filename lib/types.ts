@@ -139,6 +139,15 @@ export type RitVoertuig = {
   leeftijd_s?: number | null;
 };
 
+export type RitKaartPunt = { latitude: number; longitude: number };
+
+export type RitKaartHalte = RitKaartPunt & {
+  stop_id: string;
+  stop_name: string;
+  stop_sequence: number;
+  gepasseerd?: boolean;
+};
+
 export type Rit = {
   ok: boolean;
   id: string;
@@ -161,6 +170,11 @@ export type Rit = {
   voertuig_info?: RitVoertuig | null;
   gps_leeftijd_s?: number | null;
   haltes: RitHalte[];
+  /** Geordende GTFS shape (of fysieke haltes als fallback), optioneel op oudere API's. */
+  shape?: RitKaartPunt[];
+  stops?: RitKaartHalte[];
+  route_color?: string;
+  shape_bron?: "gtfs" | "stops" | "geen";
   storingen: Storing[];
   bijgewerkt: string;
 };

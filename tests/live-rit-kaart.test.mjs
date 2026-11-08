@@ -44,7 +44,7 @@ test("De kaart update iedere 5 seconden en animeert posities in 4 seconden", () 
 
 test("Native Google Maps direct zonder versiecheck, stille fallback of OSM-tegels", () => {
   const component = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
-  assert.match(component, /import MapView, \{ AnimatedRegion, Marker, PROVIDER_GOOGLE \} from "react-native-maps"/);
+  assert.match(component, /import MapView, \{ AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE \} from "react-native-maps"/);
   assert.match(component, /<MapView\s+ref=\{mapRef\}[\s\S]*?provider=\{PROVIDER_GOOGLE\}/);
   assert.match(component, /<Marker\.Animated/);
   assert.match(component, /mapType="standard"/);

@@ -244,7 +244,7 @@ def _gtfs_hex(value):
     return "#"+text if re.fullmatch(r"[0-9A-F]{6}",text) else None
 
 
-def _schedule(con, ids, now, limit=60):
+def _schedule(con, ids, now, limit=60, horizon_s=None):
     """Geïndexeerde GTFS-dienstregeling voor vorige/huidige/volgende dienstdag.
 
     De vorige GTFS-dag dekt ritten met 24:xx, behalve de terminale halte.
@@ -252,7 +252,8 @@ def _schedule(con, ids, now, limit=60):
     if not ids:
         return []
     lo=now-30
-    hi=now+HORIZON_S
+    horizon_s=HORIZON_S if horizon_s is None else max(1,int(horizon_s))
+    hi=now+horizon_s
     ph=",".join("?" for _ in ids)
     sql=f"""SELECT st.trip_id,st.stop_id,st.stop_sequence,st.departure_time,
                    t.service_id,t.realtime_trip_id,t.destination,t.trip_short_name,
@@ -270,7 +271,12 @@ def _schedule(con, ids, now, limit=60):
                           WHERE nxt.trip_id=st.trip_id AND nxt.stop_sequence>st.stop_sequence)
             LIMIT {MAX_ROWS}"""
     result=[]
-    for day in _service_days(now):
+    # De bestaande 12-uursaanroepen blijven ongewijzigd; langere vensters
+    # omvatten alle GTFS-dienstdagen, inclusief >24:00 nachtritten.
+    start_day=datetime.fromtimestamp(now,TZ).date()-timedelta(days=1)
+    end_day=datetime.fromtimestamp(hi,TZ).date()
+    for offset in range((end_day-start_day).days+1):
+        day=start_day+timedelta(days=offset)
         date=day.isoformat()
         midnight=tijd_ms(date,"00:00:00")
         if midnight is None:
@@ -596,6 +602,229 @@ def _halte_uncached(stop_id,modus,limit,gtfs,kv8,now,ns):
             "vertrekken":_balanced_departures(deps,limit) if modus=="alles" else deps[:limit],
             "storingen":notices}
 
+
+
+CLUSTER_RADIUS_M = 200
+BOARD_WINDOW_S = 120 * 60
+BOARD_TYPES = frozenset(("train", "bus", "tram"))
+
+
+def _quays_within_radius(gtfs, lat, lon, radius=CLUSTER_RADIUS_M):
+    """Alle echte halte- en perron-ID's fysiek binnen 200 m; géén naamheuristiek."""
+    dy=radius/111120.0
+    dx=radius/(111120.0*max(0.1,math.cos(math.radians(lat))))
+    rows=gtfs.execute(
+        """SELECT stop_id,stop_name,lat,lon,platform_code FROM stops
+           INDEXED BY idx_stops_latlon
+           WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?
+             AND location_type=0""",
+        (lat-dy,lat+dy,lon-dx,lon+dx)
+    ).fetchall()
+    result=[]
+    for sid,name,slat,slon,platform in rows:
+        if slat is None or slon is None:
+            continue
+        distance=_distance(lat,lon,slat,slon)
+        if distance <= radius:
+            result.append({
+                "id":str(sid),"naam":str(name or ""),
+                "afstand_m":round(distance,1),
+                "perron":str(platform or ""),
+            })
+    result.sort(key=lambda x:(x["afstand_m"],x["id"]))
+    return result
+
+
+def _vertrektijden_pos(gtfs, stop_id, lat, lon):
+    """Het ID is leidend; bij GPS-coördinaten is geen GTFS-parent vereist."""
+    if stop_id:
+        row=gtfs.execute(
+            "SELECT stop_id,stop_name,lat,lon FROM stops WHERE stop_id=?",
+            (stop_id,)
+        ).fetchone()
+        if row is None and stop_id.startswith("NL:Q:"):
+            row=gtfs.execute(
+                "SELECT stop_id,stop_name,lat,lon FROM stops WHERE stop_code=? LIMIT 1",
+                (stop_id[5:],)
+            ).fetchone()
+        if row is None or row[2] is None or row[3] is None:
+            return None
+        return (str(row[0]),str(row[1] or ""),float(row[2]),float(row[3]))
+    if lat is None or lon is None:
+        return None
+    return (None,"Haltes in de buurt",float(lat),float(lon))
+
+
+def _vertrektijden_items(rows,gtfs,kv8,now,limit):
+    """Echte geplande + gecontroleerde realtime tijd; dedup binnen haltecluster."""
+    if not rows:
+        return []
+    # Voor toekomstige ochtendritten geen dure, betekenisloze live-treinmatch.
+    # Alleen een rit binnen 2 uur kan een verifieerbare actuele livepassage hebben.
+    active_train_rows=[r for r in rows
+                       if r["mode"]=="train" and r["planned"]<=int((now+7200)*1000)]
+    verified=_verified_train_passages(gtfs,active_train_rows,now) if active_train_rows else {}
+    departures=[]
+    seen=set()
+    for row in rows:
+        if row["mode"] not in BOARD_TYPES:
+            continue
+        dep=_departure(row,kv8,{},now,verified)
+        if dep["vervallen"] or dep["vertrek_ms"]<int(now*1000)-30000:
+            continue
+        # Eén passage per rit/dienstdag voor haltes die 20-200 m uit elkaar liggen.
+        # Het echte GTFS stop_sequence blijft in de ritreferentie behouden.
+        key=(row["trip"],row["date"])
+        if key in seen:
+            continue
+        seen.add(key)
+        departure={
+            **dep,
+            "type":row["mode"],
+            "lijnnummer":dep["lijn"],
+            "stop_id":row["stop_id"],
+            "halte":row["stop_name"],
+            "haltepaal":row["stop_id"] if row["mode"]!="train" else None,
+            "perron":dep["spoor"] if row["mode"]=="train" else None,
+            "planned_departure":_now_iso(row["planned"]/1000),
+            "expected_departure":_now_iso(dep["vertrek_ms"]/1000),
+        }
+        departures.append(departure)
+    departures.sort(key=lambda d:(d["vertrek_ms"],d["lijnnummer"],d["stop_id"]))
+    return departures[:max(1,int(limit))]
+
+
+def vertrektijden(gtfs,kv8,stop_id=None,lat=None,lon=None,limit=30,now=None):
+    """Multimodaal 200-m-haltebord; bij 0 vertrek in 120m de volgende 10.
+
+    Bewust een apart opt-in-endpoint: de bestaande /halte- en /dichtbij-
+    contracten, lijnfilters en KV8/GPS-matching veranderen niet.
+    """
+    now=time.time() if now is None else float(now)
+    spot=_vertrektijden_pos(gtfs,stop_id,lat,lon)
+    if spot is None:
+        return None
+    resolved_id,name,base_lat,base_lon=spot
+    quays=_quays_within_radius(gtfs,base_lat,base_lon)
+    ids=[q["id"] for q in quays]
+    modes=("bus","train","tram")
+    if not ids:
+        return {
+            "halte_id":resolved_id,"naam":name,"lat":base_lat,"lon":base_lon,
+            "cluster_straal_m":CLUSTER_RADIUS_M,"haltes":quays,"types":[],
+            "bijgewerkt":_now_iso(now),"venster_min":120,
+            "nacht_fallback":False,"aantal":0,"vertrekken":[]
+        }
+
+    # Een ruime voorselectie voorkomt dat bij een groot station alle bus-/tram-
+    # vertrekken verdwijnen doordat de trein de eerste 30 ritten vult.
+    capacity=min(MAX_ROWS,max(300,int(limit)*15))
+    rows=_schedule(gtfs,ids,now,limit=capacity,horizon_s=BOARD_WINDOW_S)
+    found=_vertrektijden_items(rows,gtfs,kv8,now,limit)
+    fallback=False
+    horizon=BOARD_WINDOW_S
+    if not found:
+        fallback=True
+        # Beschikbare GTFS-tijdspanne aflopen zonder een vaste 12u-afkap.
+        # Geleidelijk verlengen; stop zodra er 10 komende vertrekken zijn.
+        want=min(10,int(limit))
+        for horizon in (24*3600,48*3600,7*86400,35*86400):
+            rows=_schedule(gtfs,ids,now,limit=capacity,horizon_s=horizon)
+            found=_vertrektijden_items(rows,gtfs,kv8,now,want)
+            if len(found)>=want:
+                break
+    types=sorted({dep["type"] for dep in found})
+    return {
+        "halte_id":resolved_id,"naam":name,"lat":base_lat,"lon":base_lon,
+        "cluster_straal_m":CLUSTER_RADIUS_M,"haltes":quays,"types":types,
+        "bijgewerkt":_now_iso(now),"venster_min":120,
+        "nacht_fallback":fallback,"zoekhorizon_uren":round(horizon/3600,2),
+        "aantal":len(found),"vertrekken":found
+    }
+
+
+MAX_ROUTE_SHAPE_POINTS = 1200
+MAX_ROUTE_SHAPE_READ = 16000
+MAX_ROUTE_STOPS = 400
+
+
+def _valid_geo(lat, lon):
+    """Gebruik uitsluitend finite WGS84-coördinaten uit deze GTFS-rit."""
+    try:
+        a, b = float(lat), float(lon)
+        return math.isfinite(a) and math.isfinite(b) and -90 <= a <= 90 and -180 <= b <= 180 and not (a == 0 and b == 0)
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
+def _sample_shape(points, limit=MAX_ROUTE_SHAPE_POINTS):
+    """Uniforme decimatie met behoud van eerste en laatste GTFS-vertex."""
+    if len(points) <= limit:
+        return points
+    last = len(points) - 1
+    return [points[(i * last) // (limit - 1)] for i in range(limit)]
+
+
+def rit_kaart_geometrie(gtfs, trip_id):
+    """Alleen-lezen shape en haltes van één exacte GTFS-trip.
+
+    Shapevolgorde komt van shapes.seq; ontbrekende shape wordt vervangen door
+    de fysieke haltevolgorde, nooit door een geschatte lijnverbinding.
+    """
+    meta=gtfs.execute(
+        """SELECT t.shape_id, r.route_color FROM trips t
+           LEFT JOIN routes r ON r.route_id=t.route_id WHERE t.trip_id=?""",
+        (str(trip_id),)
+    ).fetchone()
+    if meta is None:
+        return {"shape":[],"stops":[],"route_color":"#1E3A8A","shape_bron":"geen"}
+    shape_id,raw_color=meta
+    route_color=_gtfs_hex(raw_color) or "#1E3A8A"
+    stops=[]
+    rows=gtfs.execute(
+        """SELECT st.stop_id, s.stop_name, s.lat, s.lon, st.stop_sequence
+           FROM stop_times st LEFT JOIN stops s ON s.stop_id=st.stop_id
+           WHERE st.trip_id=? ORDER BY st.stop_sequence LIMIT ?""",
+        (str(trip_id), MAX_ROUTE_STOPS + 1)
+    ).fetchall()
+    if len(rows) > MAX_ROUTE_STOPS:
+        # Geen half ritverloop aan de gebruiker suggereren.
+        rows=[]
+    for sid,name,lat,lon,seq in rows:
+        if not _valid_geo(lat,lon):
+            continue
+        stops.append({
+            "stop_id":str(sid or ""),"stop_name":str(name or ""),
+            "latitude":float(lat),"longitude":float(lon),
+            "stop_sequence":int(seq),
+        })
+    shape=[]
+    if shape_id:
+        for lat,lon in gtfs.execute(
+            """SELECT lat,lon FROM shapes INDEXED BY idx_shapes_shape_seq
+               WHERE shape_id=? ORDER BY seq LIMIT ?""",
+            (shape_id, MAX_ROUTE_SHAPE_READ)
+        ):
+            if not _valid_geo(lat,lon):
+                continue
+            pos={"latitude":float(lat),"longitude":float(lon)}
+            if shape and shape[-1]==pos:
+                continue
+            shape.append(pos)
+    found_shape=len(shape)>=2
+    if not found_shape:
+        shape=[]
+        for stop in stops:
+            pos={"latitude":stop["latitude"],"longitude":stop["longitude"]}
+            if not shape or shape[-1]!=pos:
+                shape.append(pos)
+    else:
+        shape=_sample_shape(shape)
+    return {
+        "shape":shape,"stops":stops,
+        "route_color":route_color,
+        "shape_bron":"gtfs" if found_shape else "stops",
+    }
 
 def _nearby_stops(con,lat,lon,straal):
     dy=straal/111120

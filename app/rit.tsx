@@ -12,6 +12,7 @@ import { api } from "../lib/api";
 import { bestemmingVoorWeergave, isTrein, ritNummer } from "../lib/format";
 import { stationsnaamMetBreekpunten } from "../lib/stationsnaam";
 import { usePolling } from "../lib/hooks";
+import { markeerRitHaltes } from "../lib/liveRitKaart";
 import { positieBevestigd, positieTekst, ritBannerTitel, ritBronLabel } from "../lib/wayfindingV2";
 import type { Rit, RitHalte } from "../lib/types";
 
@@ -73,6 +74,8 @@ export default function Ritverloop() {
 
   const poll = usePolling(`rit:${ref.trip}:${ref.datum}:${ref.voertuig}:${ref.instap_halte}:${ref.instap_ms}:${ref.richting}`, () => api.rit(ref), (d) => (d?.live ? 5_000 : 30_000));
   const rit = poll.data;
+  const kaartHaltes = React.useMemo(() => markeerRitHaltes(rit?.stops, rit?.haltes ?? []),
+    [rit?.stops, rit?.haltes]);
 
   const lijn = rit?.lijn || String(p.lijn || "");
   const bestemming = bestemmingVoorWeergave(lijn, rit?.bestemming || String(p.bestemming || "Rit"));
@@ -435,6 +438,9 @@ export default function Ritverloop() {
           lijnnummer={rit.lijn}
           volgendeHalte={volgendeHalte}
           vertragingMin={rit.vertraging_min}
+          shape={rit.shape}
+          stops={kaartHaltes}
+          routeColor={rit.route_color}
           onderRuimte={insets.bottom + 12}
           onLijst={() => setWeergave("lijst")}
         />
