@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { OnderBalk } from "../components/OnderBalk";
 import { Leeg } from "../components/ui";
 import { useApp } from "../context/AppProvider";
-import { halteIcoon, halteKleur, lijnBadgeHeeftRand, lijnKleur } from "../constants/wayfinding";
+import { modusIcoonKleur, lijnBadgeHeeftRand, lijnKleur } from "../constants/wayfinding";
 import { api } from "../lib/api";
 import type { Vertrek, ZoekResultaat } from "../lib/types";
 import { geldigeLijnen, maakZoekKaarten, rangschikZoekresultaten, sorteerZoekLijnen, zoekKaartSubtitel, type ZoekKaart } from "../lib/wayfindingV2";
@@ -160,13 +160,14 @@ export default function Zoek() {
           // Gesplitste kaarten bevatten alleen lijnbadges van hun eigen modus.
           const lijst = kaart.lijnen.length ? kaart.lijnen
             : sorteerZoekLijnen(voorbeelden[item.id] || []).filter(x => !kaart.modus || x.modus === kaart.modus);
-          const vervoerder = lijst.find(x => x.vervoerder)?.vervoerder;
-          const palet = halteKleur(kaart.modus ? [kaart.modus] : item.modi, vervoerder);
-          const icoonModus = kaart.modus || item.modi[0];
-          const icon = kaart.gesplitst ? (
-            icoonModus === "train" ? "train-outline" : icoonModus === "metro" ? "subway-outline"
-              : icoonModus === "ferry" ? "boat-outline" : "bus-outline"
-          ) : halteIcoon(item.modi);
+          // Icoon en kleur volgen uitsluitend de lijnen op deze kaart.
+          // Onbekende gemengde legacy-data krijgt een neutraal wissel-icoon.
+          const palet = modusIcoonKleur(kaart.modus);
+          const icon = kaart.modus === "train" ? "train-outline"
+            : kaart.modus === "metro" ? "subway-outline"
+            : kaart.modus === "bus" ? "bus-outline"
+            : kaart.modus === "ferry" ? "boat-outline"
+            : "swap-horizontal";
           const sub = zoekKaartSubtitel(kaart);
           const plaatsZichtbaar = !kaart.gesplitst && !!item.plaats
             && item.plaats.trim().toLocaleLowerCase("nl") !== item.naam.trim().toLocaleLowerCase("nl");
@@ -216,6 +217,12 @@ export default function Zoek() {
                 ) : (
                   <Text style={[s.aantal, { color: colors.sub }]}>{item.lijnen_aantal ? `${item.lijnen_aantal} ${item.lijnen_aantal === 1 ? "lijn" : "lijnen"}` : ""}</Text>
                 )}
+                {kaart.vervangendBusvervoer ? (
+                  <View style={s.vervangend}>
+                    <Ionicons name="bus-outline" size={15} color={colors.sub} />
+                    <Text style={[s.vervangendTekst, { color: colors.sub }]}>Vervangend busvervoer beschikbaar</Text>
+                  </View>
+                ) : null}
               </Pressable>
             </View>
           );
@@ -249,5 +256,7 @@ const s = StyleSheet.create({
   badges: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-start", gap: 5, width: "100%", paddingTop: 2 },
   badge: { borderRadius: 8, minWidth: 26, minHeight: 25, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
   badgeTekst: { fontWeight: "800", fontSize: 11 },
-  aantal: { fontSize: 11, fontWeight: "600", textAlign: "right" }
+  aantal: { fontSize: 11, fontWeight: "600", textAlign: "right" },
+  vervangend: { flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 2 },
+  vervangendTekst: { fontSize: 12, fontWeight: "600" }
 });

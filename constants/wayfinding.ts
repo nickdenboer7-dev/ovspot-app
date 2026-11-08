@@ -88,6 +88,20 @@ export function lijnBadgeHeeftRand(palet: WayfindingColor): boolean {
   return palet.bg.toUpperCase() === "#FFFFFF";
 }
 
+/** Consistente achtergrond per vervoerssoort voor zoek-iconen.
+ * Voertuiglabels en lijnbadges behouden hun eigen GTFS-routekleuren.
+ */
+export function modusIcoonKleur(modus: Modus | null): WayfindingColor {
+  switch (modus) {
+    case "train": return COLORS.NS; // NS-geel met donkerblauw pictogram
+    case "metro": return COLORS.GVB;
+    case "tram": return { bg: "#cb3b2c", fg: "#ffffff", soft: "#fff0ed" };
+    case "bus": return DEFAULT;
+    case "ferry": return { bg: "#0b878a", fg: "#ffffff", soft: "#e4f5f5" };
+    default: return { bg: PRIMARY, fg: "#ffffff", soft: PRIMARY_SOFT };
+  }
+}
+
 export function halteKleur(modi: Modus[], vervoerder?: string): WayfindingColor {
   if (modi.includes("train")) return COLORS.NS;
   if (modi.includes("metro") && (modi.includes("tram") || modi.includes("ferry"))) return COLORS.GVB;

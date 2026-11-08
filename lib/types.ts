@@ -33,6 +33,9 @@ export type Storing = {
   titel: string;
   tekst: string;
   lijnen: string[];
+  /** GTFS-route-modaliteit per melding; ontbreekt op oudere API-servers. */
+  modi?: Modus[];
+  modus?: Modus;
   ernst: string;
   vanaf_ms: number | null;
   tot_ms: number | null;

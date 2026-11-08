@@ -59,15 +59,15 @@ test('Treinen: binnenlandse Sprinter en Intercity vóór internationale/intercit
   assert.deepEqual(lijnen, kopie);
 });
 
-test('Treinen en vervangende bus worden afzonderlijk weergegeven', () => {
+test('Treinvervangende snelbus wordt als melding bij Trein gegroepeerd zonder losse Bus-kaart', () => {
   const halte = maak('2992167', ['train', 'bus'], [
     lijn('Eurostar', 'train'), lijn('Intercity', 'train'), lijn('Sprinter', 'train'),
-    lijn('Snelbus ipv trein', 'bus')
+    lijn('Snelbus ipv trein', 'bus'), lijn('Stopbus ipv trein', 'bus')
   ]);
   const kaarten = maakZoekKaarten([halte]);
-  assert.deepEqual(kaarten.map(x => x.modus), ['train', 'bus']);
+  assert.deepEqual(kaarten.map(x => x.modus), ['train']);
   assert.deepEqual(kaarten[0].lijnen.map(x => x.lijn), ['Sprinter', 'Intercity', 'Eurostar']);
-  assert.deepEqual(kaarten[1].lijnen.map(x => x.lijn), ['Snelbus ipv trein']);
+  assert.equal(kaarten[0].vervangendBusvervoer, true);
 });
 
 test('Eén modus of oude API zonder lijncatalogus: niet kunstmatig splitsen', () => {

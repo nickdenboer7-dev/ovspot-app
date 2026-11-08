@@ -10,6 +10,7 @@ import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
 import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
+import { storingPastBijModus } from "../../lib/storingPerModus";
 import { klok } from "../../lib/format";
 import { busstationZoekterm, heeftBusstationAanvullingNodig, kiesGekoppeldBusstation, voegBusstationToe } from "../../lib/stationGroups";
 import { useNu, usePolling } from "../../lib/hooks";
@@ -116,7 +117,11 @@ export default function Haltebord() {
     });
   };
 
-  const storingen = h?.storingen ?? [];
+  // Filter waarschuwingen op GTFS-modus; een busomleiding zoals N89 mag
+  // niet op het Metro- of Tram-tabblad worden getoond.
+  const storingen = (h?.storingen ?? []).filter(st =>
+    storingPastBijModus(st, actieveModus, lijnCatalogus, h?.vertrekken ?? [])
+  );
 
   let lijst: React.ReactNode;
   if (poll.laden && !h) lijst = <Laden />;

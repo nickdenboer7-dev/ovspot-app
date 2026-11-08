@@ -58,6 +58,8 @@ export type ZoekKaart = {
   modus: string | null;
   gesplitst: boolean;
   lijnen: CatalogLijn[];
+  /** Alleen ter informatie bij de Trein-kaart; geen extra Bus-hoofdcategorie. */
+  vervangendBusvervoer: boolean;
 };
 
 const TREIN_BINNENLAND: Record<string, number> = {
@@ -85,18 +87,36 @@ export function sorteerZoekLijnen(lijnen: CatalogLijn[]): CatalogLijn[] {
   });
 }
 
-/** Deel alleen op als de API ook echte lijnen in meerdere modaliteiten levert. */
+/** Dienstregelingsbussen ter vervanging van treinen zijn geen zelfstandig busstation. */
+export function isVervangendeBuslijn(lijn: Pick<ZoekLijn, "lijn" | "modus">): boolean {
+  return lijn.modus === "bus"
+    && /^(?:snelbus|stopbus)\s+(?:ipv|i\.p\.v\.|in plaats van)\s+trein$/i.test(lijn.lijn.trim());
+}
+
+/** Deel alleen op als er echt meerdere modaliteiten met eigen lijnen zijn.
+ * Vervangende treindiensten horen als melding bij het treinstation, tenzij er
+ * óók normale buslijnen bestaan: dan blijven ze onder de Bus-kaart staan.
+ */
 export function maakZoekKaarten(resultaten: ZoekResultaat[]): ZoekKaart[] {
   return resultaten.flatMap<ZoekKaart>(halte => {
     const catalogus = geldigeLijnen(halte.lijnen);
-    const modi = [...new Set(halte.modi || [])].filter(m => catalogus.some(l => l.modus === m));
+    const heeftTrein = catalogus.some(l => l.modus === "train");
+    const heeftGewoneBus = catalogus.some(l => l.modus === "bus" && !isVervangendeBuslijn(l));
+    const heeftVervanging = catalogus.some(isVervangendeBuslijn);
+    const vervangingBijTrein = heeftTrein && heeftVervanging && !heeftGewoneBus;
+    const zichtbareLijnen = vervangingBijTrein
+      ? catalogus.filter(l => !isVervangendeBuslijn(l)) : catalogus;
+    const modi = [...new Set([...(halte.modi || []), ...zichtbareLijnen.map(l => l.modus)])]
+      .filter(m => zichtbareLijnen.some(l => l.modus === m));
     if (modi.length < 2) {
-      return [{ key: `${halte.id}:alles`, halte, modus: null, gesplitst: false,
-                lijnen: sorteerZoekLijnen(catalogus) }];
+      const enigeModus = modi[0] || ((halte.modi || []).length === 1 ? halte.modi[0] : null);
+      return [{ key: `${halte.id}:alles`, halte, modus: enigeModus || null, gesplitst: false,
+                lijnen: sorteerZoekLijnen(zichtbareLijnen), vervangendBusvervoer: vervangingBijTrein }];
     }
     return modi.map(modus => ({
       key: `${halte.id}:${modus}`, halte, modus, gesplitst: true,
-      lijnen: sorteerZoekLijnen(catalogus.filter(l => l.modus === modus))
+      lijnen: sorteerZoekLijnen(zichtbareLijnen.filter(l => l.modus === modus)),
+      vervangendBusvervoer: false
     }));
   });
 }
