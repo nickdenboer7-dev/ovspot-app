@@ -215,14 +215,12 @@ export default function Ritverloop() {
                           : (huidig || naderend || kv8Volgende) ? colors.infoText : colors.text
                       } : null
                     ]}
-                    numberOfLines={2}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.8}
                   >
                     {h.naam}
                   </Text>
-                  {beginhalte && !h.vervalt ? <Label tekst="Beginhalte" bg={colors.infoBg} fg={colors.infoText} /> : null}
-                  {h.vervalt ? <Label tekst="Vervalt" bg={colors.redBg} fg={colors.red} /> : null}
-                  {i === laatste && !h.vervalt ? <Label tekst="Eindhalte" bg={colors.accent} fg={colors.onAccent} /> : null}
-                  {h.spoor_gewijzigd ? <Label tekst={`Spoor ${h.spoor_gewijzigd.naar}`} bg={colors.warnBg} fg={colors.delay} /> : null}
                 </View>
 
                 {huidig || kv8Volgende || naderend ? (
@@ -242,9 +240,17 @@ export default function Ritverloop() {
                     {aanVertrek}
                   </Text>
                 ) : null}
-              </View>
 
-              {h.spoor && trein ? <Text style={[s.spoor, { color: colors.sub }]}>Spoor {h.spoor}</Text> : null}
+                {(beginhalte && !h.vervalt || h.vervalt || i === laatste && !h.vervalt || h.spoor_gewijzigd || h.spoor && trein) ? (
+                  <View style={s.kenmerken}>
+                    {beginhalte && !h.vervalt ? <Label tekst="Beginhalte" bg={colors.infoBg} fg={colors.infoText} /> : null}
+                    {h.vervalt ? <Label tekst="Vervalt" bg={colors.redBg} fg={colors.red} /> : null}
+                    {i === laatste && !h.vervalt ? <Label tekst="Eindhalte" bg={colors.accent} fg={colors.onAccent} /> : null}
+                    {h.spoor_gewijzigd ? <Label tekst={`Spoor ${h.spoor_gewijzigd.naar}`} bg={colors.warnBg} fg={colors.delay} /> : null}
+                    {h.spoor && trein ? <Text style={[s.spoor, { color: colors.sub }]}>Spoor {h.spoor}</Text> : null}
+                  </View>
+                ) : null}
+              </View>
             </View>
           );
         })}
@@ -418,14 +424,16 @@ const s = StyleSheet.create({
   open: { width: 18, height: 18, borderRadius: 9, borderWidth: 3 },
   nuBol: { width: 32, height: 32, borderRadius: 16, borderWidth: 5, alignItems: "center", justifyContent: "center" },
   naamKol: { flex: 1, minWidth: 0, justifyContent: "center", paddingLeft: 10, paddingVertical: 7 },
-  naamRij: { flexDirection: "row", alignItems: "center", gap: 8 },
-  naam: { fontSize: 17, fontWeight: "700", flexShrink: 1 },
+  // Stationstitel krijgt de volle beschikbare breedte, zonder concurrerende badges.
+  naamRij: { flexDirection: "row", alignItems: "center", minWidth: 0 },
+  naam: { fontSize: 17, fontWeight: "700", flex: 1, minWidth: 0, flexShrink: 1 },
+  kenmerken: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 5 },
   plaats: { fontSize: 14, marginTop: 2 },
   // Aankomst + vertrek krijgen de volledige breedte van de flexibele naamkolom
   // en lopen bij smalle schermen op een volgende regel door (geen ellips).
   wacht: { fontSize: 13, lineHeight: 19, marginTop: 2, flexWrap: "wrap", alignSelf: "stretch", flexShrink: 1 },
   liveVast: { paddingHorizontal: 10, paddingTop: 10 },
-  spoor: { fontSize: 13, alignSelf: "center", paddingLeft: 6 },
+  spoor: { fontSize: 13, alignSelf: "center", flexShrink: 1 },
   nuTitel: { fontSize: 17, fontWeight: "800" },
   nuTitelKlein: { fontSize: 13, fontWeight: "700", marginTop: 1 },
   nuSub: { fontSize: 13, marginTop: 1 },
