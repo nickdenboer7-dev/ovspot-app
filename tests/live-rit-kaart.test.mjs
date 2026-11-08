@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS, wereldPixels } from "../lib/liveRitKaart.ts";
+import { geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS } from "../lib/liveRitKaart.ts";
 
 const ritId = "gtfs/395732623", datum = "2026-11-07";
 const basis = {
@@ -36,22 +36,22 @@ test("De kaart update iedere 5 seconden en animeert posities in 4 seconden", () 
   assert.match(component, /setInterval\(\(\) => void ophalen\(\), LIVE_MAP_POLL_MS\)/);
   assert.match(component, /coordinate\.timing\(\{/);
   assert.match(component, /useNativeDriver: false/);
-  assert.match(component, /<MarkerAnimated coordinate=/);
+  assert.match(component, /<MarkerAnimated\s+coordinate=/);
   assert.match(component, /flat=\{true\}/);
   assert.match(component, /rotation=\{positie\.richting \?\? 0\}/);
   assert.match(component, /height: 250, overflow: "hidden"/);
 });
 
-test("Nieuwe APK gebruikt MapView; oude OTA heeft een veilige OSM-tegelfallback", () => {
+test("Native Android Google Maps zonder OSM-tegels en met veilige oude-APK-melding", () => {
   const component = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
-  assert.match(component, /UIManager\.getViewManagerConfig\?\.\("AIRMap"\)/);
-  assert.match(component, /UIManager\.getViewManagerConfig\?\.\("RNMapsMapView"\)/);
+  assert.match(component, /Constants\.nativeBuildVersion/);
+  assert.match(component, /< 2\) return null/);
   assert.match(component, /return require\("react-native-maps"\)/);
-  assert.match(component, /<Map ref=\{mapRef\}/);
-  assert.match(component, /<TegelKaart key=\{ritId\}/);
-  const a=wereldPixels(52.028,5.089);
-  const b=wereldPixels(52.029,5.09);
-  assert.ok(b.x > a.x && b.y < a.y);
+  assert.match(component, /const \{ PROVIDER_GOOGLE \} = maps/);
+  assert.match(component, /<Map ref=\{mapRef\} provider=\{PROVIDER_GOOGLE\}/);
+  assert.match(component, /mapType="standard"/);
+  assert.doesNotMatch(component, /UrlTile|TegelKaart|tile\.openstreetmap\.org|worldPixels|<Image/);
+  assert.match(component, /Live kaart beschikbaar na installatie/);
 });
 
 test("Kaart is boven het ritverloop en wordt nooit op trein- of vervallen rit getoond", () => {
