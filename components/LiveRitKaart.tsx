@@ -48,6 +48,11 @@ export function LiveRitKaart({
   const routePunten = useMemo(() => geldigeKaartPunten(shape), [shape]);
   const lijnKleur = ritRouteKleur(routeColor);
   const [positie, setPositie] = useState<LiveRitPositie | null>(null);
+  // Android moet eerst de custom marker inclusief tekst/snavel kunnen rasteren.
+  const [markerTracksViewChanges, setMarkerTracksViewChanges] = useState(true);
+  const heeftGeldigeVoertuigPositie = Number.isFinite(positie?.lat) && Number.isFinite(positie?.lon);
+  const heading = typeof positie?.richting === "number" && Number.isFinite(positie.richting)
+    ? positie.richting : 0;
   const [coordinate] = useState(() => new AnimatedRegion(STARTREGIO));
   const mapRef = useRef<MapView>(null);
   const kaartKlaar = useRef(false);
@@ -106,6 +111,17 @@ export function LiveRitKaart({
       throw error;
     }
   }, [coordinate, positie?.lat, positie?.lon, positie?.timestamp]);
+
+  useEffect(() => {
+    if (!heeftGeldigeVoertuigPositie) {
+      setMarkerTracksViewChanges(true);
+      return;
+    }
+    setMarkerTracksViewChanges(true);
+    // Pas NA de eerste Android-snapshot uitschakelen, niet tijdens render.
+    const snapshotTimer = setTimeout(() => setMarkerTracksViewChanges(false), 750);
+    return () => clearTimeout(snapshotTimer);
+  }, [heeftGeldigeVoertuigPositie, lijnnummer, positie?.lijnnummer, colors.accent, colors.surface]);
 
   useEffect(() => () => {
     // Laat geen JS-animatie doorlopen nadat de kaart wordt gesloten.
@@ -178,13 +194,13 @@ export function LiveRitKaart({
             ]} />
           </Marker>
         ))}
-        {positie ? (
+        {positie && heeftGeldigeVoertuigPositie ? (
           <Marker.Animated
             coordinate={coordinate as unknown as { latitude: number; longitude: number }}
             flat={true}
-            rotation={positie.richting ?? 0}
+            rotation={heading}
             anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
+            tracksViewChanges={markerTracksViewChanges}
           >
             <View style={s.voertuigMarkerContainer}>
               <View style={[s.richtingSnavel, { borderBottomColor: colors.accent }]} />
@@ -271,14 +287,14 @@ const s = StyleSheet.create({
   },
   // Buitenste marker is rondom het hart van de cirkel gecentreerd.
   // Native Marker rotation draait het snaveltje (noord/bearing=0 bovenaan) mee.
-  voertuigMarkerContainer: { width: 44, height: 52, alignItems: "center", justifyContent: "center" },
+  voertuigMarkerContainer: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
   richtingSnavel: {
-    position: "absolute", left: 18, top: 0, width: 0, height: 0,
+    position: "absolute", left: 20, top: 0, width: 0, height: 0,
     borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 9,
     borderLeftColor: "transparent", borderRightColor: "transparent"
   },
   voertuigMarker: {
-    position: "absolute", top: 8, left: 4,
+    position: "absolute", top: 6, left: 6,
     width: 36, height: 36, borderRadius: 18,
     borderWidth: 2, alignItems: "center", justifyContent: "center",
     elevation: 4

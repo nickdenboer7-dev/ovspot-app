@@ -38,7 +38,7 @@ test("De kaart update iedere 5 seconden en animeert posities in 4 seconden", () 
   assert.match(component, /useNativeDriver: false/);
   assert.match(component, /<Marker\.Animated\s+coordinate=/);
   assert.match(component, /flat=\{true\}/);
-  assert.match(component, /rotation=\{positie\.richting \?\? 0\}/);
+  assert.match(component, /rotation=\{heading\}/);
   assert.match(component, /scherm: \{ flex: 1, overflow: "hidden" \}/);
 });
 

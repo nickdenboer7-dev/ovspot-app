@@ -16,7 +16,7 @@ test("Buitenrand-snaveltje draait met native bearing en de marker blijft vlak op
   assert.match(code, /richtingSnavel: \{[\s\S]*?borderLeftWidth: 4, borderRightWidth: 4, borderBottomWidth: 9/);
   assert.match(code, /<View style=\{\[s.richtingSnavel, \{ borderBottomColor: colors.accent \}\]\} \/>/);
   assert.match(code, /flat=\{true\}/);
-  assert.match(code, /rotation=\{positie.richting \?\? 0\}/);
+  assert.match(code, /rotation=\{heading\}/);
   assert.match(code, /anchor=\{\{ x: 0.5, y: 0.5 \}\}/);
 });
 
