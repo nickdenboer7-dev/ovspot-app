@@ -17,7 +17,10 @@ test("Eerstvolgende halte heeft zachte highlight zonder dubbel blauw label", () 
   assert.match(rit, /const eersteVolgende = i === eerstvolgendeIndex && !geweest && !h\.vervalt/);
   assert.match(rit, /eersteVolgende \? \{ backgroundColor: colors\.infoBg, borderRadius: 12 \} : null/);
   assert.doesNotMatch(rit, /nuTitelKlein|Volgende halte \(KV8\)|naderend && bevestigd \? "Volgende halte"/);
-  assert.match(rit, /<Text style=\{\[s\.nuTitel/);
+  // De aparte Nu-hier-rij is vervangen door een geanimeerd icoon op de echte rail.
+  assert.doesNotMatch(rit, /r\.soort === "nu"|rijen\.push\(\{ soort: "nu" \}\)/);
+  assert.match(rit, /<RijdendVoertuig/);
+  assert.match(rit, /\{t\("Onderweg"\)\}/);
 });
 
 test("Per-halte vertraging als compacte +1 direct achter de tijd", () => {

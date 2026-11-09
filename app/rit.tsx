@@ -7,16 +7,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isTab, OnderBalk } from "../components/OnderBalk";
 import { Kaart, Laden, Leeg, LiveStip } from "../components/ui";
 import { LiveRitKaart } from "../components/LiveRitKaart";
+import { RijdendVoertuig } from "../components/RijdendVoertuig";
 import { useApp } from "../context/AppProvider";
 import type { Palette } from "../constants/theme";
 import { api } from "../lib/api";
 import { bestemmingVoorWeergave, isTrein, ritNummer } from "../lib/format";
-import { usePolling } from "../lib/hooks";
+import { useNu, usePolling } from "../lib/hooks";
+import { berekenTussenHalteVoortgang } from "../lib/ritTimelineProgress";
 import { markeerRitHaltes } from "../lib/liveRitKaart";
-import { positieBevestigd, positieTekst, ritBannerTitel, ritBronLabel } from "../lib/wayfindingV2";
+import { positieBevestigd, ritBannerTitel, ritBronLabel } from "../lib/wayfindingV2";
 import type { Rit, RitHalte } from "../lib/types";
 
-type Rij = { soort: "halte"; h: RitHalte; i: number } | { soort: "nu" };
+type Rij = { soort: "halte"; h: RitHalte; i: number };
 
 function minutenTussen(a: string, b: string): number {
   const m = (t: string) => {
@@ -71,10 +73,13 @@ export default function Ritverloop() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const gescrold = useRef(false);
+  const nu = useNu(10_000);
+  const [rijHoogtes, zetRijHoogtes] = useState<Record<number, number>>({});
 
   const poll = usePolling(`rit:${ref.trip}:${ref.datum}:${ref.voertuig}:${ref.instap_halte}:${ref.instap_ms}:${ref.richting}`, () => api.rit(ref),
     (d) => instellingen.databesparing ? (d?.live ? 15_000 : 60_000) : (d?.live ? 5_000 : 30_000));
   const rit = poll.data;
+  useEffect(() => zetRijHoogtes({}), [rit?.id, rit?.datum]);
   const kaartHaltes = React.useMemo(() => markeerRitHaltes(rit?.stops, rit?.haltes ?? []),
     [rit?.stops, rit?.haltes]);
 
@@ -109,7 +114,7 @@ export default function Ritverloop() {
     // zonder exact bevestigde GPS-koppeling; haltevolgorde blijft uit KV8 komen.
     const bevestigd = positieBevestigd(rit);
     const nh = rit.rit_status === "INCOMING" || !bevestigd ? null : rit.nu_hier;
-    const voortgangLabel = positieTekst(rit);
+    const tussen = berekenTussenHalteVoortgang(rit, nu);
     const rijen: Rij[] = [];
 
     const voorbijAantal = rit.haltes.findIndex((h) => (h.state ? h.state !== "PASSED" : h.status !== "geweest"));
@@ -121,9 +126,8 @@ export default function Ritverloop() {
     rit.haltes.forEach((h, i) => {
       if (i < toonVanaf) return;
       rijen.push({ soort: "halte", h, i });
-      if (nh && !nh.bij_halte && i === nh.na_index) rijen.push({ soort: "nu" });
     });
-    if (nh && !nh.bij_halte && nh.na_index < 0) rijen.unshift({ soort: "nu" });
+
     const laatste = rit.haltes.length - 1;
     // Markeer alleen de eerstvolgende echte halte, zonder tweede "Volgende halte"-label.
     const eerstvolgendeIndex = nh && nh.volgende_index >= 0
@@ -149,34 +153,6 @@ export default function Ritverloop() {
         {rijen.map((r, k) => {
           const scheiding = k < rijen.length - 1 ? { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 } : null;
 
-          if (r.soort === "nu") {
-            const over = nh?.over_min == null ? "" : nh.over_min <= 0 ? " · nu" : ` over ${nh.over_min} min`;
-            return (
-              <View
-                key="nu"
-                style={[s.rij, { minHeight: 60 }, scheiding]}
-                onLayout={(e) => scrollNaar(e.nativeEvent.layout.y)}
-                accessible
-                accessibilityLabel={`${voortgangLabel}. Volgende halte ${nh?.volgende_naam}${over}`}
-              >
-                <View style={s.tijdKol} />
-                <View style={s.rail}>
-                  <View style={[s.lijnBoven, { backgroundColor: kl.voorbij }]} />
-                  <View style={[s.lijnOnder, { backgroundColor: kl.komend }]} />
-                  <View style={[s.nuBol, { backgroundColor: colors.live, borderColor: colors.liveGlow }]}>
-                    <Ionicons name={trein ? "train" : "bus"} size={15} color="#fff" />
-                  </View>
-                </View>
-                <View style={s.naamKol}>
-                  <Text style={[s.nuTitel, { color: bevestigd ? colors.live : colors.accent }]}>{voortgangLabel}</Text>
-                  <Text style={[s.nuSub, { color: colors.sub }]} numberOfLines={2}>
-                    Volgende: {nh?.volgende_naam}{over}
-                  </Text>
-                </View>
-              </View>
-            );
-          }
-
           const { h, i } = r;
           const geweest = h.state ? h.state === "PASSED" : h.status === "geweest";
           const huidig = h.state ? h.state === "ARRIVED" : h.status === "huidig";
@@ -186,6 +162,10 @@ export default function Ritverloop() {
           const beginhalte = rit.rit_status === "INCOMING" && i === 0;
           const vertraagd = h.vertraging_min > 0;
           const eersteVolgende = i === eerstvolgendeIndex && !geweest && !h.vervalt;
+          // Alleen bevestigde GPS koppelt het voertuig aan dit traject.
+          // De plaats OP de getekende rail is een tijdschatting, geen GPS-projectie.
+          const rijdtTussenHaltes = !!tussen && i === tussen.volgendeIndex &&
+            tussen.vorigeIndex >= toonVanaf;
 
           const tijdKleur = geweest || h.vervalt ? colors.muted : vertraagd ? colors.delay : rit.live && h.live_tijd ? colors.live : colors.text;
           const sub = vertraagd ? h.gepland : "";
@@ -196,10 +176,15 @@ export default function Ritverloop() {
           return (
             <View
               key={`${h.id}-${i}`}
-              style={[s.rij, scheiding, eersteVolgende ? { backgroundColor: colors.infoBg, borderRadius: 12 } : null]}
-              onLayout={huidig || naderend ? (e) => scrollNaar(e.nativeEvent.layout.y) : undefined}
+              style={[s.rij, scheiding, eersteVolgende ? { backgroundColor: colors.infoBg, borderRadius: 12 } : null, rijdtTussenHaltes && s.rijOnderweg]}
+              onLayout={(e) => {
+                const hoogte = e.nativeEvent.layout.height;
+                zetRijHoogtes((oud) => Math.abs((oud[i] || 0) - hoogte) < 1
+                  ? oud : { ...oud, [i]: hoogte });
+                if (huidig || naderend || rijdtTussenHaltes) scrollNaar(e.nativeEvent.layout.y);
+              }}
               accessible
-              accessibilityLabel={`${h.naam}${h.plaats ? `, ${h.plaats}` : ""}, ${h.vervalt ? "vervalt" : h.verwacht}${aanVertrek ? `, ${aanVertrek}` : ""}${vertraagd ? `, gepland ${h.gepland}` : ""}${geweest ? ", geweest" : ""}${huidig ? (bevestigd ? ", halteert nu" : ", verwachte positie") : ""}`}
+              accessibilityLabel={`${h.naam}${h.plaats ? `, ${h.plaats}` : ""}, ${h.vervalt ? "vervalt" : h.verwacht}${aanVertrek ? `, ${aanVertrek}` : ""}${vertraagd ? `, gepland ${h.gepland}` : ""}${geweest ? ", geweest" : ""}${huidig ? (bevestigd ? ", halteert nu" : ", verwachte positie") : ""}${rijdtTussenHaltes ? ", geschatte voortgang tussen haltes" : ""}`}
             >
               <View style={s.tijdKol}>
                 <View style={s.tijdRij}>
@@ -217,7 +202,7 @@ export default function Ritverloop() {
                 ) : null}
               </View>
 
-              <View style={s.rail}>
+              <View style={[s.rail, { overflow: "visible" }]}>
                 <View style={[s.lijnBoven, { backgroundColor: kl.boven(i) }]} />
                 <View style={[s.lijnOnder, { backgroundColor: kl.onder(i) }]} />
                 {huidig && bevestigd ? (
@@ -231,6 +216,17 @@ export default function Ritverloop() {
                 ) : (
                   <View style={[s.open, { borderColor: h.vervalt ? colors.rail : kl.komend, backgroundColor: colors.surface }]} />
                 )}
+                {rijdtTussenHaltes && tussen ? (
+                  <RijdendVoertuig
+                    voortgang={tussen.voortgang}
+                    volgendeMs={tussen.volgendeMs}
+                    vorigeHoogte={rijHoogtes[i - 1] || 57}
+                    huidigeHoogte={rijHoogtes[i] || 80}
+                    trein={trein}
+                    geredenKleur={kl.voorbij}
+                    teRijdenKleur={colors.live}
+                  />
+                ) : null}
               </View>
 
               <View style={s.naamKol}>
@@ -260,6 +256,14 @@ export default function Ritverloop() {
                 {onderregel ? (
                   <Text style={[s.plaats, { color: colors.sub }]} numberOfLines={1}>
                     {onderregel}
+                  </Text>
+                ) : null}
+
+                {rijdtTussenHaltes && tussen ? (
+                  <Text style={[s.onderweg, { color: colors.live }]} numberOfLines={1}>
+                    {t("Onderweg")} · {tussen.resterendMin <= 0
+                      ? t("minder dan 1 min")
+                      : t("over") + " " + tussen.resterendMin + " min"}
                   </Text>
                 ) : null}
 
@@ -476,6 +480,7 @@ const s = StyleSheet.create({
   ververst: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 },
   ververstText: { fontSize: 13, flexShrink: 1 },
   rij: { flexDirection: "row", alignItems: "stretch", minHeight: 57 },
+  rijOnderweg: { minHeight: 80, overflow: "visible" },
   tijdKol: { width: 85, justifyContent: "center", paddingLeft: 4 },
   tijdRij: { flexDirection: "row", alignItems: "baseline", gap: 4 },
   tijd: { fontSize: 17, fontWeight: "700", fontVariant: ["tabular-nums"] },
@@ -495,13 +500,13 @@ const s = StyleSheet.create({
   naam: { fontSize: 17, fontWeight: "700", flexShrink: 1 },
   kenmerken: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 5 },
   plaats: { fontSize: 14, marginTop: 2 },
+  onderweg: { fontSize: 12, fontWeight: "700", marginTop: 3 },
   // Aankomst + vertrek krijgen de volledige breedte van de flexibele naamkolom
   // en lopen bij smalle schermen op een volgende regel door (geen ellips).
   wacht: { fontSize: 13, lineHeight: 19, marginTop: 2, flexWrap: "wrap", alignSelf: "stretch", flexShrink: 1 },
   liveVast: { paddingHorizontal: 10, paddingTop: 10 },
   spoor: { fontSize: 13, textAlign: "right", flexShrink: 0, paddingTop: 3 },
-  nuTitel: { fontSize: 17, fontWeight: "800" },
-  nuSub: { fontSize: 13, marginTop: 1 },
+
   passeerKnop: { minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   passeerText: { fontSize: 13, fontWeight: "700" },
   label: { paddingHorizontal: 9, minHeight: 23, borderRadius: 8, justifyContent: "center" },
