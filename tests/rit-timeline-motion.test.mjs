@@ -137,5 +137,5 @@ test("Status is plat, toont volgend halteverschil en juiste GPS-chip", () => {
   assert.match(modern,/const statusAfwijkingMin = rit\?\.live && volgendeRij/);
   assert.match(modern,/<Text style=\{s\.tussen\} numberOfLines=\{1\}>/);
   assert.match(modern,/status: \{ height: 56, backgroundColor: P\.strip/);
-  assert.match(modern,/t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
+  assert.match(modern,/t\(gpsStatus\)/);
 });

@@ -3,9 +3,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "./LocalizedText";
 import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
-import { api } from "../lib/api";
 import { darkMapStyle } from "../constants/darkMapStyle";
-import { geldigeKaartPunten, geldigeRitPositie, LIVE_MAP_ANIMATION_MS, LIVE_MAP_POLL_MS, moetVoertuigSnappen, ritRouteKleur, ritRouteKleurDonker } from "../lib/liveRitKaart";
+import { geldigeKaartPunten, LIVE_MAP_ANIMATION_MS, moetVoertuigSnappen, ritRouteKleur, ritRouteKleurDonker } from "../lib/liveRitKaart";
 import type { VorigeLiveKaartFix } from "../lib/liveRitKaart";
 import type { LiveRitPositie, RitKaartHalte, RitKaartPunt } from "../lib/types";
 import { useApp } from "../context/AppProvider";
@@ -30,6 +29,7 @@ function voertuigRegio(positie: LiveRitPositie) {
 type Props = {
   ritId: string;
   datum: string;
+  positie: LiveRitPositie | null;
   lijnnummer: string;
   volgendeHalte: string;
   vertragingMin: number;
@@ -40,19 +40,16 @@ type Props = {
   onLijst: () => void;
 };
 
-/** Full-screen Google Maps onder de ritheader. Polling leeft uitsluitend
- * zolang het kaarttabblad is gemount; er worden nooit andere ritten gegokt.
- */
+/** One GPS fix shared with the stop list; never start a second competing poll. */
 export function LiveRitKaart({
-  ritId, datum, lijnnummer, volgendeHalte, vertragingMin,
+  ritId, datum, positie, lijnnummer, volgendeHalte, vertragingMin,
   shape, stops, routeColor, onderRuimte = 18, onLijst
 }: Props) {
-  const { colors, scheme, instellingen, t } = useApp();
+  const { colors, scheme, t } = useApp();
   const isDark = scheme === "dark";
   const routePunten = useMemo(() => geldigeKaartPunten(shape), [shape]);
   const lijnKleur = isDark ? ritRouteKleurDonker(routeColor) : ritRouteKleur(routeColor);
   const voertuigKleur = isDark ? "#075985" : colors.accent;
-  const [positie, setPositie] = useState<LiveRitPositie | null>(null);
   // Android moet eerst de custom marker inclusief tekst/snavel kunnen rasteren.
   const [markerTracksViewChanges, setMarkerTracksViewChanges] = useState(true);
   const heeftGeldigeVoertuigPositie = Number.isFinite(positie?.lat) && Number.isFinite(positie?.lon);
@@ -67,50 +64,19 @@ export function LiveRitKaart({
   const appStatus = useRef(AppState.currentState);
 
   useEffect(() => {
-    let gesloten = false;
-    let bezig = false;
-    setPositie(null);
-    if (!instellingen.liveVoertuigen) return;
-
-    async function ophalen() {
-      if (gesloten || bezig || appStatus.current !== "active") return;
-      bezig = true;
-      try {
-        const antwoord = await api.liveRitVoertuig(ritId, datum);
-        if (!gesloten) setPositie(geldigeRitPositie(antwoord, ritId, datum));
-      } catch (error) {
-        console.error("[LiveRitKaart] NDOV-voertuigpositie niet opgehaald", error);
-        if (!gesloten) setPositie(huidige =>
-          huidige && Date.now() / 1000 - huidige.timestamp <= 180 ? huidige : null);
-      } finally {
-        bezig = false;
-      }
-    }
-
-    void ophalen();
-    const interval = setInterval(() => void ophalen(),
-      instellingen.databesparing ? 15_000 : LIVE_MAP_POLL_MS);
     const appStateListener = AppState.addEventListener("change", volgendeState => {
       const vorig = appStatus.current;
       appStatus.current = volgendeState;
       if (volgendeState !== "active") {
-        // Geen animatie doortrekken in de achtergrond: volgende GPS-fix snapt.
         skipAnimation.current = true;
         coordinate.stopAnimation(() => {});
-        return;
-      }
-      if (vorig !== "active") {
-        // Bij terugkeer meteen een actuele GPS-update ophalen, niet 5s afwachten.
+      } else if (vorig !== "active") {
+        // The parent refreshes GPS on foreground; the map snaps to its new fix.
         skipAnimation.current = true;
-        void ophalen();
       }
     });
-    return () => {
-      gesloten = true;
-      clearInterval(interval);
-      appStateListener.remove();
-    };
-  }, [ritId, datum, coordinate, instellingen.liveVoertuigen, instellingen.databesparing]);
+    return () => appStateListener.remove();
+  }, [coordinate]);
 
   useEffect(() => {
     if (!positie || !Number.isFinite(positie.lat) || !Number.isFinite(positie.lon)) {

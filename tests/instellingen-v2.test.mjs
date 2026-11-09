@@ -78,8 +78,9 @@ test("Scherm-aanhouden gebruikt echte Expo keep-awake hook; kaart en GPS respect
   assert.match(root,/import \{ useKeepAwake \} from "expo-keep-awake"/);
   assert.match(root,/useKeepAwake\("ovspot-scherm-aanhouden"\)/);
   assert.match(root,/instellingen\.schermAanhouden \? <WakkerHouden \/>/);
-  assert.match(routeMap,/if \(!instellingen\.liveVoertuigen\) return/);
-  assert.match(routeMap,/instellingen\.databesparing \? 15_000 : LIVE_MAP_POLL_MS/);
+  assert.match(rit,/!trein && instellingen\.liveVoertuigen/);
+  assert.match(rit,/instellingen\.databesparing \? 15000 : 5000/);
+  assert.doesNotMatch(routeMap,/api\.liveRitVoertuig/);
   assert.match(buurt,/instellingen\.databesparing \? 600_000 : 180_000/);
   assert.match(buurt,/instellingen\.databesparing \? 60_000 : 20_000/);
   assert.match(rit,/d => instellingen\.databesparing \? \(d\?\.live \? 15000 : 60000\)/);

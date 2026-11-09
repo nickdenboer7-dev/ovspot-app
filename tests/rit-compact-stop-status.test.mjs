@@ -11,7 +11,7 @@ test("Actuele ritstatus gebruikt dezelfde afgeronde afwijking als volgende halte
   assert.match(screen, /volgendeRij\.vertragingMin/);
   assert.match(screen, /t\(afwijkingTekst\(statusAfwijkingMin\)\)/);
   assert.match(screen, /const status = rit\?\.vervallen/);
-  assert.match(screen, /t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
+  assert.match(screen, /t\(gpsStatus\)/);
 });
 
 test("Voorbij is grijs en volgende stop heeft blauwe achtergrond, donkere naam", () => {

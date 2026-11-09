@@ -119,7 +119,7 @@ test("GPS current chip and marker are both gated on matched real coordinates", (
   assert.ok(Math.abs(result.fractie - .5) < .03);
   assert.equal(isGpsActueel(current, now), true);
   assert.equal(isGpsActueel(stale, now), false);
-  assert.match(screen, /t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
+  assert.match(screen, /t\(gpsStatus\)/);
   assert.match(screen, /segment && actueel && r\.index === segment\.volgendeIndex/);
   assert.doesNotMatch(moving, /volgendeMs|Date\.now\(\)/);
 });

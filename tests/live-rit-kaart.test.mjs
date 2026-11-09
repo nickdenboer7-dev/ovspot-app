@@ -33,7 +33,10 @@ test("De kaart update iedere 5 seconden en animeert posities in 4 seconden", () 
   assert.equal(LIVE_MAP_POLL_MS, 5000);
   assert.equal(LIVE_MAP_ANIMATION_MS, 4000);
   const component = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
-  assert.match(component, /setInterval\(\(\) => void ophalen\(\),\s*instellingen\.databesparing \? 15_000 : LIVE_MAP_POLL_MS\)/);
+  const parent = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  assert.match(parent, /instellingen\.databesparing \? 15000 : 5000/);
+  assert.match(parent, /positie=\{actueel \? gps : null\}/);
+  assert.doesNotMatch(component, /api\.liveRitVoertuig\(/);
   assert.match(component, /coordinate\.timing\(\{/);
   assert.match(component, /useNativeDriver: false/);
   assert.match(component, /<Marker\.Animated\s+coordinate=/);

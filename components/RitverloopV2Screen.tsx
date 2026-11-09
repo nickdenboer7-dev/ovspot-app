@@ -14,7 +14,7 @@ import { api } from "../lib/api";
 import { bestemmingVoorWeergave, isTrein } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { afwijkingTekst, bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, RITV2, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
+import { afwijkingTekst, bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, RITV2, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord } from "../lib/types";
 
 type Params = {
@@ -65,15 +65,20 @@ export default function RitverloopV2Screen() {
   const kaartBeschikbaar = !!rit && !trein && !rit.vervallen;
   const isKaart = weergave === "kaart" && kaartBeschikbaar;
   const gpsPoll = usePolling<LiveRitVoertuigAntwoord | null>(
-    "ritV2gps:" + rit?.id + ":" + rit?.datum + ":" + (isKaart ? "kaart" : "lijst"),
-    () => rit && rit.id && rit.datum && !trein && !isKaart
+    "ritV2gps:" + rit?.id + ":" + rit?.datum,
+    () => rit && rit.id && rit.datum && !trein && instellingen.liveVoertuigen
       ? api.liveRitVoertuig(rit.id, rit.datum) : Promise.resolve(null),
     instellingen.databesparing ? 15000 : 5000
   );
   const gps = rit && gpsPoll.data ? geldigeRitPositie(gpsPoll.data, rit.id, rit.datum) : null;
-  const actueel = isGpsActueel(gps, nu, !!gpsPoll.fout);
+  // A transient request failure is not a stale GPS fix: evaluate the source timestamp.
+  // Keep one vehicle request and one cached fix when switching map <-> stop list.
+  const actueel = isGpsActueel(gps, nu);
   const segment = rit && actueel && !rit.vervallen && !trein
     ? projecteerGpsOpRit(rit, gps) : null;
+  const gpsStatus = ritGpsStatus(gps, nu, !!segment, {
+    trein, enabled: instellingen.liveVoertuigen, laden: gpsPoll.laden
+  });
   const haltes = useMemo(() => rit ? bouwRitV2Haltes(rit, segment?.vorigeIndex ?? null) : [],
     [rit, segment?.vorigeIndex]);
   const gpsCursor = segment?.volgendeIndex ?? -1;
@@ -169,13 +174,15 @@ export default function RitverloopV2Screen() {
             </Text>
           ) : null}
           <View style={s.statusSpacer} />
-          <View style={[s.gpsChip, { backgroundColor: segment ? P.gpsBg : P.staleBg }]}>
-            <Text style={[s.gpsTekst, { color: segment ? P.green : P.muted }]}
-              numberOfLines={1}>{t(segment ? "GPS actueel" : "GPS verouderd")}</Text>
+          <View style={[s.gpsChip, { backgroundColor: gpsStatus === "GPS actueel" ? P.gpsBg : P.staleBg }]}>
+            <Text style={[s.gpsTekst, { color: gpsStatus === "GPS actueel" ? P.green : P.muted }]}
+              numberOfLines={1}>{t(gpsStatus)}</Text>
           </View>
         </View>
         <Text style={s.tussen} numberOfLines={1}>
-          {paar ? t("Tussen") + " " + paar : t("Geen actuele voertuigpositie")}
+          {paar ? t("Tussen") + " " + paar
+            : gpsStatus === "GPS niet op route" ? t("Voertuigpositie niet op haltevolgorde")
+            : t("Geen actuele voertuigpositie")}
         </Text>
       </View>
       <ScrollView ref={lijstRef} style={s.lijst}
@@ -225,6 +232,7 @@ export default function RitverloopV2Screen() {
       <OnderBalk actief={van} compact />
     </> : rit ? <LiveRitKaart
       key={rit.id + ":" + rit.datum} ritId={rit.id} datum={rit.datum}
+      positie={actueel ? gps : null}
       lijnnummer={rit.lijn} volgendeHalte={rit.nu_hier?.volgende_naam || bestemming}
       vertragingMin={rit.vertraging_min} shape={rit.shape} stops={kaartHaltes}
       routeColor={rit.route_color} onderRuimte={insets.bottom + 12}

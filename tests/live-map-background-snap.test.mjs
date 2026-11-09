@@ -36,10 +36,13 @@ test("AppState triggert snap bij foreground en stopt animatie in achtergrond", (
   assert.match(component, /import \{ Text \} from "\.\/LocalizedText"/);
   assert.match(component, /AppState\.addEventListener\("change", volgendeState => \{/);
   assert.match(component, /if \(volgendeState !== "active"\) \{[\s\S]*?skipAnimation\.current = true;[\s\S]*?coordinate\.stopAnimation/);
-  assert.match(component, /if \(vorig !== "active"\) \{[\s\S]*?skipAnimation\.current = true;[\s\S]*?void ophalen\(\)/);
+  assert.match(component, /if \(vorig !== "active"\) \{[\s\S]*?skipAnimation\.current = true;/);
   assert.match(component, /appStateListener\.remove\(\)/);
-  assert.match(component, /clearInterval\(interval\)/);
-  assert.match(component, /if \(gesloten \|\| bezig \|\| appStatus\.current !== "active"\) return/);
+  const parent = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  const poll = readFileSync(new URL("../lib/hooks.ts", import.meta.url), "utf8");
+  assert.match(parent, /const gpsPoll = usePolling/);
+  assert.match(poll, /if \(s === "active"\) void run\(\)/);
+  assert.doesNotMatch(component, /setInterval\(\(\) => void ophalen/);
 });
 
 test("Harde snap zonder timing, normale stap geanimeerd; camera snapt ook", () => {

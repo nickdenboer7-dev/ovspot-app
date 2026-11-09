@@ -44,9 +44,11 @@ test("Realtime coördinaten: vier seconden animatie, richting en lijnbadge, poll
   assert.match(kaart, /flat=\{true\}/);
   assert.match(kaart, /rotation=\{heading\}/);
   assert.match(kaart, /\{lijnnummer \|\| positie\.lijnnummer\}/);
-  assert.match(kaart, /setInterval\(\(\) => void ophalen\(\),\s*instellingen\.databesparing \? 15_000 : LIVE_MAP_POLL_MS\)/);
-  assert.match(kaart, /clearInterval\(interval\)/);
-  assert.match(kaart, /gesloten = true/);
+  const parent = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  assert.match(parent, /instellingen\.databesparing \? 15000 : 5000/);
+  assert.match(parent, /positie=\{actueel \? gps : null\}/);
+  assert.match(kaart, /appStateListener\.remove\(\)/);
+  assert.doesNotMatch(kaart, /setInterval\(\(\) => void ophalen/);
   assert.match(kaart, /console\.error\("\[LiveRitKaart\] Native Google Maps-animatie mislukt"/);
   assert.match(kaart, /onPanDrag=\{\(\) => \{ volgVoertuig\.current = false; \}\}/);
 });

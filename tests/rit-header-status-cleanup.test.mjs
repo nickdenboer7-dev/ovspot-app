@@ -27,7 +27,7 @@ test("Per-halte vertraging wordt compact achter tijd gezet", () => {
 
 test("Alleen geprojecteerde actuele GPS krijgt groene chip én busmarker", () => {
   assert.match(screen, /const segment = rit && actueel && !rit\.vervallen/);
-  assert.match(screen, /t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
+  assert.match(screen, /t\(gpsStatus\)/);
   assert.match(screen, /segment && actueel && r\.index === segment\.volgendeIndex/);
   assert.match(screen, /<LiveRitKaart/);
 });

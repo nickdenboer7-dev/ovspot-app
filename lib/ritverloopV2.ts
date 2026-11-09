@@ -256,3 +256,21 @@ export function isGpsActueel(gps: Pick<LiveRitPositie,"timestamp"|"leeftijd_s"> 
   const ageSec = Math.max(gps.leeftijd_s, (nuMs / 1000) - gps.timestamp);
   return ageSec >= -5 && ageSec <= 45;
 }
+
+/** Distinguish GPS age from missing vehicle data and missing route geometry.
+ * A new request error does not invalidate an earlier fix until it actually ages out.
+ */
+export function ritGpsStatus(
+  gps: Pick<LiveRitPositie, "timestamp" | "leeftijd_s"> | null,
+  nuMs: number,
+  heeftSegment: boolean,
+  opts: { trein?: boolean; enabled?: boolean; laden?: boolean } = {}
+): string {
+  if (opts.trein) return "Geen voertuig-GPS";
+  if (opts.enabled === false) return "GPS uitgeschakeld";
+  if (gps) {
+    if (!isGpsActueel(gps, nuMs)) return "GPS verouderd";
+    return heeftSegment ? "GPS actueel" : "GPS niet op route";
+  }
+  return opts.laden ? "GPS ophalen…" : "Geen voertuig-GPS";
+}

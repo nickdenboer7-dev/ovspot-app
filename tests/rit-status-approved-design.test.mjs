@@ -15,9 +15,9 @@ test("Goedgekeurde platte statusstrook is 56dp zonder rand of extra busicoon", (
 });
 
 test("Geen Jouw halte of extra haltekaart; GPS-chip is gekoppeld aan echte GPS", () => {
-  assert.match(screen, /t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
+  assert.match(screen, /t\(gpsStatus\)/);
   assert.doesNotMatch(screen + stop, /Jouw halte|<VolgendeHalteKaart|<NextStopBanner/);
-  assert.match(screen, /const actueel = isGpsActueel\(gps, nu, !!gpsPoll\.fout\)/);
+  assert.match(screen, /const actueel = isGpsActueel\(gps, nu\)/);
   assert.match(screen, /const segment = rit && actueel && !rit\.vervallen/);
 });
 

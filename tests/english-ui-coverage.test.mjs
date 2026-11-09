@@ -98,7 +98,7 @@ test("Journey GPS, early status, and disruption dates respect English", () => {
   const map = source("../components/LiveRitKaart.tsx");
   const notice = source("../components/StoringKaart.tsx");
   const dateFormat = loadTs(source("../lib/format.ts"));
-  assert.match(journey, /t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
+  assert.match(journey, /t\(gpsStatus\)/);
   assert.match(journey, /t\(afwijkingTekst\(statusAfwijkingMin\)\)/);
   assert.match(map, /min te vroeg/);
   assert.match(notice, /periode\(st\.vanaf_ms, st\.tot_ms, Date\.now\(\), taal\)/);
