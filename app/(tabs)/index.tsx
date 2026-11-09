@@ -243,21 +243,59 @@ export default function Dichtbij() {
       >
         <View style={s.titelRij}>
           <Text style={[s.titel, { color: colors.text }]} accessibilityRole="header">
-            Haltes binnen {afstand(instellingen.straal)}
+            {pos?.bron === "standaard"
+              ? "Haltes bij Amsterdam Centraal"
+              : `Haltes binnen ${afstand(instellingen.straal)}`}
           </Text>
-          {pos ? (
+          {pos && pos.bron !== "standaard" ? (
             <View style={[s.locatieChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Ionicons name="location-sharp" size={12} color={colors.accent} />
               <Text style={[s.bron, { color: colors.sub }]} numberOfLines={1}>{bronTekst}</Text>
             </View>
           ) : null}
         </View>
-        {locFout && pos ? (
-          <FoutBalk tekst={pos.bron === "standaard"
-            ? "GPS niet beschikbaar. Haltes bij Amsterdam Centraal worden getoond; probeer je locatie opnieuw."
-            : pos.bron === "thuis"
-              ? "GPS niet beschikbaar. Haltes bij je ingestelde thuislocatie worden getoond."
-              : "Nieuwe GPS-positie niet beschikbaar. Je ziet je laatst bekende locatie."} />
+        {pos?.bron === "standaard" ? (
+          <View style={[s.fallbackKaart, { backgroundColor: colors.infoBg, borderColor: colors.border }]}>
+            <View style={s.fallbackKop}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.infoText} />
+              <Text style={[s.fallbackTitel, { color: colors.infoText }]}>
+                Vervangende locatie · Amsterdam Centraal
+              </Text>
+            </View>
+            <Text style={[s.fallbackUitleg, { color: colors.body }]}>
+              Je locatie is niet beschikbaar. Dit zijn haltes bij Amsterdam Centraal, niet bij jou in de buurt.
+            </Text>
+            <View style={s.fallbackActies}>
+              <Pressable onPress={() => router.push("/zoek")}
+                accessibilityRole="button" accessibilityLabel={t("Andere halte zoeken")}
+                style={[s.fallbackZoekKnop, { backgroundColor: colors.accent }]}>
+                <Ionicons name="search-outline" size={17} color={colors.onAccent} />
+                <Text style={[s.fallbackZoekTekst, { color: colors.onAccent }]}>
+                  Andere halte zoeken
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => locFout === "geweigerd-blijvend"
+                  ? Linking.openSettings() : void zoekLocatie()}
+                disabled={zoekt && locFout !== "geweigerd-blijvend"}
+                accessibilityRole="button"
+                accessibilityLabel={t(locFout === "geweigerd-blijvend"
+                  ? "Open instellingen" : "GPS opnieuw proberen")}
+                accessibilityState={{ disabled: zoekt && locFout !== "geweigerd-blijvend" }}
+                style={[s.fallbackGpsKnop, { borderColor: colors.border,
+                  opacity: zoekt && locFout !== "geweigerd-blijvend" ? 0.6 : 1 }]}>
+                <Ionicons name={locFout === "geweigerd-blijvend"
+                  ? "settings-outline" : "locate-outline"} size={17} color={colors.infoText} />
+                <Text style={[s.fallbackGpsTekst, { color: colors.infoText }]}>
+                  {locFout === "geweigerd-blijvend" ? "Open instellingen"
+                    : zoekt ? "Locatie bepalen…" : "GPS opnieuw proberen"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : locFout && pos ? (
+          <FoutBalk tekst={pos.bron === "thuis"
+            ? "GPS niet beschikbaar. Haltes bij je ingestelde thuislocatie worden getoond."
+            : "Nieuwe GPS-positie niet beschikbaar. Je ziet je laatst bekende locatie."} />
         ) : null}
         {poll.fout && gegevens ? <FoutBalk tekst={poll.fout} /> : null}
         {inhoud}
@@ -290,6 +328,17 @@ const s = StyleSheet.create({
   titel: { fontSize: 18, fontWeight: "700", letterSpacing: -0.2, flexShrink: 1 },
   bron: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
   locatieChip: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, maxWidth: "49%" },
+  fallbackKaart: { borderWidth: 1, borderRadius: 14, padding: 13, gap: 9 },
+  fallbackKop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  fallbackTitel: { fontSize: 15, fontWeight: "700", flex: 1 },
+  fallbackUitleg: { fontSize: 13, lineHeight: 19 },
+  fallbackActies: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 2 },
+  fallbackZoekKnop: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    borderRadius: 10, paddingHorizontal: 12, gap: 6 },
+  fallbackZoekTekst: { fontSize: 13, fontWeight: "700" },
+  fallbackGpsKnop: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, gap: 6 },
+  fallbackGpsTekst: { fontSize: 13, fontWeight: "600" },
   meerKnop: { borderWidth: 1, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 },
   meerTekst: { fontSize: 14, fontWeight: "700" }
 });
