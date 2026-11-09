@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { AppState, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "../../components/LocalizedText";
 import { HalteKaart } from "../../components/HalteKaart";
 import { DichtbijSkeleton } from "../../components/DichtbijSkeleton";
@@ -14,6 +14,7 @@ import { api } from "../../lib/api";
 import { afstand } from "../../lib/format";
 import { bepaalLocatieMetFallback, binnenLocatieTimeout, kiesLocatieFallback, LocatieTimeoutFout } from "../../lib/locationTimeout";
 import type { LocatiePositie } from "../../lib/locationTimeout";
+import { GPS_HERSTEL_INTERVAL_MS, magGpsAutomatischHerstellen, moetGpsBijTerugkeerVernieuwd } from "../../lib/gpsRecovery";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { Dichtbij as DichtbijData } from "../../lib/types";
 
@@ -31,6 +32,9 @@ export default function Dichtbij() {
   const [zoekt, setZoekt] = useState(false);
   const laatsteLoc = useRef(0);
   const locatiePoging = useRef(0);
+  const zoektRef = useRef(false);
+  const locFoutRef = useRef<LocFout | null>(null);
+  const laatsteAutoHerstel = useRef(0);
   const laatstePositie = useRef<Positie | null>(null);
   const nu = useNu(10_000);
   const thuis = instellingen.thuis;
@@ -39,6 +43,7 @@ export default function Dichtbij() {
     // Bij snel opnieuw proberen mag de vorige (langzame) GPS-aanroep nooit winnen.
     const poging = ++locatiePoging.current;
     const geldig = () => locatiePoging.current === poging;
+    zoektRef.current = true;
     setZoekt(true);
     try {
       // Ook een hangende native GPS-promise eindigt na maximaal 4 seconden met een fallback.
@@ -49,19 +54,24 @@ export default function Dichtbij() {
       if (!geldig()) return;
       laatstePositie.current = positie;
       setPos(positie);
+      locFoutRef.current = fout;
       setLocFout(fout);
       if (!fout) laatsteLoc.current = Date.now();
     } catch (e: any) {
       if (!geldig() || e?.message === "geannuleerd") return;
       const reden: LocFout = e instanceof LocatieTimeoutFout ? "timeout"
         : (["geweigerd", "geweigerd-blijvend", "uit"].includes(e?.message) ? e.message : "fout");
+      locFoutRef.current = reden;
       setLocFout(reden);
       // Ook onverwachte JS-fouten mogen nooit een leeg scherm of blijvende spinner geven.
       const reserve = kiesLocatieFallback(laatstePositie.current, thuis);
       laatstePositie.current = reserve;
       setPos(reserve);
     } finally {
-      if (geldig()) setZoekt(false);
+      if (geldig()) {
+        zoektRef.current = false;
+        setZoekt(false);
+      }
     }
   }, [thuis]);
 
@@ -70,10 +80,41 @@ export default function Dichtbij() {
     return () => { locatiePoging.current += 1; };
   }, [zoekLocatie]);
 
-  // Terug naar dit scherm na een paar minuten: locatie opnieuw bepalen (je kunt verplaatst zijn).
+  // Een GPS-fout mag niet blijven staan tot de gebruiker op het locatie-icoon tikt.
+  // Android stuurt ook een 'focus'-event wanneer het snelle-instellingenpaneel sluit:
+  // zo merken we dat locatievoorzieningen weer zijn ingeschakeld zonder een herstart.
+  // Als Android dat event mist, probeert een begrensde timer het bij een bestaande fout.
   useFocusEffect(
     useCallback(() => {
-      if (laatsteLoc.current && Date.now() - laatsteLoc.current > (instellingen.databesparing ? 600_000 : 180_000)) void zoekLocatie();
+      const controleerBijTerugkeer = (naAndroidPaneel = false) => {
+        if (AppState.currentState !== "active" || zoektRef.current) return;
+        const nu = Date.now();
+        if (nu - laatsteAutoHerstel.current < 2_000) return;
+        const normaalInterval = instellingen.databesparing ? 600_000 : 180_000;
+        if (moetGpsBijTerugkeerVernieuwd(
+          locFoutRef.current, laatsteLoc.current, nu,
+          naAndroidPaneel ? 15_000 : normaalInterval
+        )) {
+          laatsteAutoHerstel.current = nu;
+          void zoekLocatie();
+        }
+      };
+      controleerBijTerugkeer();
+      const foreground = AppState.addEventListener("change", toestand => {
+        if (toestand === "active") controleerBijTerugkeer(true);
+      });
+      const androidShade = AppState.addEventListener("focus", () => controleerBijTerugkeer(true));
+      const timer = setInterval(() => {
+        if (AppState.currentState === "active" && !zoektRef.current
+          && magGpsAutomatischHerstellen(locFoutRef.current)) {
+          controleerBijTerugkeer();
+        }
+      }, GPS_HERSTEL_INTERVAL_MS);
+      return () => {
+        clearInterval(timer);
+        foreground.remove();
+        androidShade.remove();
+      };
     }, [zoekLocatie, instellingen.databesparing])
   );
 

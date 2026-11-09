@@ -82,7 +82,7 @@ test("Hung GPS request times out, next tap succeeds; late result cannot override
   assert.equal(recovered.positie.lat, 53.201);
   assert.match(nearby, /const poging = \+\+locatiePoging\.current/);
   assert.match(nearby, /if \(!geldig\(\)\) return/);
-  assert.match(nearby, /if \(geldig\(\)\) setZoekt\(false\)/);
+  assert.match(nearby, /if \(geldig\(\)\) \{[\s\S]*?setZoekt\(false\)/);
 });
 
 test("Short network drop retains last good departures; next success clears error", async () => {
