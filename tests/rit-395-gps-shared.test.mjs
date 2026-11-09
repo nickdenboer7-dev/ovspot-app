@@ -59,7 +59,7 @@ test("A transient request failure does not invalidate a previously fresh GPS fix
 
 test("Different GPS failure types are labelled accurately instead of all saying outdated", () => {
   const gps = geldigeRitPositie(response, id, datum);
-  assert.equal(ritGpsStatus(gps, now, false), "GPS niet op route");
+  assert.equal(ritGpsStatus(gps, now, false), "GPS actueel");
   assert.equal(ritGpsStatus(null, now, false, { laden: true }), "GPS ophalen…");
   assert.equal(ritGpsStatus(null, now, false), "Geen voertuig-GPS");
   assert.equal(ritGpsStatus(gps, now, true, { enabled: false }), "GPS uitgeschakeld");

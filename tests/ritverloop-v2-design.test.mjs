@@ -93,7 +93,7 @@ test("Stale GPS receives grey chip, vehicle marker only with current projected G
   assert.equal(isGpsActueel({ timestamp: now / 1000 - 46, leeftijd_s: 46 }, now), false);
   assert.equal(isGpsActueel({ timestamp: now / 1000 - 5, leeftijd_s: 5 }, now, true), false);
   assert.equal(isGpsActueel(null, now), false);
-  assert.match(screen, /const segment = rit && actueel && !rit\.vervallen/);
+  assert.match(screen, /\(\) => rit && actueel && !rit\.vervallen/);
   assert.match(screen, /projecteerGpsOpRit\(rit, gps\)/);
   assert.match(screen, /t\(gpsStatus\)/);
   assert.match(screen, /segment && actueel && r\.index === segment\.volgendeIndex/);

@@ -74,8 +74,11 @@ export default function RitverloopV2Screen() {
   // A transient request failure is not a stale GPS fix: evaluate the source timestamp.
   // Keep one vehicle request and one cached fix when switching map <-> stop list.
   const actueel = isGpsActueel(gps, nu);
-  const segment = rit && actueel && !rit.vervallen && !trein
-    ? projecteerGpsOpRit(rit, gps) : null;
+  const segment = useMemo(
+    () => rit && actueel && !rit.vervallen && !trein
+      ? projecteerGpsOpRit(rit, gps) : null,
+    [rit, actueel, gps?.timestamp, gps?.lat, gps?.lon, trein]
+  );
   const gpsStatus = ritGpsStatus(gps, nu, !!segment, {
     trein, enabled: instellingen.liveVoertuigen, laden: gpsPoll.laden
   });
@@ -174,14 +177,16 @@ export default function RitverloopV2Screen() {
             </Text>
           ) : null}
           <View style={s.statusSpacer} />
-          <View style={[s.gpsChip, { backgroundColor: gpsStatus === "GPS actueel" ? P.gpsBg : P.staleBg }]}>
+          {!trein ? <View style={[s.gpsChip, { backgroundColor: gpsStatus === "GPS actueel" ? P.gpsBg : P.staleBg }]}>
             <Text style={[s.gpsTekst, { color: gpsStatus === "GPS actueel" ? P.green : P.muted }]}
               numberOfLines={1}>{t(gpsStatus)}</Text>
-          </View>
+          </View> : null}
         </View>
         <Text style={s.tussen} numberOfLines={1}>
           {paar ? t("Tussen") + " " + paar
-            : gpsStatus === "GPS niet op route" ? t("Voertuigpositie niet op haltevolgorde")
+            : trein ? t("Treinpositie volgens beschikbare ritgegevens")
+            : gps && actueel ? t("GPS actueel · haltepositie nog niet vastgesteld")
+            : rit?.live ? t("Live tijden · geen bevestigde voertuigpositie")
             : t("Geen actuele voertuigpositie")}
         </Text>
       </View>

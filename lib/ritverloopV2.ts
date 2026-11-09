@@ -203,12 +203,15 @@ export type GpsSegment = { vorigeIndex: number; volgendeIndex: number;
  * Bij ontbrekende geometrie of ambigue lusrit geen voertuig tekenen.
  */
 export function projecteerGpsOpRit(
-  rit: Pick<Rit, "haltes" | "stops">, gps: Pick<LiveRitPositie, "lat" | "lon"> | null
+  rit: Pick<Rit, "haltes" | "stops"> & Partial<Pick<Rit, "shape">>,
+  gps: Pick<LiveRitPositie, "lat" | "lon"> | null
 ): GpsSegment | null {
   if (!gps || !Number.isFinite(gps.lat) || !Number.isFinite(gps.lon) ||
       gps.lat < 50.4 || gps.lat > 54.1 || gps.lon < 3 || gps.lon > 8 ||
       !Array.isArray(rit.stops) || rit.stops.length < 2) return null;
   const punten = koppelPunten(rit.haltes, rit.stops);
+  // First retain a unique, already-reliable stop-segment match.
+  // Use the real GTFS shape only when the straight stop connection fails.
   const latFactor = 111_320;
   const lonFactor = 111_320 * Math.cos(gps.lat * Math.PI / 180);
   const candidates: GpsSegment[] = [];
@@ -229,10 +232,102 @@ export function projecteerGpsOpRit(
         fractie: Math.max(0.05, Math.min(0.90, fractie)), afstandM });
     }
   }
-  if (!candidates.length) return null;
+  if (!candidates.length) return projecteerGpsOpShape(rit, gps, punten);
   candidates.sort((a, b) => a.afstandM - b.afstandM);
   // Zelfde geo-coördinaat kan bij lusritten in andere volgorde voorkomen.
   if (candidates[1] && Math.abs(candidates[0].vorigeIndex - candidates[1].vorigeIndex) > 1 &&
+      candidates[1].afstandM - candidates[0].afstandM < 25) return null;
+  return candidates[0];
+}
+
+/** Project on actual GTFS shape, then map travelled shape distance to the
+ * ordered stop list. Never match only by line or guess on ambiguous loops.
+ */
+function projecteerGpsOpShape(
+  rit: Pick<Rit, "haltes"> & Partial<Pick<Rit, "shape">>,
+  gps: Pick<LiveRitPositie, "lat" | "lon">,
+  punten: Array<RitKaartHalte | undefined>
+): GpsSegment | null {
+  const shape = rit.shape;
+  if (!Array.isArray(shape) || shape.length < 2 || shape.length > 5000) return null;
+  const lonFactor = 111_320 * Math.cos(gps.lat * Math.PI / 180);
+  const latFactor = 111_320;
+  // Small local metres, computed once per new GPS fix.
+  const path = shape.map(p => ({
+    x: (p.longitude - gps.lon) * lonFactor,
+    y: (p.latitude - gps.lat) * latFactor
+  }));
+  if (path.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.y))) return null;
+  const travelled = [0];
+  for (let i = 1; i < path.length; i++) {
+    const metres = Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
+    if (!Number.isFinite(metres) || metres > 20_000) return null;
+    travelled.push(travelled[i - 1] + metres);
+  }
+
+  function nearest(x: number, y: number, minAlong = 0) {
+    let best: { dist: number; along: number } | null = null;
+    for (let i = 0; i + 1 < path.length; i++) {
+      const a = path[i], b = path[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy;
+      if (len2 < 0.25) continue;
+      const raw = -((a.x - x) * dx + (a.y - y) * dy) / len2;
+      const t = Math.max(0, Math.min(1, raw));
+      const along = travelled[i] + Math.sqrt(len2) * t;
+      if (along + 15 < minAlong) continue;
+      const dist = Math.hypot(a.x + t * dx - x, a.y + t * dy - y);
+      if (!best || dist < best.dist) best = { dist, along };
+    }
+    return best;
+  }
+
+  // Assign stop positions monotonically along the physical route. If a stop
+  // cannot be tied to the shape safely, do not assign its neighbouring segment.
+  const stopAlong: Array<number | null> = [];
+  let minAlong = 0;
+  for (let i = 0; i < punten.length; i++) {
+    const stop = punten[i];
+    if (!stop) { stopAlong.push(null); continue; }
+    const snap = nearest(
+      (stop.longitude - gps.lon) * lonFactor,
+      (stop.latitude - gps.lat) * latFactor, minAlong
+    );
+    if (!snap || snap.dist > 100) { stopAlong.push(null); continue; }
+    const along = Math.max(minAlong, snap.along);
+    stopAlong.push(along);
+    minAlong = along;
+  }
+
+  // Find GPS positions on the physical polyline, then choose exactly one
+  // contiguous stop interval. A crossing loop is rejected if indistinguishable.
+  const byInterval = new Map<number, GpsSegment>();
+  for (let i = 0; i + 1 < path.length; i++) {
+    const a = path[i], b = path[i + 1];
+    const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
+    if (len2 < 0.25) continue;
+    const t = Math.max(0, Math.min(1, -(a.x * dx + a.y * dy) / len2));
+    const afstandM = Math.hypot(a.x + t * dx, a.y + t * dy);
+    if (afstandM > 100) continue;
+    const along = travelled[i] + Math.sqrt(len2) * t;
+    for (let j = 0; j + 1 < stopAlong.length; j++) {
+      const left = stopAlong[j], right = stopAlong[j + 1];
+      if (left === null || right === null || rit.haltes[j].vervalt ||
+          rit.haltes[j + 1].vervalt || right - left < 10 ||
+          along < left - 15 || along > right + 15) continue;
+      const item: GpsSegment = {
+        vorigeIndex: j, volgendeIndex: j + 1,
+        fractie: Math.max(0.05, Math.min(0.90, (along - left) / (right - left))),
+        afstandM
+      };
+      const prev = byInterval.get(j);
+      if (!prev || item.afstandM < prev.afstandM) byInterval.set(j, item);
+    }
+  }
+  const candidates = [...byInterval.values()].sort((a, b) => a.afstandM - b.afstandM);
+  if (!candidates.length) return null;
+  if (candidates[1] &&
+      Math.abs(candidates[0].vorigeIndex - candidates[1].vorigeIndex) > 1 &&
       candidates[1].afstandM - candidates[0].afstandM < 25) return null;
   return candidates[0];
 }
@@ -270,7 +365,9 @@ export function ritGpsStatus(
   if (opts.enabled === false) return "GPS uitgeschakeld";
   if (gps) {
     if (!isGpsActueel(gps, nuMs)) return "GPS verouderd";
-    return heeftSegment ? "GPS actueel" : "GPS niet op route";
+    // Freshness describes the vehicle GPS itself, not whether the route
+    // polyline can be drawn. Keep the lack of segment separate in the subtitle.
+    return "GPS actueel";
   }
   return opts.laden ? "GPS ophalen…" : "Geen voertuig-GPS";
 }
