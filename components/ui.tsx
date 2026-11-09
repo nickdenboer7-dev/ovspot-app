@@ -185,11 +185,11 @@ export function Laden() {
 }
 
 export function FoutBalk({ tekst }: { tekst: string }) {
-  const { colors } = useApp();
+  const { colors, t } = useApp();
   return (
     <View style={[s.foutBalk, { backgroundColor: colors.redBg }]}>
       <Ionicons name="cloud-offline-outline" size={16} color={colors.red} />
-      <Text style={[s.foutText, { color: colors.red }]}>{tekst} · probeert opnieuw</Text>
+      <Text style={[s.foutText, { color: colors.red }]}>{t(tekst)} {t("· probeert opnieuw")}</Text>
     </View>
   );
 }

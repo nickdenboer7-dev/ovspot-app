@@ -18,10 +18,10 @@ export function useSoortKleur() {
 }
 
 export function StoringKaart({ st }: { st: Storing }) {
-  const { colors, t } = useApp();
+  const { colors, t, taal } = useApp();
   const kleur = useSoortKleur()(st.soort);
   const [open, setOpen] = useState(false);
-  const wanneer = periode(st.vanaf_ms, st.tot_ms);
+  const wanneer = periode(st.vanaf_ms, st.tot_ms, Date.now(), taal);
   const haltes = (st.haltes || []).map((h) => h.naam).join(", ");
   const lang = st.tekst.length > 140;
   return (

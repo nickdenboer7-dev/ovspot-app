@@ -11,13 +11,22 @@ import { LijnBadge, LiveStip, StatusLabel } from "./ui";
  * vol = haltebord (met spoor/vervoerder eronder en geplande tijd onder de minuten).
  */
 export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; nu: number; compact?: boolean; eerste?: boolean; onPress?: () => void }) {
-  const { colors } = useApp();
+  const { colors, t } = useApp();
   const { width, fontScale } = useWindowDimensions();
   const smalScherm = width < 380 || fontScale > 1.2;
   const { vertrokken, vertraagd, tijd, kloktijd, tweedeTijd, oorspronkelijk } = vertrekTijden(v, nu);
   const info = [spoorLabel(v.modus, v.spoor), v.vervoerder].filter(Boolean).join(" · ");
   const displayBestemming = bestemmingVoorWeergave(v.lijn, v.bestemming);
-  const a11y = `${v.lijn_naam || v.lijn} naar ${displayBestemming}, ${v.vervallen ? "vervalt" : vertrokken ? "vertrokken" : tijd}${kloktijd ? `, vertrek ${kloktijd}` : ""}${!v.live && !vertraagd ? ", gepland" : ""}${vertraagd ? `, ${v.vertraging_min} minuten vertraging${oorspronkelijk ? `, oorspronkelijk ${oorspronkelijk}` : ""}` : ""}${v.spoor ? `, ${spoorLabel(v.modus, v.spoor)}` : ""}`;
+  // Screen readers receive translated labels without altering operator destinations.
+  const a11y = [
+    `${v.lijn_naam || v.lijn} ${t("naar")} ${displayBestemming}`,
+    v.vervallen ? t("Vervalt") : vertrokken ? t("Vertrokken") : t(tijd),
+    kloktijd ? `${t("vertrek")} ${kloktijd}` : "",
+    !v.live && !vertraagd ? t("gepland") : "",
+    vertraagd ? `${v.vertraging_min} ${t("minuten vertraging")}` : "",
+    oorspronkelijk ? `${t("oorspronkelijk")} ${oorspronkelijk}` : "",
+    v.spoor ? t(spoorLabel(v.modus, v.spoor)) : ""
+  ].filter(Boolean).join(", ");
 
   const inhoud = (
     <View

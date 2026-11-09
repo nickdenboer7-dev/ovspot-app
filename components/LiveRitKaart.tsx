@@ -298,7 +298,7 @@ export function LiveRitKaart({
               <Text style={[s.punctualiteitTekst, {
                 color: vertragingMin > 0 ? colors.delay : colors.live
               }]}>
-                {vertragingMin > 0 ? `+${vertragingMin} min` : vertragingMin === 0 ? "Op tijd" : `${vertragingMin} min`}
+                {vertragingMin > 0 ? `+${vertragingMin} min` : vertragingMin === 0 ? "Op tijd" : t(`${Math.abs(vertragingMin)} min te vroeg`)}
               </Text>
             </View>
           ) : null}

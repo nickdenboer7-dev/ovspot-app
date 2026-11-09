@@ -56,7 +56,7 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
   return (
     <Pressable onPress={onPress} disabled={!onPress}
       accessibilityRole={onPress ? "button" : undefined}
-      accessibilityLabel={onPress ? t(`${titel}, ${waarde || uitleg}`) : undefined}
+      accessibilityLabel={onPress ? `${t(titel)}, ${t(waarde || uitleg)}` : undefined}
       style={[s.rij, !laatste && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
       <View style={[s.icoonAchtergrond, { backgroundColor: scheme === "dark" ? "#334155" : colors.surface2 }]}>
         <Ionicons name={icoon} size={21} color={colors.accent} />

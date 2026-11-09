@@ -31,21 +31,22 @@ export function klok(iso: string | Date | null | undefined): string {
 
 const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
-export function datumKort(ms: number): string {
+const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export function datumKort(ms: number, taal: "nl" | "en" = "nl"): string {
   const d = new Date(ms);
-  return `${d.getDate()} ${MAANDEN[d.getMonth()]}`;
+  return `${d.getDate()} ${(taal === "en" ? MONTHS_EN : MAANDEN)[d.getMonth()]}`;
 }
 
 /** Tekst voor wanneer een storing geldt: "Sinds 06:00 · t/m 12 dec". */
-export function periode(vanaf: number | null, tot: number | null, now = Date.now()): string {
+export function periode(vanaf: number | null, tot: number | null, now = Date.now(), taal: "nl" | "en" = "nl"): string {
   const delen: string[] = [];
   if (vanaf) {
     const zelfdeDag = new Date(vanaf).toDateString() === new Date(now).toDateString();
-    delen.push(vanaf <= now ? `Sinds ${zelfdeDag ? klok(new Date(vanaf)) : datumKort(vanaf)}` : `Vanaf ${datumKort(vanaf)} ${klok(new Date(vanaf))}`);
+    delen.push(vanaf <= now ? `Sinds ${zelfdeDag ? klok(new Date(vanaf)) : datumKort(vanaf, taal)}` : `Vanaf ${datumKort(vanaf, taal)} ${klok(new Date(vanaf))}`);
   }
   if (tot) {
     const zelfdeDag = new Date(tot).toDateString() === new Date(now).toDateString();
-    delen.push(zelfdeDag ? `tot ${klok(new Date(tot))}` : `t/m ${datumKort(tot)}`);
+    delen.push(zelfdeDag ? `tot ${klok(new Date(tot))}` : `t/m ${datumKort(tot, taal)}`);
   }
   return delen.join(" · ");
 }

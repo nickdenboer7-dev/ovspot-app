@@ -86,13 +86,13 @@ export default function Favorieten() {
                   </Text>
                   {f.plaats ? <Text style={{ color: colors.sub, fontSize: 13 }}>{f.plaats}</Text> : null}
                 </View>
-                <Pressable onPress={() => verplaatsFavoriet(f.id, -1)} disabled={i === 0} style={s.icoKnop} accessibilityLabel={`${f.naam} omhoog`}>
+                <Pressable onPress={() => verplaatsFavoriet(f.id, -1)} disabled={i === 0} style={s.icoKnop} accessibilityLabel={t(`${f.naam} omhoog`)}>
                   <Ionicons name="chevron-up" size={22} color={i === 0 ? colors.border : colors.text} />
                 </Pressable>
-                <Pressable onPress={() => verplaatsFavoriet(f.id, 1)} disabled={i === favorieten.length - 1} style={s.icoKnop} accessibilityLabel={`${f.naam} omlaag`}>
+                <Pressable onPress={() => verplaatsFavoriet(f.id, 1)} disabled={i === favorieten.length - 1} style={s.icoKnop} accessibilityLabel={t(`${f.naam} omlaag`)}>
                   <Ionicons name="chevron-down" size={22} color={i === favorieten.length - 1 ? colors.border : colors.text} />
                 </Pressable>
-                <Pressable onPress={() => verwijderFavoriet(f.id)} style={s.icoKnop} accessibilityLabel={`${f.naam} verwijderen`}>
+                <Pressable onPress={() => verwijderFavoriet(f.id)} style={s.icoKnop} accessibilityLabel={t(`${f.naam} verwijderen`)}>
                   <Ionicons name="trash-outline" size={22} color={colors.red} />
                 </Pressable>
               </View>

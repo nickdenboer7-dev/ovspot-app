@@ -185,7 +185,7 @@ export default function Zoek() {
                 android_ripple={{ color: colors.divider }}
                 accessibilityRole="button"
                 accessibilityLabel={[` ${item.naam}`.trim(), ...(plaatsZichtbaar ? [item.plaats] : []),
-                  ...(subZichtbaar ? [sub] : []), `${lijst.length || item.lijnen_aantal || 0} lijnen`].join(", ")}
+                  ...(subZichtbaar ? [sub] : []), t(`${lijst.length || item.lijnen_aantal || 0} lijnen`)].join(", ")}
               >
                 <View style={s.bovenRij}>
                   <View style={[s.icoon, { backgroundColor: palet.bg }]}>
