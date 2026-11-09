@@ -249,6 +249,7 @@ export default function Haltebord() {
       <Kop
         terug
         titel={titel}
+        titelRegels={2}
         detail={groepSub || undefined}
         sub={h ? `${h.verouderd ? "Verouderd · " : ""}Bijgewerkt ${klok(h.bijgewerkt)}` : "Laden…"}
         rechts={

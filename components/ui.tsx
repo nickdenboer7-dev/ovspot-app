@@ -44,6 +44,7 @@ export function StatusLabel({ v, compact }: { v: Pick<Vertrek, "vervallen" | "li
 
 export function Kop({
   titel,
+  titelRegels = 1,
   sub,
   detail,
   terug,
@@ -51,6 +52,8 @@ export function Kop({
   groot
 }: {
   titel: string;
+  /** Laat langere haltenamen doorlopen; andere schermkoppen blijven compact. */
+  titelRegels?: number;
   sub?: string;
   detail?: string;
   terug?: boolean;
@@ -73,7 +76,7 @@ export function Kop({
         </Pressable>
       ) : null}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[groot ? s.kopTitelGroot : s.kopTitel, { color: colors.headerText }]} numberOfLines={1} accessibilityRole="header">
+        <Text style={[groot ? s.kopTitelGroot : s.kopTitel, { color: colors.headerText }]} numberOfLines={titelRegels} accessibilityRole="header">
           {titel}
         </Text>
         {detail ? <Text style={[s.kopDetail, { color: colors.headerSub }]} numberOfLines={1}>{detail}</Text> : null}

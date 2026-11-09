@@ -22,3 +22,12 @@ test("Large-text settings show full selected value below description instead of 
   assert.match(instellingen, /waardeOnder: \{ flexDirection: "row"/);
   assert.match(instellingen, /label: "Automatisch"/);
 });
+
+test("Stop names remain readable in two lines next to back and favorite buttons", () => {
+  const header = readFileSync(new URL("../components/ui.tsx", import.meta.url), "utf8");
+  const board = readFileSync(new URL("../app/halte/[id].tsx", import.meta.url), "utf8");
+  assert.match(header, /titelRegels = 1/);
+  assert.match(header, /numberOfLines=\{titelRegels\} accessibilityRole="header"/);
+  assert.match(board, /<Kop\s+terug\s+titel=\{titel\}\s+titelRegels=\{2\}/);
+  assert.match(board, /sub=\{h \? /);
+});
