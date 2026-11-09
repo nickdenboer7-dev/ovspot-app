@@ -130,13 +130,12 @@ test("Header can name confirmed stop pair when timetable timestamps are temporar
   assert.equal(berekenTussenHalteVoortgang(route, nu)?.volgendeIndex, 1);
 });
 
-test("Status is compact met halteparen en zonder GPS-chip", () => {
+test("Status is plat, toont volgend halteverschil en juiste GPS-chip", () => {
   const modern = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
   assert.match(modern,/const paar = segment && haltes\[segment\.vorigeIndex\]/);
   assert.match(modern,/t\("Tussen"\) \+ " " \+ paar/);
-  assert.match(modern,/rit\.vertraging_min > 0/);
-  assert.match(modern,/<Text style=\{s\.tussen\} numberOfLines=\{2\}>/);
-  assert.match(modern,/status: \{ minHeight: 64/);
-  assert.match(modern,/<View style=\{s\.statusScheiding\} \/>/);
-  assert.doesNotMatch(modern,/GPS actueel|GPS verouderd|s\.gpsChip/);
+  assert.match(modern,/const statusAfwijkingMin = rit\?\.live && volgendeRij/);
+  assert.match(modern,/<Text style=\{s\.tussen\} numberOfLines=\{1\}>/);
+  assert.match(modern,/status: \{ height: 56, backgroundColor: P\.strip/);
+  assert.match(modern,/t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
 });

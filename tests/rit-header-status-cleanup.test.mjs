@@ -15,7 +15,7 @@ test("OVspot-kop heeft favoriet en meer; kaartknop staat los in lijnrij", () => 
 
 test("Volgende halte is blauw gemarkeerd zonder los Nu hier-blok", () => {
   assert.match(stop, /backgroundColor: volgende \? RITV2\.info/);
-  assert.match(stop, /\{t\("Volgende halte"\)\}/);
+  assert.match(stop, /volgendeHalteTekst\(verwachtMs, nu, t\)/);
   assert.doesNotMatch(screen, /rijen\.push\(\{ soort: "nu"/);
   assert.match(stop, /<RijdendVoertuig/);
 });
@@ -25,8 +25,9 @@ test("Per-halte vertraging wordt compact achter tijd gezet", () => {
   assert.match(stop, /timeMain: \{ flexDirection: "row", gap: 3, alignItems: "baseline"/);
 });
 
-test("GPS bepaalt nog steeds de voertuigmarker, maar niet de statuschip", () => {
+test("Alleen geprojecteerde actuele GPS krijgt groene chip én busmarker", () => {
   assert.match(screen, /const segment = rit && actueel && !rit\.vervallen/);
-  assert.doesNotMatch(screen, /<View style=\{\[s\.gpsChip/);
+  assert.match(screen, /t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
+  assert.match(screen, /segment && actueel && r\.index === segment\.volgendeIndex/);
   assert.match(screen, /<LiveRitKaart/);
 });

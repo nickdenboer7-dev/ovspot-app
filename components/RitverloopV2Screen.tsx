@@ -14,7 +14,7 @@ import { api } from "../lib/api";
 import { bestemmingVoorWeergave, isTrein } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, RITV2 } from "../lib/ritverloopV2";
+import { afwijkingTekst, bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, RITV2, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord } from "../lib/types";
 
 type Params = {
@@ -40,6 +40,7 @@ export default function RitverloopV2Screen() {
   const { t, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext } = useApp();
   const [toonEerder, setToonEerder] = useState(false);
   const [toonLater, setToonLater] = useState(false);
+  const [lijstHoogte, setLijstHoogte] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [weergave, setWeergave] = useState<"lijst" | "kaart">("lijst");
@@ -81,15 +82,21 @@ export default function RitverloopV2Screen() {
   const volgendeIndex = kandidaat >= 0 && kandidaat < haltes.length && !haltes[kandidaat].h.vervalt
     ? kandidaat : haltes.findIndex(h => !h.gepasseerd && !h.h.vervalt);
   const vanaf = toonEerder || volgendeIndex < 1 ? 0 : volgendeIndex - 1;
+  const aantalKomende = zichtbaarKomendeHaltes(
+    lijstHoogte, volgendeIndex > 0, !toonEerder && volgendeIndex > 1);
   const tot = toonLater || volgendeIndex < 0 ? haltes.length
-    : Math.min(haltes.length, volgendeIndex + 6);
+    : Math.min(haltes.length, volgendeIndex + aantalKomende);
   const getoond = haltes.slice(vanaf, tot);
   const verborgenEerder = vanaf;
   const verborgenLater = haltes.length - tot;
   const lijn = String(rit?.lijn || p.lijn || "");
   const bestemming = bestemmingVoorWeergave(lijn, String(rit?.bestemming || p.bestemming || ""));
   const vervoerder = String(rit?.vervoerder || p.vervoerder || "");
-  const favStop = haltes[volgendeIndex]?.h ?? null;
+  const volgendeRij = haltes[volgendeIndex] ?? null;
+  // De status toont exact de op deze regel al eenmaal afgeronde afwijking.
+  const statusAfwijkingMin = rit?.live && volgendeRij && !volgendeRij.h.vervalt
+    ? volgendeRij.vertragingMin : null;
+  const favStop = volgendeRij?.h ?? null;
   const fav = favStop ? isFavoriet(favStop.id) : false;
   const paar = segment && haltes[segment.vorigeIndex] && haltes[segment.volgendeIndex]
     ? compacteHalteNaam(haltes[segment.vorigeIndex].h.naam, haltes[segment.vorigeIndex].plaats)
@@ -150,31 +157,32 @@ export default function RitverloopV2Screen() {
 
     {!isKaart ? <>
       <View style={s.status}>
-        <View style={s.statusBus}>
-          <Ionicons name={trein ? "train" : "bus"} size={21} color="#FFFFFF" />
-        </View>
-        <View style={s.statusScheiding} />
-        <View style={s.statusInhoud}>
-          <View style={s.statusRegel}>
-            <Text style={s.statusTitel} numberOfLines={1}>{status}</Text>
-            {rit && rit.live && !rit.vervallen && Number.isFinite(rit.vertraging_min) ? (
-              <View style={[s.statusBadge, rit.vertraging_min > 0 && s.statusBadgeLaat]}>
-                <Text style={[s.statusBadgeTekst, rit.vertraging_min > 0 && s.statusBadgeTekstLaat]}>
-                  {rit.vertraging_min === 0 ? t("Op tijd")
-                    : (rit.vertraging_min > 0 ? "+" : "") + rit.vertraging_min + " min"}
-                </Text>
-              </View>
-            ) : null}
+        <View style={s.statusRegel}>
+          <Text style={s.statusTitel} numberOfLines={1}>{status}</Text>
+          {statusAfwijkingMin !== null ? (
+            <Text style={[
+              s.statusAfwijking,
+              { color: statusAfwijkingMin > 0 ? P.delay :
+                  statusAfwijkingMin < 0 ? P.early : P.green }
+            ]} numberOfLines={1}>
+              · {t(afwijkingTekst(statusAfwijkingMin))}
+            </Text>
+          ) : null}
+          <View style={s.statusSpacer} />
+          <View style={[s.gpsChip, { backgroundColor: segment ? P.gpsBg : P.staleBg }]}>
+            <Text style={[s.gpsTekst, { color: segment ? P.green : P.muted }]}
+              numberOfLines={1}>{t(segment ? "GPS actueel" : "GPS verouderd")}</Text>
           </View>
-          <Text style={s.tussen} numberOfLines={2}>
-            {paar ? t("Tussen") + " " + paar : t("Geen actuele voertuigpositie")}
-          </Text>
         </View>
+        <Text style={s.tussen} numberOfLines={1}>
+          {paar ? t("Tussen") + " " + paar : t("Geen actuele voertuigpositie")}
+        </Text>
       </View>
       <ScrollView ref={lijstRef} style={s.lijst}
         contentContainerStyle={s.lijstInhoud}
-        onContentSizeChange={() => {
-          if (!toonEerder && rit) lijstRef.current?.scrollTo({ y: 0, animated: false });
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          setLijstHoogte(v => Math.abs(v - h) < 1 ? v : h);
         }}>
         {!rit ? <Text style={s.fout}>{poll.laden ? t("Laden…") :
           poll.fout || t("Rit niet gevonden")}</Text> : null}
@@ -245,23 +253,17 @@ const s = StyleSheet.create({
   bestemming: { fontSize: 17, fontWeight: "700", color: P.ink },
   vervoerder: { fontSize: 12, color: P.muted },
   kaartKnop: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  status: { minHeight: 64, marginHorizontal: 12, marginVertical: 8,
-    paddingHorizontal: 11, paddingVertical: 9, borderRadius: 14,
-    borderWidth: 1, borderColor: "#DFE8E1", backgroundColor: "#F8FAF9",
-    flexDirection: "row", alignItems: "center", gap: 10 },
-  statusBus: { width: 36, height: 36, borderRadius: 9,
-    backgroundColor: "#087D35", alignItems: "center", justifyContent: "center" },
-  statusScheiding: { width: 1, height: 37, backgroundColor: "#C8D5CC" },
-  statusInhoud: { flex: 1, minWidth: 0, gap: 3 },
-  statusRegel: { flexDirection: "row", alignItems: "center", gap: 9, minWidth: 0 },
+  status: { height: 56, backgroundColor: P.strip,
+    paddingHorizontal: 12, paddingVertical: 5, justifyContent: "center", gap: 3 },
+  statusRegel: { height: 22, flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
   statusTitel: { fontSize: 15, fontWeight: "700", color: P.ink, flexShrink: 1 },
-  statusBadge: { backgroundColor: "#E3F3E7", paddingHorizontal: 9,
-    paddingVertical: 3, borderRadius: 12 },
-  statusBadgeTekst: { color: P.green, fontSize: 12, fontWeight: "700" },
-  statusBadgeLaat: { backgroundColor: "#FFF0E3" },
-  statusBadgeTekstLaat: { color: P.delay },
+  statusAfwijking: { fontSize: 13, fontWeight: "700", flexShrink: 1 },
+  statusSpacer: { flex: 1 },
+  gpsChip: { borderRadius: 10, minHeight: 22, paddingHorizontal: 8,
+    justifyContent: "center", flexShrink: 0 },
+  gpsTekst: { fontSize: 11, fontWeight: "700" },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: P.greenDot },
-  tussen: { fontSize: 13, lineHeight: 18, color: "#3D4858" },
+  tussen: { fontSize: 13, color: "#3D4858" },
   lijst: { flex: 1, backgroundColor: "#FFFFFF" },
   lijstInhoud: { paddingHorizontal: 10, paddingBottom: 8 },
   liveFooter: { height: 32, backgroundColor: "#F3F5F8", borderTopWidth: 1,

@@ -7,9 +7,10 @@ const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.met
 const motion = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
 
 test("Tijden staan compact, met klein plan onder de vertraagde klok", () => {
-  assert.match(stop, /\{vertraagd \? <Text style=\{s\.planned\}>\{gepland\}<\/Text>/);
+  assert.match(stop, /\{afwijkend \? <Text style=\{s\.planned\}>\{gepland\}<\/Text>/);
   assert.match(stop, /textDecorationLine: "line-through"/);
-  assert.match(stop, /vertraagd \? <Text style=\{s\.delay\}>/);
+  assert.match(stop, /afwijkend && !vroeg \? <Text style=\{s\.delay\}>/);
+  assert.match(stop, /s\.earlyText/);
 });
 
 test("De compacte lijst heeft geen tweede aankomst/vertrek-paragraaf", () => {

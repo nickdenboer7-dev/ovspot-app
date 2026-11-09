@@ -4,14 +4,15 @@ export const RITV2 = {
   navy: "#0A3A7A", blue: "#0B57D0", info: "#E8F0FE",
   pale: "#DCE8FB", muted: "#5F6B7A", pastLine: "#C5CCD6",
   pastDot: "#AEB8C6", delay: "#B34700", green: "#1B6B33",
-  greenDot: "#1B8A3C", gpsBg: "#E3F3E7", staleBg: "#E7EBF0",
+  greenDot: "#1B8A3C", early: "#8A3E91",
+  gpsBg: "#E3F3E7", staleBg: "#E7EBF0",
   strip: "#F3F5F8", ink: "#182332"
 } as const;
 
 export type RitV2Stop = {
   index: number; h: RitHalte; naam: string; plaats: string;
   toonPlaats: boolean; verwacht: string; gepland: string;
-  verwachtMs: number | null; vertragingMin: number;
+  verwachtMs: number | null; vertragingSec: number; vertragingMin: number;
   gepasseerd: boolean;
 };
 
@@ -27,29 +28,123 @@ export function compacteHalteNaam(naam: string, plaats: string): string {
   return n;
 }
 
-/** Een ontbrekende losse live-update neemt de recentste waargenomen vertraging
- * over totdat een volgende eigen live-update die corrigeert (inclusief 0).
- * Dit is een UI-veiligheidsnet voor de huidige v2.0.24 response, geen server-cache.
+/** Hele seconds from the unrounded epoch timestamp and the planned NL clock.
+ * When a server sends only minute-resolution data, retain that honest precision.
+ * Never use the user's device timezone to interpret Netherlands trip times.
+ */
+const NL_TIME = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit",
+  second: "2-digit", hourCycle: "h23"
+});
+
+function minuutVanKlok(klok: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(klok);
+  if (!m) return null;
+  const uur = Number(m[1]), minuut = Number(m[2]);
+  return uur >= 0 && uur < 30 && minuut < 60 ? uur * 60 + minuut : null;
+}
+
+function deltaSeconden(gepland: string, verwachtMs: number | null): number | null {
+  const planned = minuutVanKlok(gepland);
+  if (planned == null || verwachtMs == null || !Number.isFinite(verwachtMs) ||
+      verwachtMs < 1e12) return null;
+  const parts = NL_TIME.formatToParts(new Date(verwachtMs));
+  const get = (type: string) => Number(parts.find(p => p.type === type)?.value);
+  const hour = get("hour"), minute = get("minute"), second = get("second");
+  if (![hour, minute, second].every(Number.isFinite)) return null;
+  let delta = (hour * 60 + minute - planned) * 60 +
+    second + ((verwachtMs % 1000) / 1000);
+  // Relative to the local GTFS clock, 23:59 -> 00:01 is +2 minutes.
+  while (delta > 12 * 3600) delta -= 86400;
+  while (delta < -12 * 3600) delta += 86400;
+  return Math.round(delta);
+}
+
+function klokVanTimestamp(ms: number): string {
+  const parts = NL_TIME.formatToParts(new Date(ms));
+  const val = (k: string) => parts.find(p => p.type === k)?.value ?? "00";
+  return val("hour").padStart(2, "0") + ":" + val("minute").padStart(2, "0");
+}
+
+export function rondAfwijkingMinuten(seconds: number): number {
+  if (!Number.isFinite(seconds)) return 0;
+  const rounded = Math.round(Math.abs(seconds) / 60);
+  return rounded === 0 ? 0 : Math.sign(seconds) * rounded;
+}
+
+export function afwijkingTekst(minuten: number): string {
+  return minuten > 0 ? "+" + minuten + " min"
+    : minuten < 0 ? Math.abs(minuten) + " min te vroeg" : "Op tijd";
+}
+
+/** Round once for the stop countdown. 0 is handled as 'aankomend' in the row. */
+export function verwachteAankomstMin(verwachtMs: number | null, nu: number): number | null {
+  if (verwachtMs == null || !Number.isFinite(verwachtMs)) return null;
+  return Math.max(0, Math.round((verwachtMs - nu) / 60_000));
+}
+
+export function volgendeHalteTekst(
+  verwachtMs: number | null, nu: number,
+  t: (tekst: string) => string = x => x
+): string | null {
+  const min = verwachteAankomstMin(verwachtMs, nu);
+  if (min === null) return null;
+  return t("Volgende halte") + " · " +
+    (min === 0 ? t("aankomend") : t("over") + " " + min + " min");
+}
+
+/** Calculate visible upcoming stops from the *measured scroll viewport*;
+ * reserve space for the passed stop and both expansion controls. At least
+ * 6 upcoming stops (including next) remain accessible on small screens.
+ */
+export function zichtbaarKomendeHaltes(
+  viewportDp: number, heeftVorige: boolean, heeftEerderKnop: boolean
+): number {
+  if (!Number.isFinite(viewportDp) || viewportDp <= 0) return 6;
+  const reserved = 64 + (heeftVorige ? 48 : 0) +
+    (heeftEerderKnop ? 44 : 0) + 44 + 8;
+  return Math.max(6, 1 + Math.max(0, Math.floor((viewportDp - reserved) / 48)));
+}
+
+export function telKlokMinuten(klok: string, plus: number): string {
+  const planned = minuutVanKlok(klok);
+  if (planned == null) return klok;
+  const dayMinutes = 24 * 60;
+  const total = ((planned + plus) % dayMinutes + dayMinutes) % dayMinutes;
+  return String(Math.floor(total / 60)).padStart(2, "0") + ":" +
+    String(total % 60).padStart(2, "0");
+}
+
+/** One time source per stop; seconds kept until a SINGLE rounding for display.
+ * A subsequent explicit live update (including a zero recovery) resets carry.
+ * Never double-add a server-propagated delay.
  */
 export function bouwRitV2Haltes(rit: Rit, gpsLaatsteGepasseerd: number | null): RitV2Stop[] {
-  let doorlopend = 0;
+  let carrySec = 0;
   return rit.haltes.map((h, index) => {
     const gepland = String(h.gepland || "").trim();
-    const expliciet = h.live_tijd === true && Number.isFinite(h.vertraging_min);
-    // Een toekomstige API met echte server-propagatie levert ook voor haltes
-    // zonder eigen KV8-update al een afwijkende verwachte tijd + delta.
-    // In dat geval mag de UI de vertraging niet nogmaals optellen.
-    const serverDoorgelopen = !expliciet && h.vertraging_min > 0 &&
-      !!h.verwacht && h.verwacht !== gepland;
-    if (expliciet || serverDoorgelopen) doorlopend = Math.max(0, Math.round(h.vertraging_min));
-    const vertragingMin = h.vervalt ? 0 : doorlopend;
+    const bronMs = typeof h.tijd_ms === "number" && Number.isFinite(h.tijd_ms) &&
+      h.tijd_ms > 1e12 ? h.tijd_ms : null;
+    const explicit = h.live_tijd === true;
+    const reported = h.verwacht && h.verwacht !== gepland;
+    // Do not infer an independent update merely from the route-level delay.
+    const serverPropagated = !explicit && !!reported &&
+      Number.isFinite(h.vertraging_min) && h.vertraging_min !== 0;
+    const source = explicit || serverPropagated;
+    if (source) {
+      carrySec = deltaSeconden(gepland, bronMs) ??
+        ((minuutVanKlok(h.verwacht || "") !== null && minuutVanKlok(gepland) !== null)
+          ? clockDeltaSec(h.verwacht, gepland)
+          : Math.round((Number.isFinite(h.vertraging_min) ? h.vertraging_min : 0) * 60));
+    }
+    const seconds = h.vervalt ? 0 : carrySec;
+    const vertragingMin = rondAfwijkingMinuten(seconds);
+    const verwachtMs = h.vervalt ? bronMs :
+      source ? bronMs : (bronMs == null ? null : bronMs + seconds * 1000);
     const verwacht = h.vervalt ? String(h.verwacht || gepland) :
-      (expliciet || serverDoorgelopen) && h.verwacht
-        ? h.verwacht : telKlokMinuten(gepland, vertragingMin);
-    const bronMs = typeof h.tijd_ms === "number" && Number.isFinite(h.tijd_ms)
-      ? h.tijd_ms : null;
-    const verwachtMs = bronMs == null ? null
-      : bronMs + (!expliciet && !serverDoorgelopen && !h.vervalt ? doorlopend * 60_000 : 0);
+      (minuutVanKlok(gepland) != null
+        ? telKlokMinuten(gepland, vertragingMin)
+        : (verwachtMs != null ? klokVanTimestamp(verwachtMs) : String(h.verwacht || "")));
     const gepasseerd = gpsLaatsteGepasseerd !== null
       ? index <= gpsLaatsteGepasseerd
       : h.state ? h.state === "PASSED" : h.status === "geweest";
@@ -57,23 +152,17 @@ export function bouwRitV2Haltes(rit: Rit, gpsLaatsteGepasseerd: number | null): 
     const plaats = String(h.plaats || "").trim();
     return { index, h, naam: compacteHalteNaam(h.naam, plaats), plaats,
       toonPlaats: !!plaats && (index === 0 || plaats !== String(vorige?.plaats || "").trim()),
-      verwacht, gepland, verwachtMs, vertragingMin, gepasseerd };
+      verwacht, gepland, verwachtMs, vertragingSec: seconds, vertragingMin, gepasseerd };
   });
 }
 
-export function telKlokMinuten(klok: string, plus: number): string {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(klok);
-  if (!m) return klok;
-  const uren = Number(m[1]);
-  const minuten = Number(m[2]);
-  const totaal = (uren * 60 + minuten + Math.max(0, plus)) % 1440;
-  return String(Math.floor(totaal / 60)).padStart(2, "0") + ":" +
-    String(totaal % 60).padStart(2, "0");
-}
-
-export function verwachteAankomstMin(verwachtMs: number | null, nu: number): number | null {
-  if (verwachtMs == null || !Number.isFinite(verwachtMs)) return null;
-  return Math.max(0, Math.ceil((verwachtMs - nu) / 60_000));
+function clockDeltaSec(expected: string, planned: string): number {
+  const e = minuutVanKlok(expected), p = minuutVanKlok(planned);
+  if (e == null || p == null) return 0;
+  let d = (e - p) * 60;
+  if (d > 12 * 3600) d -= 86400;
+  if (d < -12 * 3600) d += 86400;
+  return d;
 }
 
 /** Fysieke ruimte in React Native dp tussen de twee haltecentra.

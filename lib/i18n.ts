@@ -34,6 +34,7 @@ export const EN: Record<string, string> = {
   "Er ging iets mis": "Something went wrong", "onbekend": "unknown",
   "ingebouwd": "built in", "Versie": "Version",
   "Onderweg": "En route", "over": "in", "naar": "to",
+  "aankomend": "arriving",
   "Tussen": "Between", "en": "and",
   "Geen actuele voertuigpositie": "No current vehicle position",
   "eerdere haltes": "earlier stops", "volgende haltes": "later stops",
@@ -211,6 +212,7 @@ export const EN: Record<string, string> = {
 };
 
 const DYNAMIC: [RegExp, (...parts: string[]) => string][] = [
+  [/^(\d+) min te vroeg$/u, (_, n) => n + " min early"],
   [/^Onderweg naar (.+)$/u, (_, x) => "Heading towards " + vertaling(x, "en")],
   [/^Lijn (.+) · (\d+) sec geleden$/u, (_, x, y) => "Line " + x + " · " + y + " sec ago"],
   [/^Toon (\d+) eerdere halte(s?)$/u, (_, x, y) => "Show " + x + " earlier stop" + (y ? "s" : "")],

@@ -30,8 +30,8 @@ const rit = {
   ]
 };
 
-test("Schema: compact kop 56, lijnrij 60, status 64, vaste tijd/rail 68/28", () => {
-  for (const re of [/kop: \{ height: 56,/, /lijnrij: \{ height: 60,/, /status: \{ minHeight: 64,/, /width: 68/, /rail: \{ width: 28/, /height: 44/, /height: 32/]) {
+test("Schema: compact kop 56, lijnrij 60, platte status 56, vaste tijd/rail 68/28", () => {
+  for (const re of [/kop: \{ height: 56,/, /lijnrij: \{ height: 60,/, /status: \{ height: 56, backgroundColor: P\.strip,/, /width: 68/, /rail: \{ width: 28/, /height: 44/, /height: 32/]) {
     assert.match(screen + stopScreen, re);
   }
   assert.equal(RITV2.navy, "#0A3A7A");
@@ -87,7 +87,7 @@ test("Real GPS determines progress on the matching segment and not from clock ti
   assert.equal(projecteerGpsOpRit(noGeometry, gps), null);
 });
 
-test("No GPS chip when stale; vehicle marker not rendered without current position", () => {
+test("Stale GPS receives grey chip, vehicle marker only with current projected GPS", () => {
   const now = 1794186780000;
   assert.equal(isGpsActueel({ timestamp: now / 1000 - 30, leeftijd_s: 30 }, now), true);
   assert.equal(isGpsActueel({ timestamp: now / 1000 - 46, leeftijd_s: 46 }, now), false);
@@ -95,7 +95,8 @@ test("No GPS chip when stale; vehicle marker not rendered without current positi
   assert.equal(isGpsActueel(null, now), false);
   assert.match(screen, /const segment = rit && actueel && !rit\.vervallen/);
   assert.match(screen, /projecteerGpsOpRit\(rit, gps\)/);
-  assert.doesNotMatch(screen, /GPS actueel|GPS verouderd|gpsChip/);
+  assert.match(screen, /t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
+  assert.match(screen, /segment && actueel && r\.index === segment\.volgendeIndex/);
   assert.match(marker, /Animated\.timing\(beweging/);
   assert.doesNotMatch(marker, /Date\.now\(\)|volgendeMs/);
 });
@@ -106,7 +107,8 @@ test("No pull to refresh, auto polling, footer data age, one passed stop and fut
   assert.match(screen, /api\.liveRitVoertuig\(rit\.id, rit\.datum\)/);
   assert.match(api, /get<LiveRitVoertuigAntwoord>/);
   assert.match(screen, /volgendeIndex - 1/);
-  assert.match(screen, /volgendeIndex \+ 6/);
+  assert.match(screen, /zichtbaarKomendeHaltes\(/);
+  assert.match(screen, /volgendeIndex \+ aantalKomende/);
   assert.match(screen, /leeftijdS.*Math\.max/);
   assert.match(screen, /<OnderBalk actief=\{van\} compact/);
   assert.match(nav, /compact \? 64 : 62/);

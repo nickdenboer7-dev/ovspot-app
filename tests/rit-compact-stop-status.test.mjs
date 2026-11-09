@@ -6,13 +6,12 @@ const screen = readFileSync(new URL("../components/RitverloopV2Screen.tsx", impo
 const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
 const motion = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
 
-test("Actuele ritstatus toont Onderweg met Op tijd-badge zonder GPS-chip", () => {
-  assert.match(screen, /rit\.vertraging_min > 0/);
-  assert.match(screen, /"Op tijd"/);
+test("Actuele ritstatus gebruikt dezelfde afgeronde afwijking als volgende halte", () => {
+  assert.match(screen, /const statusAfwijkingMin = rit\?\.live && volgendeRij/);
+  assert.match(screen, /volgendeRij\.vertragingMin/);
+  assert.match(screen, /t\(afwijkingTekst\(statusAfwijkingMin\)\)/);
   assert.match(screen, /const status = rit\?\.vervallen/);
-  assert.match(screen, /rit\.vertraging_min === 0 \? t\("Op tijd"\)/);
-  assert.match(screen, /<View style=\{\[s\.statusBadge/);
-  assert.doesNotMatch(screen, /<View style=\{\[s\.gpsChip|bronLabel/);
+  assert.match(screen, /t\(segment \? "GPS actueel" : "GPS verouderd"\)/);
 });
 
 test("Voorbij is grijs en volgende stop heeft blauwe achtergrond, donkere naam", () => {
@@ -22,7 +21,7 @@ test("Voorbij is grijs en volgende stop heeft blauwe achtergrond, donkere naam",
 });
 
 test("Volgende halte heeft een compacte countdown, geen losse Nu hier-rij", () => {
-  assert.match(stop, /verwachteAankomstMin\(verwachtMs, nu\)/);
+  assert.match(stop, /volgendeHalteTekst\(verwachtMs, nu, t\)/);
   assert.match(stop, /t\("Volgende halte"\)/);
   assert.doesNotMatch(screen, /rijen\.push\(\{ soort: "nu"/);
 });

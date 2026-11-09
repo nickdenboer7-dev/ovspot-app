@@ -3,31 +3,32 @@ import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "./LocalizedText";
 import { RijdendVoertuig } from "./RijdendVoertuig";
-import { RITV2, verwachteAankomstMin, type RitV2Stop } from "../lib/ritverloopV2";
+import { afwijkingTekst, RITV2, volgendeHalteTekst, type RitV2Stop } from "../lib/ritverloopV2";
 
 export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fractie, trein, nu, t }: {
   r: RitV2Stop; volgende: boolean; laatste: boolean; vorigeHoogte: number; hoogte: number;
   fractie: number | null; trein: boolean; nu: number; t: (s: string) => string;
 }) {
   const { h, index, naam, plaats, toonPlaats, verwacht, gepland, vertragingMin, verwachtMs, gepasseerd } = r;
-  const eta = volgende && !gepasseerd ? verwachteAankomstMin(verwachtMs, nu) : null;
-  const vertraagd = !h.vervalt && vertragingMin > 0 && verwacht !== gepland;
+  const eta = volgende && !gepasseerd ? volgendeHalteTekst(verwachtMs, nu, t) : null;
+  const afwijkend = !h.vervalt && vertragingMin !== 0;
+  const vroeg = vertragingMin < 0;
   return (
     <View
       style={[s.row, { height: hoogte, backgroundColor: volgende ? RITV2.info : "#FFFFFF", zIndex: fractie !== null ? 3 : 0 }]}
       accessible accessibilityRole="text"
       accessibilityLabel={verwacht + ", " + naam +
         (plaats ? ", " + plaats : "") +
-        (vertraagd ? ", +" + vertragingMin + " min" : "") +
+        (afwijkend ? ", " + t(afwijkingTekst(vertragingMin)) : "") +
         (volgende ? ", " + t("Volgende halte") : "")}
     >
       <View style={s.timeColumn}>
         <View style={s.timeMain}>
           <Text style={[s.time, { color: gepasseerd ? RITV2.muted : RITV2.ink },
             h.vervalt && s.strike]}>{verwacht}</Text>
-          {vertraagd ? <Text style={s.delay}>+{vertragingMin}</Text> : null}
+          {afwijkend && !vroeg ? <Text style={s.delay}>+{vertragingMin}</Text> : null}
         </View>
-        {vertraagd ? <Text style={s.planned}>{gepland}</Text> : null}
+        {afwijkend ? <Text style={s.planned}>{gepland}</Text> : null}
       </View>
       <View style={s.rail}>
         <View style={[s.topLine, {
@@ -50,9 +51,14 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
         <Text style={[s.name, { color: gepasseerd ? RITV2.muted : RITV2.ink },
           volgende && s.nextName, h.vervalt && s.strike]}
           numberOfLines={1}>{naam}</Text>
+        {vroeg && !h.vervalt ? (
+          <Text style={s.earlyText} numberOfLines={1}>
+            {t(afwijkingTekst(vertragingMin))}
+          </Text>
+        ) : null}
         {volgende && eta !== null ? (
           <Text style={s.eta} numberOfLines={1}>
-            {t("Volgende halte")} · {t("over")} {eta} min
+            {eta}
           </Text>
         ) : null}
       </View>
@@ -78,6 +84,7 @@ const s = StyleSheet.create({
   timeMain: { flexDirection: "row", gap: 3, alignItems: "baseline" },
   time: { fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] },
   delay: { fontSize: 12, fontWeight: "700", color: RITV2.delay },
+  earlyText: { color: RITV2.early, fontSize: 11, fontWeight: "700", marginTop: 1 },
   planned: { fontSize: 11, color: RITV2.muted, textDecorationLine: "line-through", marginTop: 1 },
   rail: { width: 28, alignItems: "center", justifyContent: "center", overflow: "visible" },
   topLine: { position: "absolute", left: 13, top: 0, width: 2, height: "50%" },
