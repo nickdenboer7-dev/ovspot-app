@@ -10,7 +10,7 @@ const tabs = readFileSync(new URL("../app/(tabs)/_layout.tsx",import.meta.url),"
 const root = readFileSync(new URL("../app/_layout.tsx",import.meta.url),"utf8");
 const routeMap = readFileSync(new URL("../components/LiveRitKaart.tsx",import.meta.url),"utf8");
 const buurt = readFileSync(new URL("../app/(tabs)/index.tsx",import.meta.url),"utf8");
-const rit = readFileSync(new URL("../app/rit.tsx",import.meta.url),"utf8");
+const rit = readFileSync(new URL("../components/RitverloopV2Screen.tsx",import.meta.url),"utf8");
 
 test("Nieuwe installatie, lege opslag en ongeldige themawaarde vallen terug op Systeem",()=>{
   assert.equal(STANDAARD_INSTELLINGEN.thema,"systeem");
@@ -82,7 +82,7 @@ test("Scherm-aanhouden gebruikt echte Expo keep-awake hook; kaart en GPS respect
   assert.match(routeMap,/instellingen\.databesparing \? 15_000 : LIVE_MAP_POLL_MS/);
   assert.match(buurt,/instellingen\.databesparing \? 600_000 : 180_000/);
   assert.match(buurt,/instellingen\.databesparing \? 60_000 : 20_000/);
-  assert.match(rit,/instellingen\.databesparing \? \(d\?\.live \? 15_000 : 60_000\)/);
+  assert.match(rit,/d => instellingen\.databesparing \? \(d\?\.live \? 15000 : 60000\)/);
 });
 
 test("Feedback blijft in-app, over-pagina navigeerbaar en legacy halte/GPS-opties behouden",()=>{

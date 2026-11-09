@@ -89,19 +89,18 @@ test("No bogus fraction when both stop times are unavailable or implausible", ()
   assert.equal(berekenTussenHalteVoortgang(y, nu), null);
 });
 
-test("UI keeps a single stop row; the moving bus overlays the line, status stays in next stop", () => {
-  assert.doesNotMatch(screen, /r\.soort === "nu"|rijen\.push\(\{ soort: "nu" \}\)/);
-  assert.match(screen, /<RijdendVoertuig/);
-  assert.match(screen, /rijdtTussenHaltes && tussen/);
-  assert.match(screen, /\{t\("Onderweg"\)\}/);
-  assert.match(screen, /eersteVolgende \? \{ backgroundColor: colors\.infoBg, borderRadius: 12 \}/);
-  assert.match(movingBus, /Animated\.timing\(beweging/);
-  assert.match(movingBus, /Math\.min\(Math\.max\(1200, resterendMs\)/);
-  assert.match(movingBus, /backgroundColor: geredenKleur/);
-  assert.match(movingBus, /backgroundColor: teRijdenKleur/);
-  assert.match(movingBus, /top: -vorigeHoogte \/ 2/);
+test("New UI keeps the bus on the rail and next-stop status on the row", () => {
+  const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
+  const modern = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  assert.match(stop,/<RijdendVoertuig/);
+  assert.match(stop,/t\("Volgende halte"\)/);
+  assert.match(modern,/projecteerGpsOpRit\(rit, gps\)/);
+  assert.match(movingBus,/Animated\.timing\(beweging/);
+  assert.match(movingBus,/backgroundColor: geredenKleur/);
+  assert.match(movingBus,/backgroundColor: teRijdenKleur/);
+  assert.match(movingBus,/top: -vorigeHoogte \/ 2/);
+  assert.doesNotMatch(movingBus,/Date\.now\(\)|volgendeMs/);
 });
-
 
 test("Header only names previous and next real stops for an actively tracked vehicle", () => {
   const route = exports.bepaalRitTraject(basis);
@@ -131,14 +130,12 @@ test("Header can name confirmed stop pair when timetable timestamps are temporar
   assert.equal(berekenTussenHalteVoortgang(route, nu)?.volgendeIndex, 1);
 });
 
-test("Top banner shows both stops, punctuality and GPS; other status banners remain available", () => {
-  assert.match(screen, /const ritTraject = rit && !poll\.fout \? bepaalRitTraject\(rit\) : null/);
-  assert.match(screen, /ritTraject \? \(\s*<View style=\{s\.trajectInhoud\}>/);
-  assert.match(screen, /\{ritTraject\.van\} → \{ritTraject\.naar\}/);
-  assert.match(screen, /<Text style=\{\[s\.liveText, \{ color: colors\.live \}\]\}>\{t\("Onderweg"\)\}<\/Text>/);
-  assert.match(screen, /rit\.vertraging_min > 0 \? "\+" \+ rit\.vertraging_min \+ " min"/);
-  assert.match(screen, /<View style=\{s\.trajectGps\}>/);
-  assert.match(screen, /!isIncoming && bronLabel && !ritTraject/);
-  assert.match(screen, /\) : isIncoming \? \(/);
-  assert.match(screen, /\) : rit\.live \? \(/);
+test("New status strip has current GPS and two stop names without overlap", () => {
+  const modern = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  assert.match(modern,/const paar = segment && haltes\[segment\.vorigeIndex\]/);
+  assert.match(modern,/t\("Tussen"\) \+ " " \+ paar/);
+  assert.match(modern,/rit\.vertraging_min > 0/);
+  assert.match(modern,/actueel \? t\("GPS actueel"\) : t\("GPS verouderd"\)/);
+  assert.match(modern,/status: \{ minHeight: 56/);
+  assert.match(modern,/GPS verouderd/);
 });

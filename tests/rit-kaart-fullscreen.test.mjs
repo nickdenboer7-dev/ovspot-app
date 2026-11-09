@@ -5,26 +5,24 @@ import { readFileSync } from "node:fs";
 const app = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
 const kaart = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
 
-test("Header toont één dynamische Kaart/Lijst-knop; geen tweede balk of instellingenknop", () => {
-  assert.match(app, /useState<"lijst" \| "kaart">\("lijst"\)/);
-  assert.match(app, /kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
-  assert.match(app, /onPress=\{\(\) => setWeergave\(isKaart \? "lijst" : "kaart"\)\}/);
-  assert.match(app, /accessibilityLabel=\{t\(isKaart \? "Toon de haltelijst" : "Toon de live voertuigkaart"\)\}/);
-  assert.match(app, /name=\{isKaart \? "list-outline" : "map-outline"\}/);
-  assert.doesNotMatch(app, /settings-outline|weergaveRij|weergaveKeuze|weergaveKnop/);
-  assert.match(app, /if \(!kaartBeschikbaar && weergave === "kaart"\) setWeergave\("lijst"\)/);
+test("Kop en lijnrij hebben overzichtelijke kaart/lijstwissel", () => {
+  const modern = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  assert.match(modern,/useState<"lijst" \| "kaart">\("lijst"\)/);
+  assert.match(modern,/kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
+  assert.match(modern,/onPress=\{\(\) => setWeergave\(isKaart \? "lijst" : "kaart"\)\}/);
+  assert.match(modern,/name=\{isKaart \? "list-outline" : "map-outline"\}/);
+  assert.match(modern,/icon="ellipsis-vertical"/);
 });
 
-test("Kaart is full-screen binnen ritweergave, zonder inline kaart of onderste tabbar", () => {
-  assert.match(app, /\{isKaart && rit \? \(\s*<LiveRitKaart/);
-  assert.match(app, /\{!isKaart \? \(\s*<ScrollView/);
-  assert.match(app, /\{!isKaart \? <OnderBalk actief=\{van\} \/>/);
-  assert.match(kaart, /scherm: \{ flex: 1, overflow: "hidden" \}/);
-  assert.match(kaart, /provider=\{PROVIDER_GOOGLE\}/);
-  assert.match(kaart, /style=\{StyleSheet\.absoluteFill\}/);
-  assert.match(kaart, /scrollEnabled=\{true\}/);
-  assert.match(kaart, /zoomEnabled=\{true\}/);
-  assert.doesNotMatch(kaart, /height: 250|UrlTile|TegelKaart|tile\.openstreetmap/);
+test("Kaart is full-screen en sluit compacte haltelijst/tabbar uit", () => {
+  const modern = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  assert.match(modern,/!isKaart \? <>/);
+  assert.match(modern,/<ScrollView ref=\{lijstRef\}/);
+  assert.match(modern,/<LiveRitKaart/);
+  assert.match(modern,/<OnderBalk actief=\{van\} compact/);
+  assert.match(kaart,/provider=\{PROVIDER_GOOGLE\}/);
+  assert.match(kaart,/style=\{StyleSheet\.absoluteFill\}/);
+  assert.doesNotMatch(kaart,/height: 250|UrlTile|tile\.openstreetmap/);
 });
 
 test("Zwevende ritstatus, vertraging, terug naar lijst en hercentreerknop zijn gekoppeld", () => {

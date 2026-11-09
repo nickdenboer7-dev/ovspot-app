@@ -2,27 +2,25 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 
-const rit = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
+const screen = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
+const motion = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
 
-test("IC Schiphol Airport toont volledige GTFS-namen uit h.naam zonder handmatige afkorting", () => {
-  const n = rit.indexOf('<View style={s.naamRij}>');
-  const e = rit.indexOf('\n                </View>', n);
-  assert.ok(n >= 0 && e > n);
-  const nameBlock = rit.slice(n, e);
-  assert.match(nameBlock, /\{h\.naam\}/);
-  assert.doesNotMatch(nameBlock, /h\.naam\s*\.(?:slice|substring|substr)\s*\(|truncate\s*\(|\.\.\.|…/);
-  assert.match(nameBlock, /numberOfLines=\{1\}\s+ellipsizeMode="tail"\s+adjustsFontSizeToFit\s+minimumFontScale=\{0\.82\}/);
+test("GTFS-haltenaam wordt niet willekeurig afgeknipt: alleen plaats-prefix wordt verwijderd", () => {
+  assert.match(stop, /\{naam\}/);
+  assert.match(stop, /numberOfLines=\{1\}/);
+  assert.doesNotMatch(stop, /naam\.slice\(|naam\.substring\(|truncat/);
+  assert.match(screen, /compacteHalteNaam\(/);
 });
 
-test("Naamkolom benut alle beschikbare ruimte en spoornummer reserveert alleen eigen tekstbreedte", () => {
-  assert.match(rit, /naamKol: \{ flex: 1, minWidth: 0,[^}]*paddingLeft: 6/);
-  assert.match(rit, /naamRij: \{ flexDirection: "row", alignItems: "flex-start", minWidth: 0, gap: 4 \}/);
-  assert.match(rit, /naamTitel: \{ flex: 1, flexShrink: 1, minWidth: 0 \}/);
-  assert.match(rit, /spoor: \{ fontSize: 13, textAlign: "right", flexShrink: 0, paddingTop: 3 \}/);
-  assert.doesNotMatch(rit, /(?:naamKol|naamRij|naamTitel|spoor): \{[^}]*\b(?:width|maxWidth|minWidth): (?!0\b)\d+/);
+test("Naamkolom neemt beschikbare breedte zonder 52px spoorreserve", () => {
+  assert.match(stop, /labelColumn: \{ flex: 1, minWidth: 0/);
+  assert.doesNotMatch(stop, /minWidth: 52|width: 210/);
+  assert.match(stop, /name: \{ fontSize: 15, fontWeight: "600" \}/);
 });
 
-test("Spoor blijft naast de haltenaam, maar dwingt geen 52 px minimumruimte af", () => {
-  assert.match(rit, /\{h\.spoor && trein \? \(\s*<Text style=\{\[s\.spoor,/);
-  assert.doesNotMatch(rit, /minWidth: 52/);
+test("Nieuwe compacte lijst reserveert geen ruimte voor een ongebruikte perronkolom", () => {
+  assert.match(stop, /timeColumn: \{ width: 68/);
+  assert.match(stop, /rail: \{ width: 28/);
+  assert.doesNotMatch(stop, /spoor && trein|s\.spoor/);
 });

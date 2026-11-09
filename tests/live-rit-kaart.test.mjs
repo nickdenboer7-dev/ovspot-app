@@ -52,17 +52,15 @@ test("Native Google Maps direct zonder versiecheck, stille fallback of OSM-tegel
   assert.doesNotMatch(component, /nativeBuildVersion|nativeMaps\(|!maps|TegelKaart|UrlTile|tile\.openstreetmap\.org|Live kaart beschikbaar na installatie/);
 });
 
-test("Rit is een keuzescherm Lijst of Kaart; geen inline kaart die de tijdlijn verschuift", () => {
-  const app = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
-  assert.match(app, /useState<"lijst" \| "kaart">\("lijst"\)/);
-  assert.match(app, /kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
-  assert.match(app, /accessibilityLabel=\{t\(isKaart \? "Toon de haltelijst" : "Toon de live voertuigkaart"\)\}/);
-  assert.match(app, /\{!isKaart \? \(\s*<ScrollView/);
-  assert.match(app, /\{isKaart && rit \? \(\s*<LiveRitKaart/);
-  assert.match(app, /onLijst=\{\(\) => setWeergave\("lijst"\)\}/);
-  assert.match(app, /\{!isKaart \? <OnderBalk actief=\{van\} \/>/);
+test("Ritverloop heeft een keuzescherm voor de volledige kaart, zonder inline kaart", () => {
+  const app = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  assert.match(app,/useState<"lijst" \| "kaart">\("lijst"\)/);
+  assert.match(app,/kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
+  assert.match(app,/setWeergave\(isKaart \? "lijst" : "kaart"\)/);
+  assert.match(app,/<LiveRitKaart/);
+  assert.match(app,/<OnderBalk actief=\{van\} compact/);
   const api = readFileSync(new URL("../lib/api.ts", import.meta.url), "utf8");
-  assert.match(api, /liveRitVoertuig: \(ritId: string, datum: string\)/);
-  assert.match(api, /\/voertuig\?rit_id=/);
-  assert.match(api, /API_V2_BASE/);
+  assert.match(api,/liveRitVoertuig: \(ritId: string, datum: string\)/);
+  assert.match(api,/\/voertuig\?rit_id=/);
+  assert.match(api,/API_V2_BASE/);
 });

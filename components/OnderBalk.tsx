@@ -20,15 +20,15 @@ export function isTab(v: unknown): v is TabKey {
 }
 
 /** Tabbalk onderin. Ook gebruikt op haltebord en ritverloop, zodat je altijd snel terug kunt. */
-export function OnderBalk({ actief, onKies }: { actief: TabKey; onKies?: (k: TabKey) => void }) {
+export function OnderBalk({ actief, onKies, compact = false }: { actief: TabKey; onKies?: (k: TabKey) => void; compact?: boolean }) {
   const { colors, storingenMijn, t: translate } = useApp();
   const insets = useSafeAreaInsets();
   const onder = Math.max(insets.bottom, 6);
   return (
-    <View style={[s.balk, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: onder, height: 62 + onder }]} accessibilityRole="tablist">
+    <View style={[s.balk, { backgroundColor: compact ? "#FFFFFF" : colors.surface, borderTopColor: colors.border, paddingBottom: onder, height: (compact ? 64 : 62) + onder }]} accessibilityRole="tablist">
       {TABS.map((t) => {
         const aan = t.key === actief;
-        const kleur = aan ? colors.accent : colors.tabInactive;
+        const kleur = compact ? (aan ? "#0B57D0" : "#5F6B7A") : (aan ? colors.accent : colors.tabInactive);
         return (
           <Pressable
             key={t.key}
@@ -38,7 +38,7 @@ export function OnderBalk({ actief, onKies }: { actief: TabKey; onKies?: (k: Tab
             accessibilityLabel={translate(t.key === "storingen" && storingenMijn ? `${t.label}, ${storingenMijn} bij je favorieten` : t.label)}
             onPress={() => (onKies ? onKies(t.key) : router.navigate(t.pad as any))}
           >
-            <View style={s.actiefIcoon}>
+            <View style={[s.actiefIcoon, compact && aan ? { backgroundColor: "#E8F0FE", borderRadius: 20, width: 48 } : null]}>
               <Ionicons name={aan ? t.aan : t.uit} size={24} color={kleur} />
               {t.key === "storingen" && storingenMijn > 0 ? (
                 <View style={[s.bolletje, { backgroundColor: colors.red, borderColor: colors.surface }]}>

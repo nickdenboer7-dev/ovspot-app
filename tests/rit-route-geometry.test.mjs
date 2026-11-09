@@ -41,7 +41,7 @@ test("Gegrijsde reeds gepasseerde haltes op lusritten worden op exact stop_id é
 test("GTFS route shape/stops via rit-response naar full-screen Google Polyline en halte-dots", () => {
   const api = readFileSync(new URL("../backend/api_v2_kv8.py",import.meta.url),"utf8");
   const board = readFileSync(new URL("../backend/board_v2.py",import.meta.url),"utf8");
-  const rit = readFileSync(new URL("../app/rit.tsx",import.meta.url),"utf8");
+  const rit = readFileSync(new URL("../components/RitverloopV2Screen.tsx",import.meta.url),"utf8");
   const kaart = readFileSync(new URL("../components/LiveRitKaart.tsx",import.meta.url),"utf8");
   const types = readFileSync(new URL("../lib/types.ts",import.meta.url),"utf8");
   assert.match(board,/def rit_kaart_geometrie\(/);
@@ -54,7 +54,7 @@ test("GTFS route shape/stops via rit-response naar full-screen Google Polyline e
   assert.match(rit,/shape=\{rit\.shape\}/);
   assert.match(rit,/stops=\{kaartHaltes\}/);
   assert.match(rit,/routeColor=\{rit\.route_color\}/);
-  assert.match(rit,/markeerRitHaltes\(rit\?\.stops, rit\?\.haltes \?\? \[\]\)/);
+  assert.match(rit,/markeerRitHaltes\(rit\?\.stops, rit\?\.haltes \|\| \[\]\)/);
   assert.match(kaart,/import MapView, \{ AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE \}/);
   assert.match(kaart,/<Polyline[\s\S]*?coordinates=\{routePunten\}/);
   assert.match(kaart,/strokeColor=\{lijnKleur\}/);

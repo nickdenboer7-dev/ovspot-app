@@ -20,12 +20,9 @@ test("Opnieuw formatteren voegt nooit dubbele zero-width spaces toe", () => {
   assert.equal(stationsnaamMetBreekpunten(eenKeer), eenKeer);
 });
 
-test("Tijdlijn toont haltes voortaan altijd op één regel en gebruikt tail-ellips", () => {
-  const code = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
-  assert.match(code, /numberOfLines=\{1\}\s+ellipsizeMode="tail"/);
-  assert.match(code, /\{h\.naam\}/);
-  assert.doesNotMatch(code, /stationsnaamMetBreekpunten\(h\.naam\)/);
-  assert.match(code, /naamTitel: \{[^}]*flex: 1, flexShrink: 1, minWidth: 0 \}/);
-  assert.match(code, /naamRij: \{[^}]*gap: 4/);
-  assert.match(code, /spoor: \{[^}]*flexShrink: 0/);
+test("Nieuwe compacte ritlijst toont haltenaam op één regel zonder woordmanipulatie", () => {
+  const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
+  assert.match(stop,/numberOfLines=\{1\}>\{naam\}/);
+  assert.doesNotMatch(stop,/stationsnaamMetBreekpunten|\.slice\(/);
+  assert.match(stop,/labelColumn: \{ flex: 1, minWidth: 0/);
 });

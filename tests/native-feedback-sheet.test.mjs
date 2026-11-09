@@ -8,7 +8,7 @@ const api = readFileSync(new URL("../lib/api.ts", import.meta.url), "utf8");
 const appContext = readFileSync(new URL("../context/AppProvider.tsx", import.meta.url), "utf8");
 const backend = readFileSync(new URL("../backend/app_feedback_v2.py", import.meta.url), "utf8");
 const stop = readFileSync(new URL("../app/halte/[id].tsx", import.meta.url), "utf8");
-const trip = readFileSync(new URL("../app/rit.tsx", import.meta.url), "utf8");
+const trip = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
 
 test("Feedbackknop opent een echt native bottom sheet, geen browser/contact-link",()=>{
   assert.match(settings,/onPress=\{\(\) => setFeedbackOpen\(true\)\}/);
