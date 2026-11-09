@@ -76,6 +76,36 @@ export function verwachteAankomstMin(verwachtMs: number | null, nu: number): num
   return Math.max(0, Math.ceil((verwachtMs - nu) / 60_000));
 }
 
+/** Fysieke ruimte in React Native dp tussen de twee haltecentra.
+ * Met 28dp marker en 12dp haltecirkel blijft rondom >=4dp vrij.
+ * De GPS bepaalt de gewenste positie; deze functie begrenst alleen de UI.
+ */
+export const VOERTUIG_DIAMETER = 28;
+export const HALTE_DIAMETER = 12;
+export const MIN_TUSSENRUIMTE_DP = 4;
+
+export type VeiligeVoertuigPositie = {
+  lengte: number; minCentrum: number; maxCentrum: number; normaal: number;
+};
+
+export function veiligeVoertuigPositie(
+  progress: number, vorigeHoogte: number, huidigeHoogte: number
+): VeiligeVoertuigPositie | null {
+  const lengte = (vorigeHoogte + huidigeHoogte) / 2;
+  const afstand = (VOERTUIG_DIAMETER + HALTE_DIAMETER) / 2 + MIN_TUSSENRUIMTE_DP;
+  if (![progress, vorigeHoogte, huidigeHoogte, lengte].every(Number.isFinite) ||
+      vorigeHoogte <= 0 || huidigeHoogte <= 0 || lengte < afstand * 2) {
+    return null;
+  }
+  const minCentrum = afstand;
+  const maxCentrum = lengte - afstand;
+  const gpsCenter = Math.max(minCentrum, Math.min(maxCentrum,
+    Math.max(0, Math.min(1, progress)) * lengte));
+  const normaal = maxCentrum > minCentrum
+    ? (gpsCenter - minCentrum) / (maxCentrum - minCentrum) : 0.5;
+  return { lengte, minCentrum, maxCentrum, normaal };
+}
+
 export type GpsSegment = { vorigeIndex: number; volgendeIndex: number;
   fractie: number; afstandM: number };
 
