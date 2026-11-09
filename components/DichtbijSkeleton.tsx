@@ -1,12 +1,13 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Text } from "./LocalizedText";
 import { useApp } from "../context/AppProvider";
 
 /** Rustige kaart-skeletons. Geen bewegende spinner over de hele pagina. */
 export function DichtbijSkeleton({ locatie }: { locatie: boolean }) {
-  const { colors } = useApp();
+  const { colors, t } = useApp();
   return (
-    <View accessibilityRole="progressbar" accessibilityLabel={locatie ? "Vertrekken laden" : "Locatie bepalen"} style={s.wikkel}>
+    <View accessibilityRole="progressbar" accessibilityLabel={t(locatie ? "Vertrekken laden" : "Locatie bepalen")} style={s.wikkel}>
       <Text style={[s.status, { color: colors.sub }]}>
         {locatie ? "Haltes ophalen…" : "Locatie bepalen…"}
       </Text>

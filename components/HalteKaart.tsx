@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Text } from "./LocalizedText";
 import { useApp } from "../context/AppProvider";
 import { bestemmingVoorWeergave } from "../lib/format";
 import type { Modus, Vertrek } from "../lib/types";
@@ -42,7 +43,7 @@ export function HalteKaart({
   ster?: boolean;
   laden?: boolean;
 }) {
-  const { colors } = useApp();
+  const { colors, t } = useApp();
   const trein = (modi || []).includes("train");
   const openHalte = (halteId: string) => router.push({
     pathname: "/halte/[id]", params: { id: halteId, van, naam, plaats: plaats || "" }
@@ -51,7 +52,7 @@ export function HalteKaart({
   const open = () => openHalte(id);
   return (
     <Kaart>
-      <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={`Vertrektijden ${naam}${sub ? `, ${sub}` : ""}`} android_ripple={{ color: colors.divider }} style={[s.binnen, gecombineerd ? s.gecombineerdeKop : null]}>
+      <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={t(`Vertrektijden ${naam}${sub ? `, ${sub}` : ""}`)} android_ripple={{ color: colors.divider }} style={[s.binnen, gecombineerd ? s.gecombineerdeKop : null]}>
         <View style={s.kop}>
           {ster ? (
             <Ionicons name="star" size={24} color={colors.star} />
@@ -65,7 +66,7 @@ export function HalteKaart({
               <Text style={[s.naam, { color: colors.text }]} numberOfLines={2}>
                 {naam}
               </Text>
-              {storingen ? <Ionicons name="warning-outline" size={16} color={colors.delay} accessibilityLabel="Er is een storing" /> : null}
+              {storingen ? <Ionicons name="warning-outline" size={16} color={colors.delay} accessibilityLabel={t("Er is een storing")} /> : null}
             </View>
             {sub ? (
               <View style={[s.afstandChip, { backgroundColor: colors.surface2 }]}>
@@ -96,7 +97,7 @@ export function HalteKaart({
             <Pressable key={`${halteId}-${v.lijn}-${v.vertrek_ms}-${i}`}
               onPress={() => openHalte(halteId)}
               accessibilityRole="button"
-              accessibilityLabel={`Haltebord ${naam}, richting ${bestemmingVoorWeergave(v.lijn, v.bestemming)}, lijn ${v.lijn}`}
+              accessibilityLabel={t(`Haltebord ${naam}, richting ${bestemmingVoorWeergave(v.lijn, v.bestemming)}, lijn ${v.lijn}`)}
               android_ripple={{ color: colors.divider }}
               style={s.richtingRegel}>
               <VertrekRegel v={v} nu={nu} compact eerste={false} />

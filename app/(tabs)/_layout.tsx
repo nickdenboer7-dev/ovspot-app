@@ -4,7 +4,7 @@ import { isTab, OnderBalk } from "../../components/OnderBalk";
 import { useApp } from "../../context/AppProvider";
 
 export default function TabsLayout() {
-  const { colors, instellingen } = useApp();
+  const { colors, instellingen, t } = useApp();
   return (
     <Tabs
       initialRouteName={instellingen.startscherm}
@@ -14,10 +14,10 @@ export default function TabsLayout() {
         return <OnderBalk actief={isTab(naam) ? naam : "index"} onKies={(k) => props.navigation.navigate(k)} />;
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Dichtbij" }} />
-      <Tabs.Screen name="favorieten" options={{ title: "Favorieten" }} />
-      <Tabs.Screen name="storingen" options={{ title: "Storingen" }} />
-      <Tabs.Screen name="instellingen" options={{ title: "Instellingen" }} />
+      <Tabs.Screen name="index" options={{ title: t("Dichtbij") }} />
+      <Tabs.Screen name="favorieten" options={{ title: t("Favorieten") }} />
+      <Tabs.Screen name="storingen" options={{ title: t("Storingen") }} />
+      <Tabs.Screen name="instellingen" options={{ title: t("Instellingen") }} />
     </Tabs>
   );
 }

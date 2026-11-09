@@ -3,20 +3,27 @@ import Constants from "expo-constants";
 import { router } from "expo-router";
 import * as Updates from "expo-updates";
 import React, { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { Text } from "../../components/LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FeedbackModal } from "../../components/FeedbackModal";
 import { Kop } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import type { Startscherm, Thema } from "../../lib/types";
+import type { TaalVoorkeur } from "../../lib/i18n";
 
 type Icoon = keyof typeof Ionicons.glyphMap;
-type Kiezer = "thema" | "startscherm" | null;
+type Kiezer = "thema" | "taal" | "startscherm" | null;
 
 const THEMAS: { key: Thema; label: string; icoon: Icoon }[] = [
   { key: "systeem", label: "Systeem", icoon: "phone-portrait-outline" },
   { key: "licht", label: "Licht", icoon: "sunny-outline" },
   { key: "donker", label: "Donker", icoon: "moon-outline" }
+];
+const TAALOPTIES: { key: TaalVoorkeur; label: string; icoon: Icoon }[] = [
+  { key: "auto", label: "Automatisch", icoon: "phone-portrait-outline" },
+  { key: "nl", label: "Nederlands", icoon: "language-outline" },
+  { key: "en", label: "English", icoon: "language-outline" }
 ];
 const STARTSCHERMEN: { key: Startscherm; label: string; icoon: Icoon }[] = [
   { key: "index", label: "Dichtbij", icoon: "location-outline" },
@@ -45,11 +52,11 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
   schakel?: { value: boolean; onChange: (next: boolean) => void };
   laatste?: boolean;
 }) {
-  const { colors, scheme } = useApp();
+  const { colors, scheme, t } = useApp();
   return (
     <Pressable onPress={onPress} disabled={!onPress}
       accessibilityRole={onPress ? "button" : undefined}
-      accessibilityLabel={onPress ? `${titel}, ${waarde || uitleg}` : undefined}
+      accessibilityLabel={onPress ? t(`${titel}, ${waarde || uitleg}`) : undefined}
       style={[s.rij, !laatste && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
       <View style={[s.icoonAchtergrond, { backgroundColor: scheme === "dark" ? "#334155" : colors.surface2 }]}>
         <Ionicons name={icoon} size={21} color={colors.accent} />
@@ -60,7 +67,7 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
       </View>
       {schakel ? (
         <Switch
-          accessibilityLabel={titel}
+          accessibilityLabel={t(titel)}
           value={schakel.value}
           onValueChange={schakel.onChange}
           trackColor={{ false: colors.border, true: scheme === "dark" ? "#0E7490" : "#7DD3FC" }}
@@ -77,7 +84,7 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
 }
 
 export default function Instellingen() {
-  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext } = useApp();
+  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext, t } = useApp();
   const insets = useSafeAreaInsets();
   const [kiezer, zetKiezer] = useState<Kiezer>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -93,8 +100,8 @@ export default function Instellingen() {
     : { view: "instellingen" as const };
   const versie = Constants.nativeAppVersion || Constants.expoConfig?.version || "1.0.0";
   const otaId = Updates.updateId ? Updates.updateId.slice(0, 8) : "ingebouwd";
-  const opties = kiezer === "thema" ? THEMAS : STARTSCHERMEN;
-  const geselecteerd = kiezer === "thema" ? instellingen.thema : instellingen.startscherm;
+  const opties = kiezer === "thema" ? THEMAS : kiezer === "taal" ? TAALOPTIES : STARTSCHERMEN;
+  const geselecteerd = kiezer === "thema" ? instellingen.thema : kiezer === "taal" ? instellingen.taalVoorkeur : instellingen.startscherm;
 
   return (
     <View style={{ flex: 1, backgroundColor: scheme === "dark" ? "#0F172A" : colors.background }}>
@@ -105,6 +112,10 @@ export default function Instellingen() {
           <InstellingsRij icoon="color-palette-outline" titel="Thema"
             uitleg="Donker, licht of systeem" waarde={THEMAS.find(o => o.key === instellingen.thema)?.label || "Systeem"}
             onPress={() => zetKiezer("thema")} />
+          <InstellingsRij icoon="language-outline" titel="Taal"
+            uitleg="Taal van je telefoon of zelf kiezen"
+            waarde={TAALOPTIES.find(o => o.key === instellingen.taalVoorkeur)?.label || "Automatisch"}
+            onPress={() => zetKiezer("taal")} />
           <InstellingsRij icoon="apps-outline" titel="Startscherm"
             uitleg="Kies welk scherm als eerste opstart"
             waarde={STARTSCHERMEN.find(o => o.key === instellingen.startscherm)?.label || "Dichtbij"}
@@ -154,10 +165,10 @@ export default function Instellingen() {
         onRequestClose={() => zetKiezer(null)}>
         <View style={s.modalAchtergrond}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => zetKiezer(null)}
-            accessibilityRole="button" accessibilityLabel="Keuzemenu sluiten" />
+            accessibilityRole="button" accessibilityLabel={t("Keuzemenu sluiten")} />
           <View style={[s.modalKaart, { backgroundColor: scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
             <Text style={[s.modalTitel, { color: colors.text }]}>
-              {kiezer === "thema" ? "Kies thema" : "Kies startscherm"}
+              {kiezer === "thema" ? "Kies thema" : kiezer === "taal" ? "Kies taal" : "Kies startscherm"}
             </Text>
             {opties.map(item => {
               const actief = item.key === geselecteerd;
@@ -166,6 +177,7 @@ export default function Instellingen() {
                   accessibilityState={{ checked: actief }}
                   onPress={() => {
                     if (kiezer === "thema") zetInstellingen({ thema: item.key as Thema });
+                    else if (kiezer === "taal") zetInstellingen({ taalVoorkeur: item.key as TaalVoorkeur });
                     else zetInstellingen({ startscherm: item.key as Startscherm });
                     zetKiezer(null);
                   }}

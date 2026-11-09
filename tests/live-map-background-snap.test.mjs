@@ -32,7 +32,8 @@ test("Eerste fix, hervatten of ontvangstgat >15 sec veroorzaakt harde snap", () 
 });
 
 test("AppState triggert snap bij foreground en stopt animatie in achtergrond", () => {
-  assert.match(component, /import \{ AppState, Pressable, StyleSheet, Text, View \} from "react-native"/);
+  assert.match(component, /import \{ AppState, Pressable, StyleSheet, View \} from "react-native"/);
+  assert.match(component, /import \{ Text \} from "\.\/LocalizedText"/);
   assert.match(component, /AppState\.addEventListener\("change", volgendeState => \{/);
   assert.match(component, /if \(volgendeState !== "active"\) \{[\s\S]*?skipAnimation\.current = true;[\s\S]*?coordinate\.stopAnimation/);
   assert.match(component, /if \(vorig !== "active"\) \{[\s\S]*?skipAnimation\.current = true;[\s\S]*?void ophalen\(\)/);

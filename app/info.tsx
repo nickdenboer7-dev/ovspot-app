@@ -2,7 +2,8 @@ import Constants from "expo-constants";
 import { Kop } from "../components/ui";
 import { useApp } from "../context/AppProvider";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/LocalizedText";
 
 export default function Info() {
   const { colors } = useApp();

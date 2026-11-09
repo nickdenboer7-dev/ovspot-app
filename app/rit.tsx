@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isTab, OnderBalk } from "../components/OnderBalk";
 import { Kaart, Laden, Leeg, LiveStip } from "../components/ui";
@@ -66,7 +67,7 @@ export default function Ritverloop() {
 
   const [toonGepasseerd, setToonGepasseerd] = useState(false);
   const [weergave, setWeergave] = useState<"lijst" | "kaart">("lijst");
-  const { colors, zetFeedbackContext, instellingen } = useApp();
+  const { colors, zetFeedbackContext, instellingen, t } = useApp();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const gescrold = useRef(false);
@@ -311,7 +312,7 @@ export default function Ritverloop() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={[s.kop, { backgroundColor: colors.header, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} accessibilityRole="button" accessibilityLabel="Terug" style={s.kopKnop} hitSlop={8}>
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} accessibilityRole="button" accessibilityLabel={t("Terug")} style={s.kopKnop} hitSlop={8}>
           <Ionicons name="arrow-back" size={26} color={colors.headerText} />
         </Pressable>
         {lijn ? (
@@ -335,8 +336,8 @@ export default function Ritverloop() {
           <Pressable
             onPress={() => setWeergave(isKaart ? "lijst" : "kaart")}
             accessibilityRole="button"
-            accessibilityLabel={isKaart ? "Toon de haltelijst" : "Toon de live voertuigkaart"}
-            accessibilityHint={isKaart ? "Schakel van kaart naar lijst" : "Schakel van lijst naar kaart"}
+            accessibilityLabel={t(isKaart ? "Toon de haltelijst" : "Toon de live voertuigkaart")}
+            accessibilityHint={t(isKaart ? "Schakel van kaart naar lijst" : "Schakel van lijst naar kaart")}
             style={s.kopKnop}
             hitSlop={8}
           >

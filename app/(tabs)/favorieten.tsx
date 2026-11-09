@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../../components/LocalizedText";
 import { HalteKaart } from "../../components/HalteKaart";
 import { Kaart, Kop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
@@ -32,7 +33,7 @@ function FavKaart({ f, nu }: { f: FavHalte; nu: number }) {
 }
 
 export default function Favorieten() {
-  const { colors, favorieten, verwijderFavoriet, verplaatsFavoriet } = useApp();
+  const { colors, favorieten, verwijderFavoriet, verplaatsFavoriet, t } = useApp();
   const [bewerk, setBewerk] = useState(false);
   const nu = useNu(10_000);
   const plaatsen = [...new Set(favorieten.map((f) => f.plaats).filter(Boolean))];
@@ -52,7 +53,7 @@ export default function Favorieten() {
         }
       />
       <View style={[s.zoekStrook, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
-        <Pressable onPress={() => router.push("/zoek")} accessibilityRole="search" accessibilityLabel="Zoek een halte"
+        <Pressable onPress={() => router.push("/zoek")} accessibilityRole="search" accessibilityLabel={t("Zoek een halte")}
           style={[s.zoekbalk, { backgroundColor: colors.surface2 }]}>
           <Ionicons name="search-outline" size={20} color={colors.sub} />
           <Text style={[s.zoekText, { color: colors.sub }]}>Zoek halte om toe te voegen</Text>

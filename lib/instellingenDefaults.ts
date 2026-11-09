@@ -2,6 +2,7 @@ import type { Instellingen, Startscherm, Thema } from "./types";
 
 export const STANDAARD_INSTELLINGEN: Instellingen = {
   thema: "systeem",
+  taalVoorkeur: "auto",
   startscherm: "index",
   schermAanhouden: false,
   liveVoertuigen: true,
@@ -23,6 +24,7 @@ export function normaliseerInstellingen(raw: unknown): Instellingen {
     ...STANDAARD_INSTELLINGEN,
     ...s,
     thema, startscherm,
+    taalVoorkeur: ["auto","nl","en"].includes(String(s.taalVoorkeur)) ? s.taalVoorkeur! : "auto",
     schermAanhouden: typeof s.schermAanhouden === "boolean" ? s.schermAanhouden : false,
     liveVoertuigen: typeof s.liveVoertuigen === "boolean" ? s.liveVoertuigen : true,
     databesparing: typeof s.databesparing === "boolean" ? s.databesparing : false,

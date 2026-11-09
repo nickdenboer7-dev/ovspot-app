@@ -1,0 +1,270 @@
+import { I18nManager } from "react-native";
+
+/** UI languages only; stop names and operator data are not translated. */
+export type TaalVoorkeur = "auto" | "nl" | "en";
+export type AppTaal = "nl" | "en";
+
+export function leesSysteemTaal(): AppTaal {
+  let locale = "";
+  try { locale = String(I18nManager.getConstants().localeIdentifier || ""); }
+  catch { /* Intl fallback */ }
+  if (!locale) {
+    try { locale = Intl.DateTimeFormat().resolvedOptions().locale; }
+    catch { locale = "nl-NL"; }
+  }
+  return /^nl(?:[-_]|$)/i.test(locale) ? "nl" : "en";
+}
+export function bepaalTaal(voorkeur: TaalVoorkeur, systeem = leesSysteemTaal()): AppTaal {
+  return voorkeur === "auto" ? systeem : voorkeur;
+}
+
+export const EN: Record<string, string> = {
+  "Dichtbij": "Nearby", "Favorieten": "Favorites", "Storingen": "Disruptions",
+  "Instellingen": "Settings", "Zoeken": "Search", "Terug": "Back",
+  "Opnieuw": "Retry", "Opnieuw proberen": "Try again", "Opnieuw controleren": "Check again",
+  "Sluiten": "Close", "Wissen": "Clear", "Inklappen": "Collapse",
+  "Uitklappen": "Expand", "Alles": "All", "Klaar": "Done",
+  "Bewerk": "Edit", "Bewerken": "Edit", "Ja": "Yes", "Nee": "No",
+  "Laden…": "Loading…", "Laden...": "Loading...",
+  "Gepland": "Scheduled", "Op tijd": "On time", "Live": "Live",
+  "Vervalt": "Cancelled", "Vertrokken": "Departed",
+  "Nog niet": "Not yet", "Onbekend": "Unknown",
+  "Geen informatie": "No information", "Geen gegevens": "No data",
+  "· probeert opnieuw": "· retrying",
+  "Er ging iets mis": "Something went wrong", "onbekend": "unknown",
+  "ingebouwd": "built in", "Versie": "Version",
+  "Nu": "Now", "Volgende": "Next",
+  "Spoor": "Platform", "Perron": "Platform",
+  "Richting": "Towards", "Halte": "Stop", "Haltes": "Stops",
+  "Lijn": "Line", "Lijnen": "Lines", "Trein": "Train",
+  "Bus": "Bus", "Tram": "Tram", "Metro": "Metro",
+  "Veerboot": "Ferry", "Veer": "Ferry",
+
+  "WEERGAVE & GEDRAG": "APPEARANCE & BEHAVIOR",
+  "KAART & DATA": "MAP & DATA", "MELDINGEN": "NOTIFICATIONS",
+  "OVER OVSPOT": "ABOUT OVSPOT",
+  "Thema": "Theme", "Systeem": "System", "Licht": "Light", "Donker": "Dark",
+  "Donker, licht of systeem": "Dark, light or system",
+  "Taal": "Language", "Automatisch": "Automatic",
+  "Nederlands": "Dutch", "Taal van je telefoon of zelf kiezen": "Use your phone's language or choose manually",
+  "Kies taal": "Choose language", "Kies thema": "Choose theme",
+  "Kies startscherm": "Choose home screen", "Keuzemenu sluiten": "Close options",
+  "Startscherm": "Home screen", "Kies welk scherm als eerste opstart": "Choose which screen opens first",
+  "Scherm aanhouden": "Keep screen on", "Voorkom dat het scherm uitgaat": "Prevent the screen from turning off",
+  "Live voertuigen": "Live vehicles", "Toon bussen en treinen op de achtergrond": "Show buses and trains in the background",
+  "Databesparing": "Data saver", "Minder vaak kaartgegevens en GPS verversen": "Refresh map data and GPS less often",
+  "Locatie & haltebord": "Location & departures",
+  "Afstand, thuislocatie en standaardfilter": "Distance, home location and default filter",
+  "Pushberichten bij vertragingen op favoriete lijnen": "Push notifications for delays on favorite lines",
+  "Stuur feedback": "Send feedback", "Meld een bug of geef een suggestie": "Report a bug or suggest an improvement",
+  "Over de app": "About the app", "Licenties en algemene voorwaarden": "Licenses and terms of use",
+  "Standaard haltefilter": "Default stop filter", "Zo opent het vertrekbord.": "Choose the default departure board filter.",
+  "Afstand voor Dichtbij": "Nearby search radius",
+  "Thuislocatie": "Home location",
+  "Niet ingesteld. Wordt gebruikt wanneer locatie uitstaat.": "Not set. Used when location is turned off.",
+  "Andere halte kiezen": "Choose another stop",
+  "Thuislocatie instellen": "Set home location", "Thuislocatie wissen": "Clear home location",
+  "Over OVspot": "About OVspot", "Licenties": "Licenses",
+  "Algemene voorwaarden & informatie": "Terms and information",
+  "OVspot gebruikt onder meer Expo, React Native, React Navigation, React Native Maps en open vervoersdata zoals GTFS en NDOV. De softwarecomponenten vallen onder hun eigen licentievoorwaarden.": "OVspot uses Expo, React Native, React Navigation, React Native Maps and open public transport data such as GTFS and NDOV. Software components are subject to their own licenses.",
+  "Reisinformatie kan wijzigen, vertraagd worden bijgewerkt of onvolledig zijn. Controleer belangrijke reizen bij de vervoerder. Voor feedback is een e-mailadres optioneel. Je kunt de GPS-toestemming via Android beheren.": "Travel information may change, be delayed or be incomplete. Check important journeys with the operator. An email address is optional for feedback. You can manage location permission in Android settings.",
+
+  "Locatie vernieuwen": "Refresh location", "Locatie bepalen": "Finding your location",
+  "Locatie bepalen…": "Finding your location…", "Vertrekken laden": "Loading departures",
+  "Haltes ophalen…": "Loading stops…", "Haltes laden duurt te lang": "Loading stops is taking too long",
+  "Meer haltes laden lukt nu niet": "Unable to load more stops right now",
+  "Meer haltes laden": "Loading more stops", "Meer haltes laden…": "Loading more stops…",
+  "Meer haltes binnen de ingestelde afstand tonen": "Show more stops within your chosen radius",
+  "Standaardlocatie · Amsterdam Centraal": "Default location · Amsterdam Centraal",
+  "Huidige locatie": "Current location", "Locatie staat uit": "Location is turned off",
+  "Locatie duurt te lang": "Location is taking too long",
+  "Geen toegang tot je locatie": "Location access denied",
+  "Locatie niet beschikbaar": "Location unavailable",
+  "Geen GPS-positie binnen 5 seconden. Probeer opnieuw of kies een thuislocatie in Instellingen.": "No GPS position after 5 seconds. Try again or set a home location in Settings.",
+  "Zet locatie aan om haltes dichtbij te zien, of kies een thuislocatie in Instellingen.": "Turn on location to see nearby stops, or set a home location in Settings.",
+  "Open instellingen": "Open settings", "Locatie toestaan": "Allow location",
+  "Vergroot de afstand in Instellingen of zoek een halte.": "Increase the search radius in Settings or search for a stop.",
+  "Naar instellingen": "Go to Settings",
+  "Kan vertrektijden niet laden": "Unable to load departures",
+  "Zoek halte, lijn of plaats": "Search for a stop, line or city",
+  "GPS niet beschikbaar. Haltes bij Amsterdam Centraal worden getoond; probeer je locatie opnieuw.": "GPS unavailable. Showing stops near Amsterdam Centraal; try finding your location again.",
+  "GPS niet beschikbaar. Haltes bij je ingestelde thuislocatie worden getoond.": "GPS unavailable. Showing stops near your saved home location.",
+  "Nieuwe GPS-positie niet beschikbaar. Je ziet je laatst bekende locatie.": "New GPS position unavailable. Showing your last known location.",
+
+  "Zoek een halte": "Search for a stop", "Zoek halte om toe te voegen": "Search for a stop to add",
+  "Mijn haltes": "My stops", "Nog geen favorieten": "No favorites yet",
+  "Tik op de ster bij een halte om hem hier te bewaren.": "Tap the star on a stop to save it here.",
+  "Er is een storing": "There is a disruption",
+  "Geen vertrekken in de komende tijd": "No upcoming departures",
+  "Momenteel geen vertrekken in de komende tijd.": "No upcoming departures at the moment.",
+  "Lijnen op deze halte": "Lines at this stop",
+  "Volledige dienstregeling niet bereikbaar": "Full timetable unavailable",
+  "Verouderd · ": "Outdated · ",
+  "Bijgewerkt": "Updated",
+  "Verwijder uit favorieten": "Remove from favorites",
+  "Bewaar als favoriet": "Save to favorites",
+  "lijnen · veeg voor meer": "lines · swipe for more",
+  "Lijn zoeken sluiten": "Close line search",
+  "Lijnnummer zoeken": "Search by line number",
+  "Zoek lijnnummer, bijvoorbeeld 97": "Search line number, e.g. 97",
+  "Zoek in alle lijnen van deze halte": "Search all lines at this stop",
+  "Alle lijnen": "All lines", "Geen lijnen gevonden": "No lines found",
+  "Toon storingen": "Show disruptions",
+  "lijn": "line", "lijnen": "lines", "haltes": "stops", "lopen": "walk",
+  "haltepalen · beide richtingen": "stop poles · both directions",
+
+  "Storingen bij je favoriete haltes verschijnen hier. Kies 'Alles' voor haltes dichtbij.": "Disruptions at your favorite stops appear here. Choose 'All' for nearby stops.",
+  "Nog geen haltes": "No stops yet",
+  "Open eerst Dichtbij, dan zie je hier de storingen bij haltes om je heen.": "Open Nearby first to see disruptions at stops around you.",
+  "Kan storingen niet laden": "Unable to load disruptions",
+  "Storingsstatus niet bevestigd": "Disruption status unconfirmed",
+  "De nieuwste controle is mislukt. Eerdere resultaten kunnen verouderd zijn.": "The latest check failed. Earlier results may be outdated.",
+  "Storingsoverzicht onvolledig": "Incomplete disruption overview",
+  "Geen gemelde storingen": "No reported disruptions",
+  "Hele melding lezen": "Read full notice",
+
+  "Zoek je thuishalte": "Search for your home stop",
+  "Zoek halte of plaats": "Search for a stop or city",
+  "Zoekterm": "Search term",
+  "MEEST RELEVANT": "MOST RELEVANT",
+  "ZOEKRESULTATEN": "SEARCH RESULTS",
+  "ANDERE RESULTATEN": "OTHER RESULTS",
+  "Kies je thuislocatie": "Choose your home location",
+  "Typ minimaal twee letters, bijvoorbeeld Amsterdam Centraal.": "Type at least two letters, for example Amsterdam Centraal.",
+  "Zoeken lukt nu niet": "Search unavailable right now",
+  "Haltes zoeken…": "Searching for stops…",
+  "Niets gevonden": "No results found",
+  "Vervangend busvervoer beschikbaar": "Replacement bus service available",
+  "resultaat": "result", "resultaten": "results",
+
+  "Verberg eerdere haltes": "Hide previous stops",
+  "Beginhalte": "First stop", "Eindhalte": "Last stop",
+  "Volgende:": "Next:", "Deze rit vervalt": "This journey is cancelled",
+  "Rit niet gevonden": "Journey not found",
+  "GPS actueel": "GPS up to date", "GPS onzeker": "GPS uncertain",
+  "GPS verouderd": "GPS outdated",
+  "Toon de haltelijst": "Show stop list",
+  "Toon de live voertuigkaart": "Show live vehicle map",
+  "Schakel van kaart naar lijst": "Switch from map to list",
+  "Schakel van lijst naar kaart": "Switch from list to map",
+  "LIVE VOERTUIG": "LIVE VEHICLE",
+  "GEEN ACTUELE GPS": "NO CURRENT GPS",
+  "de volgende halte": "the next stop",
+  "Nog geen bevestigde voertuiglocatie": "No confirmed vehicle location yet",
+  "We controleren elke 5 seconden of deze rit een live voertuig heeft.": "We check every 5 seconds whether this journey has a live vehicle position.",
+  "Centreer kaart op live voertuig": "Center map on live vehicle",
+  "Terug naar de haltelijst": "Back to stop list",
+  "Bekijk haltelijst": "View stop list",
+
+  "Bij halte gemeld (KV8)": "Reported at stop (KV8)",
+  "Volgende halte (KV8)": "Next stop (KV8)",
+  "Halteert nu": "At stop now",
+  "Nu hier": "Currently here",
+  "Onderweg naar beginhalte": "Approaching first stop",
+  "Dienstregeling": "Timetable",
+  "Live tijden": "Live times",
+  "Rijdt nu": "In service",
+  "Bij halte": "At stop",
+  "Positie geschat": "Estimated position",
+  "Live bijgewerkt": "Live updated",
+  "Verbinding kwijt": "Connection lost",
+  "KV8 halteberichten": "KV8 stop updates",
+  "Volgende halte": "Next stop",
+  "Vertraagd": "Delayed",
+  "aankomst": "arrival",
+  "vertrek": "departure",
+  "gepland": "scheduled",
+  "geweest": "passed",
+  "halteert nu": "stopping now",
+  "verwachte positie": "estimated position",
+  "GPS gegevens ontbreken": "GPS data unavailable",
+  "· Op tijd": "· On time",
+  "Vertrektijden, storingen en voertuigposities zijn afhankelijk van externe OV-bronnen.": "Departure times, disruptions and vehicle positions depend on external transport data.",
+  "🗺️ Kaart / Data": "🗺️ Map / Data",
+  "💡 Idee / Wens": "💡 Idea / Feature request",
+  "🐛 Bug": "🐛 Bug", "💬 Overig": "💬 Other",
+  "Schrijf minimaal 10 tekens over je melding.": "Please enter at least 10 characters.",
+  "Controleer het e-mailadres.": "Please check your email address.",
+  "Verzenden mislukt. Probeer opnieuw.": "Unable to send. Please try again.",
+  "Sluit feedbackvenster": "Close feedback form",
+  "Feedback sturen": "Send feedback",
+  "Help OVspot verbeteren": "Help improve OVspot",
+  "Bedankt voor je feedback!": "Thank you for your feedback!",
+  "Je bericht is ontvangen en staat in de OVspot-feedbackinbox.": "Your report has been received by OVspot.",
+  "Waar gaat je bericht over?": "What is your feedback about?",
+  "Je bericht": "Your message",
+  "Wat gaat er mis of wat kan beter?": "What's not working, or what could be improved?",
+  "Feedbackbericht": "Feedback message",
+  "E-mailadres (optioneel)": "Email address (optional)",
+  "naam@voorbeeld.nl": "name@example.com",
+  "E-mailadres, optioneel": "Email address, optional",
+  "We sturen app-, OTA- en OS-versie mee, plus de onlangs bekeken halte of rit als die beschikbaar is. Geen GPS-coördinaten.": "We include your app, OTA and OS versions, and the last viewed stop or journey if available. We don't include GPS coordinates.",
+  "Feedback verzenden": "Send feedback",
+  "Versturen...": "Sending...", "Verstuur feedback": "Submit feedback"
+};
+
+const DYNAMIC: [RegExp, (...parts: string[]) => string][] = [
+  [/^Onderweg naar (.+)$/u, (_, x) => "Heading towards " + vertaling(x, "en")],
+  [/^Lijn (.+) · (\d+) sec geleden$/u, (_, x, y) => "Line " + x + " · " + y + " sec ago"],
+  [/^Toon (\d+) eerdere halte(s?)$/u, (_, x, y) => "Show " + x + " earlier stop" + (y ? "s" : "")],
+  [/^Spoor (.+)$/u, (_, x) => "Platform " + x],
+  [/^Perron (.+)$/u, (_, x) => "Platform " + x],
+  [/^rit (\d+)$/u, (_, x) => "trip " + x],
+  [/^Sinds (.+)$/u, (_, x) => "Since " + x],
+  [/^Vanaf (.+)$/u, (_, x) => "From " + x],
+  [/^tot (.+)$/u, (_, x) => "until " + x],
+  [/^t\/m (.+)$/u, (_, x) => "through " + x],
+  [/^Geen (.+)vertrekken in de komende tijd\.$/u, (_, x) => "No upcoming " + vertaling(x, "en").toLowerCase() + " departures."],
+  [/^Geen vertrekken meer vandaag voor lijn (.+)\.$/u, (_, x) => "No more departures today for line " + x + "."],
+  [/^Geen vertrekken meer vandaag voor lijn (.+)\. Volgende rit: (.+) om (.+)\.$/u, (_, x, day, time) => "No more departures today for line " + x + ". Next trip: " + day + " at " + time + "."],
+  [/^Versie ([\d.]+)\. Vertrektijden, storingen en voertuigposities zijn afhankelijk van externe OV-bronnen\.$/u, (_, ver) => "Version " + ver + ". Departure times, disruptions and vehicle positions depend on external transport data."],
+  [/^Haltes binnen (.+)$/u, (_, x) => "Stops within " + x],
+  [/^Geen haltes binnen (.+)$/u, (_, x) => "No stops within " + x],
+  [/^Meer haltes binnen (.+) tonen$/u, (_, x) => "Show more stops within " + x],
+  [/^Haltes tot (.+) van je locatie\.$/u, (_, x) => "Stops up to " + x + " from your location."],
+  [/^Bijgewerkt (.+)$/u, (_, x) => "Updated " + x],
+  [/^Verouderd · (.+)$/u, (_, x) => "Outdated · " + x],
+  [/^Mijn haltes · (.+)$/u, (_, x) => "My stops · " + x],
+  [/^(\d+) haltes$/u, (_, x) => x + " stops"],
+  [/^(\d+) lijnen$/u, (_, x) => x + " lines"],
+  [/^(\d+) lijn$/u, (_, x) => x + " line"],
+  [/^(\d+) haltepalen · beide richtingen$/u, (_, x) => x + " stop poles · both directions"],
+  [/^(.+) lopen$/u, (_, x) => x + " walk"],
+  [/^Gecontroleerd: (\d+) van (\d+) haltes\. Een deel van de storingsbron is niet bereikbaar\.$/u, (_, x, y) => "Checked " + x + " of " + y + " stops. Part of the disruption source is unavailable."],
+  [/^Storingen onvolledig: (\d+) van (\d+) haltes niet gecontroleerd$/u, (_, x, y) => "Incomplete disruptions: " + x + " of " + y + " stops not checked"],
+  [/^Geen meldingen gevonden voor (\d+) gecontroleerde halte(s?)\. Dit betekent niet automatisch dat alle ritten op tijd rijden\.$/u, (_, x, s) => "No notices found for " + x + " checked stop" + (s ? "s" : "") + ". Not all services are necessarily on time."],
+  [/^Geen haltes voor "(.+)"\. Probeer een andere naam of plaats\.$/u, (_, x) => "No stops found for \"" + x + "\". Try another name or city."],
+  [/^(\d+) resultaat$/u, (_, x) => x + " result"],
+  [/^(\d+) resultaten$/u, (_, x) => x + " results"],
+  [/^Versie (.+) \(OTA: (.+)\)$/u, (_, x, y) => "Version " + x + " (OTA: " + y + ")"],
+  [/^(.+), (\d+) bij je favorieten$/u, (_, x, y) => vertaling(x, "en") + ", " + y + " at your favorites"],
+  [/^(.+) omhoog$/u, (_, x) => "Move " + x + " up"],
+  [/^(.+) omlaag$/u, (_, x) => "Move " + x + " down"],
+  [/^(.+) verwijderen$/u, (_, x) => "Remove " + x],
+  [/^Vertrektijden (.+)$/u, (_, x) => "Departures " + x],
+  [/^Haltebord (.+), richting (.+), lijn (.+)$/u, (_, x, y, z) => "Departure board " + x + ", towards " + y + ", line " + z],
+  [/^Filter op lijn (.+)$/u, (_, x) => "Filter line " + x],
+  [/^Richting (.+)$/u, (_, x) => "Towards " + x],
+  [/^Volgende: (.+)$/u, (_, x) => "Next: " + x]
+];
+
+export function vertaling(input: string, taal: AppTaal): string {
+  if (taal !== "en" || !input) return input;
+  if (EN[input] !== undefined) return EN[input];
+  const trimmed = input.trim();
+  if (!trimmed) return input;
+  const normalized = trimmed.replace(/\s+/g, " ");
+  let translated: string | undefined = EN[trimmed] ?? EN[normalized];
+  if (translated === undefined && normalized.includes(" · ")) {
+    const chunks = normalized.split(" · ");
+    const localized = chunks.map(c => vertaling(c, taal));
+    if (localized.some((v, i) => v !== chunks[i])) translated = localized.join(" · ");
+  }
+  if (translated === undefined) for (const [pattern, fn] of DYNAMIC) {
+    const m = normalized.match(pattern);
+    if (m) { translated = fn(...m); break; }
+  }
+  if (translated === undefined) return input;
+  const i = input.indexOf(trimmed);
+  return input.slice(0, i) + translated + input.slice(i + trimmed.length);
+}

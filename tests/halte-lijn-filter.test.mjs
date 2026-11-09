@@ -71,8 +71,8 @@ test("Scrollbare chipbalk onder Bijgewerkt-header, kleurcontrast en toegankelijk
   const vanafLijn=bron.indexOf("{uniekeLijnen.length >= 1 ? (",vanafModus);
   assert.ok(vanafHeader>=0 && vanafModus>vanafHeader && vanafLijn>vanafModus);
   assert.match(bron,/ScrollView horizontal showsHorizontalScrollIndicator=\{false\}/);
-  assert.match(bron,/accessibilityLabel="Alle lijnen"/);
-  assert.match(bron,/accessibilityLabel=\{\x60Filter op lijn \$\{lijn.lijn\}\x60\}/);
+  assert.match(bron,/accessibilityLabel=\{t\("Alle lijnen"\)\}/);
+  assert.match(bron,/accessibilityLabel=\{t\(\x60Filter op lijn \$\{lijn.lijn\}\x60\)\}/);
   assert.match(bron,/accessibilityState=\{\{ selected: actief \}\}/);
   assert.match(bron,/backgroundColor: actief \? colors.accent : "transparent"/);
   assert.match(bron,/borderColor: actief \? colors.accent : colors.border/);

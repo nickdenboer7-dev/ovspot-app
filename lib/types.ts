@@ -279,6 +279,7 @@ export type Startscherm = "index" | "favorieten" | "storingen";
 
 export type Instellingen = {
   thema: Thema;
+  taalVoorkeur: "auto" | "nl" | "en";
   startscherm: Startscherm;
   schermAanhouden: boolean;
   liveVoertuigen: boolean;

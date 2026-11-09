@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../components/LocalizedText";
 import { Chips, Kop } from "../components/ui";
 import { useApp } from "../context/AppProvider";
 import { afstand } from "../lib/format";

@@ -9,7 +9,7 @@ test("Header toont één dynamische Kaart/Lijst-knop; geen tweede balk of instel
   assert.match(app, /useState<"lijst" \| "kaart">\("lijst"\)/);
   assert.match(app, /kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
   assert.match(app, /onPress=\{\(\) => setWeergave\(isKaart \? "lijst" : "kaart"\)\}/);
-  assert.match(app, /accessibilityLabel=\{isKaart \? "Toon de haltelijst" : "Toon de live voertuigkaart"\}/);
+  assert.match(app, /accessibilityLabel=\{t\(isKaart \? "Toon de haltelijst" : "Toon de live voertuigkaart"\)\}/);
   assert.match(app, /name=\{isKaart \? "list-outline" : "map-outline"\}/);
   assert.doesNotMatch(app, /settings-outline|weergaveRij|weergaveKeuze|weergaveKnop/);
   assert.match(app, /if \(!kaartBeschikbaar && weergave === "kaart"\) setWeergave\("lijst"\)/);
@@ -32,9 +32,9 @@ test("Zwevende ritstatus, vertraging, terug naar lijst en hercentreerknop zijn g
   assert.match(kaart, /\+\$\{vertragingMin\} min/);
   assert.match(kaart, /Nog geen bevestigde voertuiglocatie/);
   assert.match(kaart, /statusKaart: \{\s*position: "absolute"/);
-  assert.match(kaart, /accessibilityLabel="Terug naar de haltelijst"/);
+  assert.match(kaart, /accessibilityLabel=\{t\("Terug naar de haltelijst"\)\}/);
   assert.match(kaart, /onPress=\{onLijst\}/);
-  assert.match(kaart, /accessibilityLabel="Centreer kaart op live voertuig"/);
+  assert.match(kaart, /accessibilityLabel=\{t\("Centreer kaart op live voertuig"\)\}/);
   assert.match(kaart, /onPress=\{centreerVoertuig\}/);
   assert.match(kaart, /mapRef\.current\?\.animateToRegion\(voertuigRegio\(positie\), 550\)/);
 });

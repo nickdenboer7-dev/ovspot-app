@@ -2,7 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "../../components/LocalizedText";
 import { HalteKaart } from "../../components/HalteKaart";
 import { DichtbijSkeleton } from "../../components/DichtbijSkeleton";
 import { groepeerDichtbijHaltes } from "../../lib/dichtbijClusters";
@@ -23,7 +24,7 @@ type LocFout = "geweigerd" | "geweigerd-blijvend" | "uit" | "timeout" | "fout";
 let vorigeHaltes: { key: string; data: DichtbijData; ts: number } | null = null;
 
 export default function Dichtbij() {
-  const { colors, instellingen, zetDichtbijIds } = useApp();
+  const { colors, instellingen, zetDichtbijIds, t } = useApp();
   const [pos, setPos] = useState<Positie | null>(null);
   const [locFout, setLocFout] = useState<LocFout | null>(null);
   const [zoekt, setZoekt] = useState(false);
@@ -211,7 +212,7 @@ export default function Dichtbij() {
           onPress={() => router.push("/zoek")}
           style={[s.zoekbalk, { backgroundColor: colors.surface2 }]}
           accessibilityRole="search"
-          accessibilityLabel="Zoek halte, lijn of plaats"
+          accessibilityLabel={t("Zoek halte, lijn of plaats")}
         >
           <Ionicons name="search-outline" size={20} color={colors.sub} />
           <Text style={[s.zoekText, { color: colors.sub }]}>Zoek halte, lijn of plaats</Text>
@@ -267,7 +268,7 @@ export default function Dichtbij() {
             onPress={() => void laadMeer()}
             style={[s.meerKnop, { backgroundColor: colors.surface, borderColor: colors.border }]}
             accessibilityRole="button"
-            accessibilityLabel={meerLaden ? "Meer haltes laden" : "Meer haltes binnen de ingestelde afstand tonen"}
+            accessibilityLabel={t(meerLaden ? "Meer haltes laden" : "Meer haltes binnen de ingestelde afstand tonen")}
           >
             <Ionicons name={meerLaden ? "ellipsis-horizontal" : "chevron-down"} size={19} color={colors.accent} />
             <Text style={[s.meerTekst, { color: colors.accent }]}>

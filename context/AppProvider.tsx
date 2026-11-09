@@ -4,11 +4,14 @@ import { dark, light, type Palette } from "../constants/theme";
 import { api } from "../lib/api";
 import { bewaarFavorieten, bewaarInstellingen, leesFavorieten, leesInstellingen, STANDAARD } from "../lib/storage";
 import type { FavHalte, Instellingen, FeedbackContext, RecentFeedbackContext } from "../lib/types";
+import { bepaalTaal, vertaling, type AppTaal } from "../lib/i18n";
 
 type AppContext = {
   klaar: boolean;
   colors: Palette;
   scheme: "light" | "dark";
+  taal: AppTaal;
+  t: (text: string) => string;
   instellingen: Instellingen;
   zetInstellingen: (patch: Partial<Instellingen>) => void;
   favorieten: FavHalte[];
@@ -48,6 +51,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const scheme: "light" | "dark" =
     instellingen.thema === "donker" ? "dark" : instellingen.thema === "licht" ? "light" : systeem === "dark" ? "dark" : "light";
   const colors = scheme === "dark" ? dark : light;
+  const taal = bepaalTaal(instellingen.taalVoorkeur);
+  const t = useCallback((text: string) => vertaling(text, taal), [taal]);
 
   const zetInstellingen = useCallback((patch: Partial<Instellingen>) => {
     setInstellingen((oud) => {
@@ -121,6 +126,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       klaar,
       colors,
       scheme,
+      taal,
+      t,
       instellingen,
       zetInstellingen,
       favorieten,
@@ -134,7 +141,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       laatsteFeedbackContext,
       zetFeedbackContext
     }),
-    [klaar, colors, scheme, instellingen, zetInstellingen, favorieten, isFavoriet, wisselFavoriet, verwijderFavoriet, verplaatsFavoriet, dichtbijIds, storingenMijn, laatsteFeedbackContext, zetFeedbackContext]
+    [klaar, colors, scheme, taal, t, instellingen, zetInstellingen, favorieten, isFavoriet, wisselFavoriet, verwijderFavoriet, verplaatsFavoriet, dichtbijIds, storingenMijn, laatsteFeedbackContext, zetFeedbackContext]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

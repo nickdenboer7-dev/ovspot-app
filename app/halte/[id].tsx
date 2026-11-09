@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { PanResponder, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { PanResponder, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Text } from "../../components/LocalizedText";
 import { isTab, OnderBalk } from "../../components/OnderBalk";
 import { StoringKaart } from "../../components/StoringKaart";
 import { Chips, FoutBalk, Kaart, Kop, KopKnop, Laden, Leeg } from "../../components/ui";
@@ -35,7 +36,7 @@ export default function Haltebord() {
   const p = useLocalSearchParams<{ id: string; van?: string; naam?: string; plaats?: string; groep?: string; lijnen?: string; modus?: string }>();
   const id = String(p.id || "");
   const van = isTab(p.van) ? p.van : "index";
-  const { colors, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext } = useApp();
+  const { colors, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext, t, taal } = useApp();
   // De opgeslagen instelling blijft een voorkeur; op haltes zonder die modus tonen we alles.
   const gevraagdeModus = ["train", "metro", "tram", "bus", "ferry"].includes(String(p.modus))
     ? String(p.modus) : null;
@@ -225,7 +226,7 @@ export default function Haltebord() {
           <Text style={[s.geenTekst, { color: colors.infoText }]}>
             {geselecteerdeLijn
               ? lijnData?.volgende_rit?.rit?.datum
-                ? `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}. Volgende rit: ${new Date(`${lijnData.volgende_rit.rit.datum}T12:00:00`).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })} om ${lijnData.volgende_rit.gepland}.`
+                ? `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}. Volgende rit: ${new Date(`${lijnData.volgende_rit.rit.datum}T12:00:00`).toLocaleDateString(taal === "en" ? "en-GB" : "nl-NL", { weekday: "long", day: "numeric", month: "long" })} om ${lijnData.volgende_rit.gepland}.`
                 : `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}.`
               : actieveModus === "alles"
                 ? "Momenteel geen vertrekken in de komende tijd."
@@ -281,7 +282,7 @@ export default function Haltebord() {
               </Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={zoekveldOpen ? "Lijn zoeken sluiten" : "Lijnnummer zoeken"}
+                accessibilityLabel={t(zoekveldOpen ? "Lijn zoeken sluiten" : "Lijnnummer zoeken")}
                 onPress={() => {
                   setZoekveldOpen(v => !v);
                   setLijnZoektekst("");
@@ -295,12 +296,12 @@ export default function Haltebord() {
             <TextInput
               value={lijnZoektekst}
               onChangeText={setLijnZoektekst}
-              placeholder="Zoek lijnnummer, bijvoorbeeld 97"
+              placeholder={t("Zoek lijnnummer, bijvoorbeeld 97")}
               placeholderTextColor={colors.muted}
               keyboardType="default"
               autoCapitalize="none"
               autoCorrect={false}
-              accessibilityLabel="Zoek in alle lijnen van deze halte"
+              accessibilityLabel={t("Zoek in alle lijnen van deze halte")}
               style={[s.lijnZoekveld, {
                 color: colors.text,
                 backgroundColor: colors.surface,
@@ -313,7 +314,7 @@ export default function Haltebord() {
             <Pressable
               accessibilityRole="tab"
               accessibilityState={{ selected: geselecteerdeLijn === null }}
-              accessibilityLabel="Alle lijnen"
+              accessibilityLabel={t("Alle lijnen")}
               onPress={() => kiesLijn(null)}
               style={[s.lijnFilterChip, {
                 backgroundColor: geselecteerdeLijn === null ? colors.accent : "transparent",
@@ -333,7 +334,7 @@ export default function Haltebord() {
                 <Pressable key={`${lijn.modus}:${lijn.lijn}`}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: actief }}
-                  accessibilityLabel={`Filter op lijn ${lijn.lijn}`}
+                  accessibilityLabel={t(`Filter op lijn ${lijn.lijn}`)}
                   onPress={() => kiesLijn(lijn.lijn)}
                   style={[s.lijnFilterChip, {
                     backgroundColor: actief ? colors.accent : "transparent",
@@ -373,7 +374,7 @@ export default function Haltebord() {
               onPress={() => setStoringenOpen((o) => !o)}
               style={[s.storing, { backgroundColor: colors.warnBg, borderColor: colors.warnBorder }]}
               accessibilityRole="button"
-              accessibilityHint={storingenOpen ? "Inklappen" : "Toon storingen"}
+              accessibilityHint={t(storingenOpen ? "Inklappen" : "Toon storingen")}
             >
               <Ionicons name="alert-circle-outline" size={20} color={colors.delay} />
               <Text style={[s.storingText, { color: colors.warnText }]} numberOfLines={storingenOpen ? undefined : 1}>

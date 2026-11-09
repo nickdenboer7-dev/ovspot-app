@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppState, Pressable, StyleSheet, View } from "react-native";
+import { Text } from "./LocalizedText";
 import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { api } from "../lib/api";
 import { darkMapStyle } from "../constants/darkMapStyle";
@@ -46,7 +47,7 @@ export function LiveRitKaart({
   ritId, datum, lijnnummer, volgendeHalte, vertragingMin,
   shape, stops, routeColor, onderRuimte = 18, onLijst
 }: Props) {
-  const { colors, scheme, instellingen } = useApp();
+  const { colors, scheme, instellingen, t } = useApp();
   const isDark = scheme === "dark";
   const routePunten = useMemo(() => geldigeKaartPunten(shape), [shape]);
   const lijnKleur = isDark ? ritRouteKleurDonker(routeColor) : ritRouteKleur(routeColor);
@@ -267,7 +268,7 @@ export function LiveRitKaart({
         onPress={centreerVoertuig}
         disabled={!positie}
         accessibilityRole="button"
-        accessibilityLabel="Centreer kaart op live voertuig"
+        accessibilityLabel={t("Centreer kaart op live voertuig")}
         accessibilityState={{ disabled: !positie }}
         style={[s.centreerKnop, {
           backgroundColor: isDark ? "#1E293B" : colors.surface,
@@ -317,7 +318,7 @@ export function LiveRitKaart({
         <Pressable
           onPress={onLijst}
           accessibilityRole="button"
-          accessibilityLabel="Terug naar de haltelijst"
+          accessibilityLabel={t("Terug naar de haltelijst")}
           style={[s.terugKnop, { backgroundColor: colors.accent }]}
         >
           <Ionicons name="list-outline" size={19} color={colors.onAccent} />

@@ -1,7 +1,8 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Text } from "../components/LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { OnderBalk } from "../components/OnderBalk";
 import { Leeg } from "../components/ui";
@@ -31,7 +32,7 @@ function enkeleLijnen(vertrekken: Vertrek[]): LijnVoorbeeld[] {
 }
 
 export default function Zoek() {
-  const { colors, zetInstellingen } = useApp();
+  const { colors, zetInstellingen, t } = useApp();
   const { doel } = useLocalSearchParams<{ doel?: string }>();
   const voorThuis = doel === "thuis";
   const insets = useSafeAreaInsets();
@@ -109,7 +110,7 @@ export default function Zoek() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={[s.kop, { backgroundColor: colors.header, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
         <View style={s.kopRij}>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Terug" style={s.terug} hitSlop={8}>
+          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("Terug")} style={s.terug} hitSlop={8}>
             <Ionicons name="arrow-back" size={26} color={colors.headerText} />
           </Pressable>
           <Text style={[s.kopTitel, { color: colors.headerText }]}>Zoeken</Text>
@@ -118,14 +119,14 @@ export default function Zoek() {
           <Ionicons name="search" size={21} color={colors.accent} />
           <TextInput
             autoFocus value={q} onChangeText={setQ}
-            placeholder={voorThuis ? "Zoek je thuishalte" : "Zoek halte of plaats"}
+            placeholder={t(voorThuis ? "Zoek je thuishalte" : "Zoek halte of plaats")}
             placeholderTextColor={colors.muted}
             style={[s.input, { color: colors.text }]}
-            returnKeyType="search" autoCorrect={false} accessibilityLabel="Zoekterm"
+            returnKeyType="search" autoCorrect={false} accessibilityLabel={t("Zoekterm")}
           />
           {bezig ? <ActivityIndicator size="small" color={colors.accent} /> : null}
           {q && !bezig ? (
-            <Pressable onPress={() => setQ("")} accessibilityRole="button" accessibilityLabel="Wissen" hitSlop={10}>
+            <Pressable onPress={() => setQ("")} accessibilityRole="button" accessibilityLabel={t("Wissen")} hitSlop={10}>
               <Ionicons name="close-circle" size={21} color={colors.muted} />
             </Pressable>
           ) : null}

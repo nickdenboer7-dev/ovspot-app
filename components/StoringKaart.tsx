@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Text } from "./LocalizedText";
 import { useApp } from "../context/AppProvider";
 import { periode } from "../lib/format";
 import type { Storing } from "../lib/types";
@@ -17,7 +18,7 @@ export function useSoortKleur() {
 }
 
 export function StoringKaart({ st }: { st: Storing }) {
-  const { colors } = useApp();
+  const { colors, t } = useApp();
   const kleur = useSoortKleur()(st.soort);
   const [open, setOpen] = useState(false);
   const wanneer = periode(st.vanaf_ms, st.tot_ms);
@@ -25,7 +26,7 @@ export function StoringKaart({ st }: { st: Storing }) {
   const lang = st.tekst.length > 140;
   return (
     <Kaart style={s.kaart}>
-      <Pressable onPress={() => lang && setOpen((o) => !o)} accessibilityRole={lang ? "button" : undefined} accessibilityHint={lang ? (open ? "Inklappen" : "Hele melding lezen") : undefined}>
+      <Pressable onPress={() => lang && setOpen((o) => !o)} accessibilityRole={lang ? "button" : undefined} accessibilityHint={lang ? t(open ? "Inklappen" : "Hele melding lezen") : undefined}>
         <View style={s.kopRij}>
           <View style={[s.label, { backgroundColor: kleur.bg }]}>
             <Text style={[s.labelText, { color: kleur.fg }]}>{st.label}</Text>

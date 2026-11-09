@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { Text } from "./LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../context/AppProvider";
 import { status } from "../lib/format";
@@ -56,7 +57,7 @@ export function Kop({
   rechts?: React.ReactNode;
   groot?: boolean;
 }) {
-  const { colors } = useApp();
+  const { colors, t } = useApp();
   const insets = useSafeAreaInsets();
   return (
     <View style={[s.kop, { backgroundColor: colors.header, borderBottomColor: colors.border, paddingTop: insets.top + (groot ? 12 : 8) }]}>
@@ -64,7 +65,7 @@ export function Kop({
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
           accessibilityRole="button"
-          accessibilityLabel="Terug"
+          accessibilityLabel={t("Terug")}
           hitSlop={8}
           style={s.kopKnop}
         >
@@ -88,9 +89,9 @@ export function Kop({
 }
 
 export function KopKnop({ icoon, label, onPress, kleur }: { icoon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; kleur?: string }) {
-  const { colors } = useApp();
+  const { colors, t } = useApp();
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} hitSlop={6} style={s.kopKnop}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={t(label)} hitSlop={6} style={s.kopKnop}>
       <Ionicons name={icoon} size={26} color={kleur || colors.headerText} />
     </Pressable>
   );

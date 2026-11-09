@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Text } from "./LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../context/AppProvider";
 
@@ -20,7 +21,7 @@ export function isTab(v: unknown): v is TabKey {
 
 /** Tabbalk onderin. Ook gebruikt op haltebord en ritverloop, zodat je altijd snel terug kunt. */
 export function OnderBalk({ actief, onKies }: { actief: TabKey; onKies?: (k: TabKey) => void }) {
-  const { colors, storingenMijn } = useApp();
+  const { colors, storingenMijn, t: translate } = useApp();
   const insets = useSafeAreaInsets();
   const onder = Math.max(insets.bottom, 6);
   return (
@@ -34,7 +35,7 @@ export function OnderBalk({ actief, onKies }: { actief: TabKey; onKies?: (k: Tab
             style={s.tab}
             accessibilityRole="tab"
             accessibilityState={{ selected: aan }}
-            accessibilityLabel={t.key === "storingen" && storingenMijn ? `${t.label}, ${storingenMijn} bij je favorieten` : t.label}
+            accessibilityLabel={translate(t.key === "storingen" && storingenMijn ? `${t.label}, ${storingenMijn} bij je favorieten` : t.label)}
             onPress={() => (onKies ? onKies(t.key) : router.navigate(t.pad as any))}
           >
             <View style={s.actiefIcoon}>

@@ -1,5 +1,6 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Text } from "./LocalizedText";
 import { useApp } from "../context/AppProvider";
 import { bestemmingVoorWeergave, spoorLabel, vertrekTijden } from "../lib/format";
 import type { Vertrek } from "../lib/types";

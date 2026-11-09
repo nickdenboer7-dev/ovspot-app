@@ -32,7 +32,7 @@ test("Leeuwarden: Qbuzz 97 heeft altijd een statische chip, ook als het eerste v
   assert.match(scherm,/const getoondeLijnChips = useMemo/);
   assert.match(scherm,/zoekStatischeLijnen\(uniekeLijnen, lijnZoektekst\)/);
   assert.match(scherm,/getoondeLijnChips\.map\(lijn => \{/);
-  assert.match(scherm,/placeholder="Zoek lijnnummer, bijvoorbeeld 97"/);
+  assert.match(scherm,/placeholder=\{t\("Zoek lijnnummer, bijvoorbeeld 97"\)\}/);
 });
 
 test("Vaste catalogi blijven verenigd bij een kleine /halte-respons of 350m-cluster",()=>{
@@ -65,7 +65,7 @@ test("Modaliteit staat boven de chips; reset lijn- en zoekfilter bij iedere tabw
   assert.match(scherm,/wisselModus\(tabModi\[volgende\]\)/);
   assert.match(scherm,/getoondeLijnChips\.map\(lijn => \{/);
   assert.ok(scherm.includes("veeg voor meer"));
-  assert.match(scherm,/accessibilityLabel=\{zoekveldOpen \? "Lijn zoeken sluiten" : "Lijnnummer zoeken"\}/);
+  assert.match(scherm,/accessibilityLabel=\{t\(zoekveldOpen \? "Lijn zoeken sluiten" : "Lijnnummer zoeken"\)\}/);
 });
 
 test("Bestaande routekleuren worden niet overschreven door oudere zoekkaartdata",()=>{

@@ -2,10 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Updates from "expo-updates";
 import React, { useRef, useState } from "react";
-import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Platform,
-  Pressable, ScrollView, StyleSheet, Text, TextInput, View
-} from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Text } from "./LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../context/AppProvider";
 import { api } from "../lib/api";
@@ -30,7 +28,7 @@ function nieuwBerichtId(): string {
 }
 
 export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
-  const { colors, scheme } = useApp();
+  const { colors, scheme, t } = useApp();
   const insets = useSafeAreaInsets();
   const [categorie, zetCategorie] = useState<FeedbackCategorie>("kaart_data");
   const [bericht, zetBericht] = useState("");
@@ -104,7 +102,7 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <Pressable style={s.achtergrond} onPress={sluiten}
-          accessibilityRole="button" accessibilityLabel="Sluit feedbackvenster" />
+          accessibilityRole="button" accessibilityLabel={t("Sluit feedbackvenster")} />
         <View style={[s.sheet, {
           backgroundColor: colors.surface,
           borderColor: colors.border,
@@ -119,7 +117,7 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
               </Text>
             </View>
             <Pressable onPress={sluiten} disabled={bezig} accessibilityRole="button"
-              accessibilityLabel="Sluiten" style={s.sluitKnop}>
+              accessibilityLabel={t("Sluiten")} style={s.sluitKnop}>
               <Ionicons name="close" size={24} color={colors.sub} />
             </Pressable>
           </View>
@@ -161,11 +159,11 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
               <Text style={[s.label, { color: colors.text }]}>Je bericht</Text>
               <TextInput
                 value={bericht} onChangeText={zetBericht}
-                placeholder="Wat gaat er mis of wat kan beter?"
+                placeholder={t("Wat gaat er mis of wat kan beter?")}
                 placeholderTextColor={colors.muted}
                 maxLength={2000}
                 multiline textAlignVertical="top"
-                accessibilityLabel="Feedbackbericht"
+                accessibilityLabel={t("Feedbackbericht")}
                 style={[s.bericht, {
                   color: colors.text,
                   backgroundColor: colors.background,
@@ -177,11 +175,11 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
               <Text style={[s.label, { color: colors.text }]}>E-mailadres (optioneel)</Text>
               <TextInput
                 value={email} onChangeText={zetEmail}
-                placeholder="naam@voorbeeld.nl"
+                placeholder={t("naam@voorbeeld.nl")}
                 placeholderTextColor={colors.muted}
                 keyboardType="email-address" autoCapitalize="none"
                 autoCorrect={false} maxLength={200}
-                accessibilityLabel="E-mailadres, optioneel"
+                accessibilityLabel={t("E-mailadres, optioneel")}
                 style={[s.email, {
                   color: colors.text,
                   backgroundColor: colors.background,
@@ -198,7 +196,7 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
                 onPress={() => void verzenden()}
                 disabled={bezig || bericht.trim().length < 10}
                 accessibilityRole="button"
-                accessibilityLabel="Feedback verzenden"
+                accessibilityLabel={t("Feedback verzenden")}
                 style={[s.verzendKnop, {
                   backgroundColor: colors.accent,
                   opacity: bezig || bericht.trim().length < 10 ? 0.55 : 1
