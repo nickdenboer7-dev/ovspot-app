@@ -283,14 +283,14 @@ export default function Dichtbij() {
           />
         }
       >
-        <View style={s.titelRij}>
-          <Text style={[s.titel, { color: colors.text }]} accessibilityRole="header">
+        <View style={[s.titelRij, instellingen.groteTekst && s.titelRijGroteTekst]}>
+          <Text style={[s.titel, instellingen.groteTekst && s.titelGroteTekst, { color: colors.text }]} accessibilityRole="header">
             {pos?.bron === "standaard"
               ? "Haltes bij Amsterdam Centraal"
               : `Haltes binnen ${afstand(instellingen.straal)}`}
           </Text>
           {pos && pos.bron !== "standaard" ? (
-            <View style={[s.locatieChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[s.locatieChip, instellingen.groteTekst && s.locatieChipGroteTekst, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Ionicons name="location-sharp" size={12} color={colors.accent} />
               <Text style={[s.bron, { color: colors.sub }]} numberOfLines={1}>{bronTekst}</Text>
             </View>
@@ -368,9 +368,13 @@ const s = StyleSheet.create({
   zoekText: { fontSize: 15 },
   lijst: { padding: 14, paddingTop: 17, gap: 12, paddingBottom: 26 },
   titelRij: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2, gap: 10, marginBottom: 1 },
+  // Met vergrote tekst krijgt de locatienaam een eigen regel. De kop blijft volledig leesbaar.
+  titelRijGroteTekst: { flexWrap: "wrap", rowGap: 7 },
   titel: { fontSize: 18, fontWeight: "700", letterSpacing: -0.2, flexShrink: 1 },
+  titelGroteTekst: { width: "100%" },
   bron: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
   locatieChip: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, maxWidth: "49%" },
+  locatieChipGroteTekst: { marginLeft: "auto", maxWidth: "100%" },
   fallbackKaart: { borderWidth: 1, borderRadius: 14, padding: 13, gap: 9 },
   fallbackKop: { flexDirection: "row", alignItems: "center", gap: 8 },
   fallbackTitel: { fontSize: 15, fontWeight: "700", flex: 1 },

@@ -53,6 +53,8 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
   laatste?: boolean;
 }) {
   const { colors, scheme, instellingen, t } = useApp();
+  // In de grotere-tekststand mag een lange gekozen waarde nooit 'Automatis…' worden.
+  const waardeOnder = instellingen.groteTekst && !!waarde && !!onPress;
   return (
     <Pressable onPress={onPress} disabled={!onPress}
       accessibilityRole={onPress ? "button" : undefined}
@@ -64,6 +66,12 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
       <View style={s.rijTekst}>
         <Text style={[s.rijTitel, { color: colors.text }]}>{titel}</Text>
         <Text style={[s.rijUitleg, { color: colors.sub }]}>{uitleg}</Text>
+        {waardeOnder ? (
+          <View style={s.waardeOnder}>
+            <Text style={[s.waarde, { color: colors.sub }]}>{waarde}</Text>
+            <Ionicons name="chevron-forward" size={19} color={colors.muted} />
+          </View>
+        ) : null}
       </View>
       {schakel ? (
         <Switch
@@ -73,12 +81,12 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
           trackColor={{ false: colors.border, true: scheme === "dark" ? "#0E7490" : "#7DD3FC" }}
           thumbColor={schakel.value ? colors.accent : colors.muted}
         />
-      ) : (
+      ) : !waardeOnder ? (
         <View style={s.rechterDeel}>
           {waarde ? <Text style={[s.waarde, { color: colors.sub }]} numberOfLines={1}>{waarde}</Text> : null}
           <Ionicons name="chevron-forward" size={19} color={colors.muted} />
         </View>
-      )}
+      ) : null}
     </Pressable>
   );
 }
@@ -220,6 +228,7 @@ const s = StyleSheet.create({
   rijTitel: { fontSize: 15, fontWeight: "700" },
   rijUitleg: { fontSize: 12, lineHeight: 17 },
   rechterDeel: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: 112 },
+  waardeOnder: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 4, marginTop: 4 },
   waarde: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
   versie: { marginTop: 0, textAlign: "center", fontSize: 11, lineHeight: 18 },
   modalAchtergrond: { flex: 1, justifyContent: "center", paddingHorizontal: 28, backgroundColor: "rgba(2,6,23,0.65)" },
