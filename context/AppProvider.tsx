@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { bewaarFavorieten, bewaarInstellingen, leesFavorieten, leesInstellingen, STANDAARD } from "../lib/storage";
 import type { FavHalte, Instellingen, FeedbackContext, RecentFeedbackContext } from "../lib/types";
 import { bepaalTaal, vertaling, type AppTaal } from "../lib/i18n";
+import { korteUitlegGezien, markeerKorteUitlegGezien } from "../lib/onboardingGuide";
 
 type AppContext = {
   klaar: boolean;
@@ -12,6 +13,9 @@ type AppContext = {
   scheme: "light" | "dark";
   taal: AppTaal;
   t: (text: string) => string;
+  uitlegZichtbaar: boolean;
+  toonUitleg: () => void;
+  sluitUitleg: () => void;
   instellingen: Instellingen;
   zetInstellingen: (patch: Partial<Instellingen>) => void;
   favorieten: FavHalte[];
@@ -31,6 +35,12 @@ const Ctx = createContext<AppContext | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const systeem = useColorScheme();
   const [klaar, setKlaar] = useState(false);
+  const [uitlegZichtbaar, setUitlegZichtbaar] = useState(false);
+  const toonUitleg = useCallback(() => setUitlegZichtbaar(true), []);
+  const sluitUitleg = useCallback(() => {
+    setUitlegZichtbaar(false);
+    void markeerKorteUitlegGezien();
+  }, []);
   const [instellingen, setInstellingen] = useState<Instellingen>(STANDAARD);
   const [favorieten, setFavorieten] = useState<FavHalte[]>([]);
   const [dichtbijIds, zetDichtbijIds] = useState<string[]>([]);
@@ -41,9 +51,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    Promise.all([leesInstellingen(), leesFavorieten()]).then(([s, f]) => {
+    Promise.all([leesInstellingen(), leesFavorieten(), korteUitlegGezien()]).then(([s, f, gezien]) => {
       setInstellingen(s);
       setFavorieten(f);
+      setUitlegZichtbaar(!gezien);
       setKlaar(true);
     });
   }, []);
@@ -128,6 +139,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       scheme,
       taal,
       t,
+      uitlegZichtbaar,
+      toonUitleg,
+      sluitUitleg,
       instellingen,
       zetInstellingen,
       favorieten,
@@ -141,7 +155,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       laatsteFeedbackContext,
       zetFeedbackContext
     }),
-    [klaar, colors, scheme, taal, t, instellingen, zetInstellingen, favorieten, isFavoriet, wisselFavoriet, verwijderFavoriet, verplaatsFavoriet, dichtbijIds, storingenMijn, laatsteFeedbackContext, zetFeedbackContext]
+    [klaar, colors, scheme, taal, t, uitlegZichtbaar, toonUitleg, sluitUitleg, instellingen, zetInstellingen, favorieten, isFavoriet, wisselFavoriet, verwijderFavoriet, verplaatsFavoriet, dichtbijIds, storingenMijn, laatsteFeedbackContext, zetFeedbackContext]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

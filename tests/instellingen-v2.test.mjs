@@ -23,7 +23,7 @@ test("Nieuwe installatie, lege opslag en ongeldige themawaarde vallen terug op S
   assert.match(opslag,/return normaliseerInstellingen\(s\)/);
   assert.match(opslag,/AsyncStorage\.getItem/);
   assert.match(opslag,/AsyncStorage\.setItem/);
-  assert.match(context,/Promise\.all\(\[leesInstellingen\(\), leesFavorieten\(\)\]\)/);
+  assert.match(context,/Promise\.all\(\[leesInstellingen\(\), leesFavorieten\(\)(?:, korteUitlegGezien\(\))?\]\)/);
 });
 
 test("Alle zes nieuwe voorkeuren hebben veilige initwaarden, validatie en blijven bewaarbaar",()=>{

@@ -84,7 +84,7 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
 }
 
 export default function Instellingen() {
-  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext, t } = useApp();
+  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext, t, toonUitleg } = useApp();
   const insets = useSafeAreaInsets();
   const [kiezer, zetKiezer] = useState<Kiezer>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -148,6 +148,9 @@ export default function Instellingen() {
         </Sectie>
 
         <Sectie titel="OVER OVSPOT">
+          <InstellingsRij icoon="help-circle-outline" titel="Korte uitleg"
+            uitleg="Uitleg over Nu, Live, vertraging, GPS en favorieten"
+            onPress={() => { toonUitleg(); router.navigate("/"); }} />
           <InstellingsRij icoon="chatbubble-ellipses-outline" titel="Stuur feedback"
             uitleg="Meld een bug of geef een suggestie"
             onPress={() => setFeedbackOpen(true)} />

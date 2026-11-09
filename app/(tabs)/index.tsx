@@ -6,6 +6,7 @@ import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from
 import { Text } from "../../components/LocalizedText";
 import { HalteKaart } from "../../components/HalteKaart";
 import { DichtbijSkeleton } from "../../components/DichtbijSkeleton";
+import { KorteUitleg } from "../../components/KorteUitleg";
 import { groepeerDichtbijHaltes } from "../../lib/dichtbijClusters";
 import { FoutBalk, Kop, KopKnop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
@@ -24,7 +25,7 @@ type LocFout = "geweigerd" | "geweigerd-blijvend" | "uit" | "timeout" | "fout";
 let vorigeHaltes: { key: string; data: DichtbijData; ts: number } | null = null;
 
 export default function Dichtbij() {
-  const { colors, instellingen, zetDichtbijIds, t } = useApp();
+  const { colors, instellingen, zetDichtbijIds, t, uitlegZichtbaar, sluitUitleg } = useApp();
   const [pos, setPos] = useState<Positie | null>(null);
   const [locFout, setLocFout] = useState<LocFout | null>(null);
   const [zoekt, setZoekt] = useState(false);
@@ -297,6 +298,7 @@ export default function Dichtbij() {
             ? "GPS niet beschikbaar. Haltes bij je ingestelde thuislocatie worden getoond."
             : "Nieuwe GPS-positie niet beschikbaar. Je ziet je laatst bekende locatie."} />
         ) : null}
+        {uitlegZichtbaar ? <KorteUitleg onSluit={sluitUitleg} /> : null}
         {poll.fout && gegevens ? <FoutBalk tekst={poll.fout} /> : null}
         {inhoud}
         {meerFout ? <FoutBalk tekst={meerFout} /> : null}
