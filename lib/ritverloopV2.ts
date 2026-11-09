@@ -36,15 +36,20 @@ export function bouwRitV2Haltes(rit: Rit, gpsLaatsteGepasseerd: number | null): 
   return rit.haltes.map((h, index) => {
     const gepland = String(h.gepland || "").trim();
     const expliciet = h.live_tijd === true && Number.isFinite(h.vertraging_min);
-    if (expliciet) doorlopend = Math.max(0, Math.round(h.vertraging_min));
-    const vertragingMin = h.vervalt ? 0 : expliciet
-      ? Math.max(0, Math.round(h.vertraging_min)) : doorlopend;
+    // Een toekomstige API met echte server-propagatie levert ook voor haltes
+    // zonder eigen KV8-update al een afwijkende verwachte tijd + delta.
+    // In dat geval mag de UI de vertraging niet nogmaals optellen.
+    const serverDoorgelopen = !expliciet && h.vertraging_min > 0 &&
+      !!h.verwacht && h.verwacht !== gepland;
+    if (expliciet || serverDoorgelopen) doorlopend = Math.max(0, Math.round(h.vertraging_min));
+    const vertragingMin = h.vervalt ? 0 : doorlopend;
     const verwacht = h.vervalt ? String(h.verwacht || gepland) :
-      expliciet && h.verwacht ? h.verwacht : telKlokMinuten(gepland, vertragingMin);
+      (expliciet || serverDoorgelopen) && h.verwacht
+        ? h.verwacht : telKlokMinuten(gepland, vertragingMin);
     const bronMs = typeof h.tijd_ms === "number" && Number.isFinite(h.tijd_ms)
       ? h.tijd_ms : null;
     const verwachtMs = bronMs == null ? null
-      : bronMs + (!expliciet && !h.vervalt ? doorlopend * 60_000 : 0);
+      : bronMs + (!expliciet && !serverDoorgelopen && !h.vervalt ? doorlopend * 60_000 : 0);
     const gepasseerd = gpsLaatsteGepasseerd !== null
       ? index <= gpsLaatsteGepasseerd
       : h.state ? h.state === "PASSED" : h.status === "geweest";

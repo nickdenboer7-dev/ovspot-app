@@ -64,6 +64,18 @@ test("Delay continues over later unsupplied stops until a live recovery of zero"
   assert.equal(verwachteAankomstMin(2_000_000, 1_940_000), 1);
 });
 
+test("Already propagated server delay is not added twice", () => {
+  const r = JSON.parse(JSON.stringify(rit));
+  r.haltes[1].live_tijd = false;
+  r.haltes[1].vertraging_min = 2;
+  r.haltes[1].verwacht = "02:15";
+  r.haltes[1].tijd_ms = 1794186900000;
+  const rows = bouwRitV2Haltes(r, null);
+  assert.equal(rows[1].verwacht, "02:15");
+  assert.equal(rows[1].verwachtMs, 1794186900000);
+  assert.equal(rows[2].vertragingMin, 0);
+});
+
 test("Real GPS determines progress on the matching segment and not from clock times", () => {
   const gps = { lat: 52.36, lon: 4.901 };
   const seg = projecteerGpsOpRit(rit, gps);
