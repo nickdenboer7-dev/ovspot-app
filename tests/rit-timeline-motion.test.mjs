@@ -101,3 +101,44 @@ test("UI keeps a single stop row; the moving bus overlays the line, status stays
   assert.match(movingBus, /backgroundColor: teRijdenKleur/);
   assert.match(movingBus, /top: -vorigeHoogte \/ 2/);
 });
+
+
+test("Header only names previous and next real stops for an actively tracked vehicle", () => {
+  const route = exports.bepaalRitTraject(basis);
+  assert.equal(route.van, "De Vlinder");
+  assert.equal(route.naar, "Weerpad/Wachterstraat");
+  assert.equal(route.vorigeIndex, 0);
+  assert.equal(route.volgendeIndex, 1);
+});
+
+test("Header does not claim a location for KV8-only, stale GPS, arrived or invalid stop links", () => {
+  const scenarios = [];
+  const kv8 = copie(basis); kv8.positie_betrouwbaar = false; scenarios.push(kv8);
+  const stale = copie(basis); stale.nu_hier.gps_leeftijd_s = 150; scenarios.push(stale);
+  const arrived = copie(basis); arrived.rit_status = "ARRIVED"; arrived.nu_hier.bij_halte = true; scenarios.push(arrived);
+  const incoming = copie(basis); incoming.rit_status = "INCOMING"; scenarios.push(incoming);
+  const skip = copie(basis); skip.nu_hier.volgende_index = 4; scenarios.push(skip);
+  const same = copie(basis); same.haltes[1].naam = "De Vlinder"; scenarios.push(same);
+  const missing = copie(basis); missing.haltes[0].naam = ""; scenarios.push(missing);
+  for (const scenario of scenarios) assert.equal(exports.bepaalRitTraject(scenario), null);
+});
+
+test("Header can name confirmed stop pair when timetable timestamps are temporarily missing", () => {
+  const route = copie(basis);
+  route.haltes[0].tijd_ms = null;
+  route.haltes[1].tijd_ms = null;
+  assert.equal(exports.bepaalRitTraject(route).naar, "Weerpad/Wachterstraat");
+  assert.equal(berekenTussenHalteVoortgang(route, nu)?.volgendeIndex, 1);
+});
+
+test("Top banner shows both stops, punctuality and GPS; other status banners remain available", () => {
+  assert.match(screen, /const ritTraject = rit && !poll\.fout \? bepaalRitTraject\(rit\) : null/);
+  assert.match(screen, /ritTraject \? \(\s*<View style=\{s\.trajectInhoud\}>/);
+  assert.match(screen, /\{ritTraject\.van\} → \{ritTraject\.naar\}/);
+  assert.match(screen, /<Text style=\{\[s\.liveText, \{ color: colors\.live \}\]\}>\{t\("Onderweg"\)\}<\/Text>/);
+  assert.match(screen, /rit\.vertraging_min > 0 \? "\+" \+ rit\.vertraging_min \+ " min"/);
+  assert.match(screen, /<View style=\{s\.trajectGps\}>/);
+  assert.match(screen, /!isIncoming && bronLabel && !ritTraject/);
+  assert.match(screen, /\) : isIncoming \? \(/);
+  assert.match(screen, /\) : rit\.live \? \(/);
+});

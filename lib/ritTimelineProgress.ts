@@ -1,6 +1,38 @@
 import { positieBevestigd } from "./wayfindingV2";
 import type { Rit, RitHalte } from "./types";
 
+/** Bestaat uitsluitend als het voertuig betrouwbaar tussen TWEE opeenvolgende haltes is gekoppeld. */
+export type RitTraject = { vorigeIndex: number; volgendeIndex: number; van: string; naar: string };
+
+export function bepaalRitTraject(rit: Rit): RitTraject | null {
+  const nh = rit.nu_hier;
+  if (!rit.live || rit.vervallen || !nh || nh.bij_halte ||
+      rit.rit_status === "INCOMING" || rit.rit_status === "ARRIVED" ||
+      (rit.rit_status && rit.rit_status !== "DRIVING") || !positieBevestigd(rit)) {
+    return null;
+  }
+  const gpsLeeftijd = nh.gps_leeftijd_s ?? rit.gps_leeftijd_s ??
+    rit.voertuig_info?.leeftijd_s ?? rit.voertuig?.leeftijd_s;
+  if (typeof gpsLeeftijd === "number" &&
+      (!Number.isFinite(gpsLeeftijd) || gpsLeeftijd < 0 || gpsLeeftijd > 120)) return null;
+
+  const vorigeIndex = nh.na_index;
+  const volgendeIndex = nh.volgende_index;
+  if (!Number.isInteger(vorigeIndex) || !Number.isInteger(volgendeIndex) ||
+      vorigeIndex < 0 || volgendeIndex !== vorigeIndex + 1 ||
+      volgendeIndex >= rit.haltes.length) return null;
+
+  const vorige = rit.haltes[vorigeIndex];
+  const volgende = rit.haltes[volgendeIndex];
+  if (!vorige || !volgende || vorige.vervalt || volgende.vervalt ||
+      vorige.state === "SCHEDULED" || vorige.status === "komt" ||
+      volgende.state === "PASSED" || volgende.status === "geweest") return null;
+  const van = String(vorige.naam || "").trim();
+  const naar = String(volgende.naam || "").trim();
+  if (!van || !naar || van === naar) return null;
+  return { vorigeIndex, volgendeIndex, van, naar };
+}
+
 export type TussenHalteVoortgang = {
   vorigeIndex: number;
   volgendeIndex: number;

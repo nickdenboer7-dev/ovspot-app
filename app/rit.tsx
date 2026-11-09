@@ -13,7 +13,7 @@ import type { Palette } from "../constants/theme";
 import { api } from "../lib/api";
 import { bestemmingVoorWeergave, isTrein, ritNummer } from "../lib/format";
 import { useNu, usePolling } from "../lib/hooks";
-import { berekenTussenHalteVoortgang } from "../lib/ritTimelineProgress";
+import { bepaalRitTraject, berekenTussenHalteVoortgang } from "../lib/ritTimelineProgress";
 import { markeerRitHaltes } from "../lib/liveRitKaart";
 import { positieBevestigd, ritBannerTitel, ritBronLabel } from "../lib/wayfindingV2";
 import type { Rit, RitHalte } from "../lib/types";
@@ -293,6 +293,8 @@ export default function Ritverloop() {
   const isIncoming = rit?.rit_status === "INCOMING" && !rit?.vervallen;
   const bronLabel = rit ? ritBronLabel(rit, !!poll.fout) : null;
   const bannerTitel = rit ? ritBannerTitel(rit) : "";
+  // Toon het exacte halte-paar alleen met een betrouwbare, actuele voertuigkoppeling.
+  const ritTraject = rit && !poll.fout ? bepaalRitTraject(rit) : null;
   const inkomendVoertuig = rit?.voertuig_info ?? rit?.voertuig;
   const inkomendNummer = String(inkomendVoertuig?.nummer ?? "").trim();
   const inkomendSoort = trein ? "Trein" : rit?.modus === "tram" ? "Tram" : rit?.modus === "metro" ? "Metro" : "Bus";
@@ -355,7 +357,7 @@ export default function Ritverloop() {
           <View style={[s.liveBalk, {
             backgroundColor: isIncoming ? colors.infoBg : colors.surface,
             borderColor: isIncoming ? colors.infoBg : colors.border
-          }, isIncoming ? s.incomingBalk : null]}>
+          }, isIncoming ? s.incomingBalk : ritTraject ? s.trajectBalk : null]}>
             {rit.vervallen ? (
               <Text style={[s.liveText, { color: colors.red }]}>Deze rit vervalt</Text>
             ) : isIncoming ? (
@@ -379,6 +381,43 @@ export default function Ritverloop() {
                   ) : null}
                 </View>
               </View>
+            ) : ritTraject ? (
+              <View style={s.trajectInhoud}>
+                <View style={s.trajectHeader}>
+                  <View style={s.trajectTitel}>
+                    <LiveStip kleur={colors.live} />
+                    <Text style={[s.liveText, { color: colors.live }]}>{t("Onderweg")}</Text>
+                    {Number.isFinite(rit.vertraging_min) ? (
+                      <Text style={[s.liveVertraging, {
+                        color: rit.vertraging_min > 0 ? colors.delay : colors.live
+                      }]}>
+                        · {rit.vertraging_min > 0 ? "+" + rit.vertraging_min + " min"
+                          : rit.vertraging_min === 0 ? t("Op tijd") : rit.vertraging_min + " min"}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {bronLabel ? (
+                    <View style={s.trajectGps}>
+                      <Ionicons
+                        name={bronLabel === "GPS actueel" ? "checkmark-circle" : "information-circle-outline"}
+                        size={16}
+                        color={bronLabel === "GPS actueel" ? colors.live : colors.sub}
+                      />
+                      <Text style={[s.trajectGpsTekst, {
+                        color: bronLabel === "GPS actueel" ? colors.live : colors.sub
+                      }]} numberOfLines={1}>{bronLabel}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text
+                  style={[s.trajectRoute, { color: colors.text }]}
+                  numberOfLines={3}
+                  accessibilityLabel={t("Onderweg") + ": " + ritTraject.van +
+                    " " + t("naar") + " " + ritTraject.naar}
+                >
+                  {ritTraject.van} → {ritTraject.naar}
+                </Text>
+              </View>
             ) : rit.live ? (
               <View style={s.liveLinks}>
                 <LiveStip kleur={isLive ? colors.live : colors.infoText} />
@@ -393,7 +432,7 @@ export default function Ritverloop() {
                 ) : null}
               </View>
             ) : null}
-            {!isIncoming && bronLabel ? (
+            {!isIncoming && bronLabel && !ritTraject ? (
               <>
                 <View style={[s.streepje, { backgroundColor: colors.border }]} />
                 <View style={s.ververst}>
@@ -467,6 +506,13 @@ const s = StyleSheet.create({
   infoTekst: { fontSize: 12, marginTop: 3, lineHeight: 17 },
   liveBalk: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, minHeight: 48 },
   incomingBalk: { paddingVertical: 9, alignItems: "stretch" },
+  trajectBalk: { flexDirection: "column", alignItems: "stretch", paddingVertical: 11, gap: 6 },
+  trajectInhoud: { flex: 1, minWidth: 0, gap: 5 },
+  trajectHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 7 },
+  trajectTitel: { flexDirection: "row", alignItems: "center", gap: 5, minWidth: 0, flexShrink: 1 },
+  trajectGps: { flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 0 },
+  trajectGpsTekst: { fontSize: 12, fontWeight: "600" },
+  trajectRoute: { fontSize: 13, lineHeight: 18, fontWeight: "600", paddingLeft: 14 },
   incomingInhoud: { flex: 1, gap: 3 },
   incomingKop: { flexDirection: "row", alignItems: "center", gap: 8 },
   incomingTitel: { flex: 1, fontSize: 15, lineHeight: 20, fontWeight: "700" },

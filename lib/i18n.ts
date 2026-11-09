@@ -33,7 +33,7 @@ export const EN: Record<string, string> = {
   "· probeert opnieuw": "· retrying",
   "Er ging iets mis": "Something went wrong", "onbekend": "unknown",
   "ingebouwd": "built in", "Versie": "Version",
-  "Onderweg": "En route", "over": "in",
+  "Onderweg": "En route", "over": "in", "naar": "to",
   "minder dan 1 min": "less than 1 min",
   "Nu": "Now", "Volgende": "Next",
   "Spoor": "Platform", "Perron": "Platform",
