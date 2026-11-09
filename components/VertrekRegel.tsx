@@ -11,9 +11,9 @@ import { LijnBadge, LiveStip, StatusLabel } from "./ui";
  * vol = haltebord (met spoor/vervoerder eronder en geplande tijd onder de minuten).
  */
 export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; nu: number; compact?: boolean; eerste?: boolean; onPress?: () => void }) {
-  const { colors, t } = useApp();
+  const { colors, t, instellingen } = useApp();
   const { width, fontScale } = useWindowDimensions();
-  const smalScherm = width < 380 || fontScale > 1.2;
+  const smalScherm = width < 380 || fontScale > 1.2 || instellingen.groteTekst;
   const { vertrokken, vertraagd, tijd, kloktijd, tweedeTijd, oorspronkelijk } = vertrekTijden(v, nu);
   const info = [spoorLabel(v.modus, v.spoor), v.vervoerder].filter(Boolean).join(" · ");
   const displayBestemming = bestemmingVoorWeergave(v.lijn, v.bestemming);

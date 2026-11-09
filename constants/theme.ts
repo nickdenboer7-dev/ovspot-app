@@ -96,3 +96,32 @@ export const dark: Palette = {
   star: "#FBBF24",
   tabInactive: "#94A3B8"
 };
+
+/** Opt-in WCAG-oriented high-contrast palettes; no native module required. */
+export const highContrastLight: Palette = {
+  ...light,
+  header: "#FFFFFF", headerText: "#000000", headerSub: "#27364B",
+  background: "#FFFFFF", surface: "#FFFFFF", surface2: "#F1F5F9",
+  text: "#000000", body: "#17212F", sub: "#27364B", muted: "#334155",
+  border: "#526176", divider: "#64748B",
+  accent: "#005A9C", onAccent: "#FFFFFF",
+  live: "#006B3B", delay: "#8A4300", red: "#A10F1A",
+  infoBg: "#E6F1FF", infoText: "#003D75",
+  warnBg: "#FFF1D4", warnText: "#623600",
+  rail: "#64748B", tabInactive: "#334155",
+  busBadge: "#005A9C", trainBadge: "#142E45", badgeText: "#FFFFFF"
+};
+
+export const highContrastDark: Palette = {
+  ...dark,
+  header: "#000000", headerText: "#FFFFFF", headerSub: "#E2E8F0",
+  background: "#000000", surface: "#0D1117", surface2: "#19212C",
+  text: "#FFFFFF", body: "#F1F5F9", sub: "#E2E8F0", muted: "#CBD5E1",
+  border: "#94A3B8", divider: "#94A3B8",
+  accent: "#7DD3FC", onAccent: "#00131C",
+  live: "#86EFAC", delay: "#FCD34D", red: "#FDA4AF",
+  infoBg: "#0D2A43", infoText: "#BAE6FD",
+  warnBg: "#32260A", warnText: "#FEF08A",
+  rail: "#94A3B8", tabInactive: "#E2E8F0",
+  busBadge: "#075985", trainBadge: "#1E3A5F", badgeText: "#FFFFFF"
+};

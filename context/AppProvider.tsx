@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, useColorScheme } from "react-native";
-import { dark, light, type Palette } from "../constants/theme";
+import { dark, light, highContrastDark, highContrastLight, type Palette } from "../constants/theme";
 import { api } from "../lib/api";
 import { bewaarFavorieten, bewaarInstellingen, leesFavorieten, leesInstellingen, STANDAARD } from "../lib/storage";
 import type { FavHalte, Instellingen, FeedbackContext, RecentFeedbackContext } from "../lib/types";
@@ -61,7 +61,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const scheme: "light" | "dark" =
     instellingen.thema === "donker" ? "dark" : instellingen.thema === "licht" ? "light" : systeem === "dark" ? "dark" : "light";
-  const colors = scheme === "dark" ? dark : light;
+  const colors = instellingen.hoogContrast
+    ? (scheme === "dark" ? highContrastDark : highContrastLight)
+    : (scheme === "dark" ? dark : light);
   const taal = bepaalTaal(instellingen.taalVoorkeur);
   const t = useCallback((text: string) => vertaling(text, taal), [taal]);
 

@@ -32,11 +32,11 @@ const STARTSCHERMEN: { key: Startscherm; label: string; icoon: Icoon }[] = [
 ];
 
 function Sectie({ titel, children }: { titel: string; children: React.ReactNode }) {
-  const { colors, scheme } = useApp();
+  const { colors, scheme, instellingen } = useApp();
   return (
     <View style={s.sectie}>
       <Text style={[s.sectieTitel, { color: colors.sub }]} accessibilityRole="header">{titel}</Text>
-      <View style={[s.kaart, { backgroundColor: scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
+      <View style={[s.kaart, { backgroundColor: instellingen.hoogContrast ? colors.surface : scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
         {children}
       </View>
     </View>
@@ -52,13 +52,13 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
   schakel?: { value: boolean; onChange: (next: boolean) => void };
   laatste?: boolean;
 }) {
-  const { colors, scheme, t } = useApp();
+  const { colors, scheme, instellingen, t } = useApp();
   return (
     <Pressable onPress={onPress} disabled={!onPress}
       accessibilityRole={onPress ? "button" : undefined}
       accessibilityLabel={onPress ? `${t(titel)}, ${t(waarde || uitleg)}` : undefined}
       style={[s.rij, !laatste && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-      <View style={[s.icoonAchtergrond, { backgroundColor: scheme === "dark" ? "#334155" : colors.surface2 }]}>
+      <View style={[s.icoonAchtergrond, { backgroundColor: instellingen.hoogContrast ? colors.surface2 : scheme === "dark" ? "#334155" : colors.surface2 }]}>
         <Ionicons name={icoon} size={21} color={colors.accent} />
       </View>
       <View style={s.rijTekst}>
@@ -104,7 +104,7 @@ export default function Instellingen() {
   const geselecteerd = kiezer === "thema" ? instellingen.thema : kiezer === "taal" ? instellingen.taalVoorkeur : instellingen.startscherm;
 
   return (
-    <View style={{ flex: 1, backgroundColor: scheme === "dark" ? "#0F172A" : colors.background }}>
+    <View style={{ flex: 1, backgroundColor: instellingen.hoogContrast ? colors.background : scheme === "dark" ? "#0F172A" : colors.background }}>
       <Kop groot titel="Instellingen" />
       <ScrollView showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.lijst, { paddingBottom: Math.max(insets.bottom, 12) + 28 }]}>
@@ -116,6 +116,14 @@ export default function Instellingen() {
             uitleg="Taal van je telefoon of zelf kiezen"
             waarde={TAALOPTIES.find(o => o.key === instellingen.taalVoorkeur)?.label || "Automatisch"}
             onPress={() => zetKiezer("taal")} />
+          <InstellingsRij icoon="text-outline" titel="Grotere tekst"
+            uitleg="Maak de teksten in de app beter leesbaar"
+            schakel={{ value: instellingen.groteTekst,
+              onChange: groteTekst => zetInstellingen({ groteTekst }) }} />
+          <InstellingsRij icoon="contrast-outline" titel="Hoog contrast"
+            uitleg="Duidelijker onderscheid tussen tekst en achtergrond"
+            schakel={{ value: instellingen.hoogContrast,
+              onChange: hoogContrast => zetInstellingen({ hoogContrast }) }} />
           <InstellingsRij icoon="apps-outline" titel="Startscherm"
             uitleg="Kies welk scherm als eerste opstart"
             waarde={STARTSCHERMEN.find(o => o.key === instellingen.startscherm)?.label || "Dichtbij"}
@@ -169,7 +177,7 @@ export default function Instellingen() {
         <View style={s.modalAchtergrond}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => zetKiezer(null)}
             accessibilityRole="button" accessibilityLabel={t("Keuzemenu sluiten")} />
-          <View style={[s.modalKaart, { backgroundColor: scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
+          <View style={[s.modalKaart, { backgroundColor: instellingen.hoogContrast ? colors.surface : scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
             <Text style={[s.modalTitel, { color: colors.text }]}>
               {kiezer === "thema" ? "Kies thema" : kiezer === "taal" ? "Kies taal" : "Kies startscherm"}
             </Text>

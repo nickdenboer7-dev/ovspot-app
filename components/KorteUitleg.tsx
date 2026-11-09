@@ -8,6 +8,7 @@ import { useApp } from "../context/AppProvider";
 const ITEMS = [
   { icon: "time-outline", title: "Nu", description: "Het vertrek is nu of binnen ongeveer 30 seconden." },
   { icon: "radio-outline", title: "Live", description: "De tijd is bijgewerkt met actuele OV-gegevens." },
+  { icon: "checkmark-circle-outline", title: "Vertrokken / Gepland", description: "Vertrokken is bevestigd. Gepland is een dienstregelingstijd zonder bevestigde passage." },
   { icon: "timer-outline", title: "+3 min", description: "De rit is 3 minuten later dan gepland." },
   { icon: "locate-outline", title: "GPS-status", description: "Actueel geeft een bevestigde positie aan; verouderd of onzeker niet." },
   { icon: "star-outline", title: "Favorieten", description: "Tik op de ster bij een halte om die snel terug te vinden." }
@@ -23,7 +24,7 @@ export function KorteUitleg({ onSluit }: { onSluit: () => void }) {
             OVspot in het kort
           </Text>
           <Text style={[s.intro, { color: colors.sub }]}>
-            Vijf symbolen die je helpen met vertrekken en ritten.
+            De belangrijkste symbolen bij vertrekken en ritten.
           </Text>
         </View>
         <Pressable onPress={onSluit} accessibilityRole="button"

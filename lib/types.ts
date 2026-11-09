@@ -282,6 +282,8 @@ export type Instellingen = {
   taalVoorkeur: "auto" | "nl" | "en";
   startscherm: Startscherm;
   schermAanhouden: boolean;
+  groteTekst: boolean;
+  hoogContrast: boolean;
   liveVoertuigen: boolean;
   databesparing: boolean;
   storingenPush: boolean;
