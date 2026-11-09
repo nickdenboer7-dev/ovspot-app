@@ -12,7 +12,6 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
   const { h, index, naam, plaats, toonPlaats, verwacht, gepland, vertragingMin, verwachtMs, gepasseerd } = r;
   const eta = volgende && !gepasseerd ? verwachteAankomstMin(verwachtMs, nu) : null;
   const vertraagd = !h.vervalt && vertragingMin > 0 && verwacht !== gepland;
-  const showCity = !!plaats && toonPlaats;
   return (
     <View
       style={[s.row, { height: hoogte, backgroundColor: volgende ? RITV2.info : "#FFFFFF", zIndex: fractie !== null ? 3 : 0 }]}
@@ -51,7 +50,6 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
         <Text style={[s.name, { color: gepasseerd ? RITV2.muted : RITV2.ink },
           volgende && s.nextName, h.vervalt && s.strike]}
           numberOfLines={1}>{naam}</Text>
-        {showCity ? <Text style={s.city} numberOfLines={1}>{plaats}</Text> : null}
         {volgende && eta !== null ? (
           <Text style={s.eta} numberOfLines={1}>
             {t("Volgende halte")} · {t("over")} {eta} min
@@ -88,7 +86,6 @@ const s = StyleSheet.create({
   labelColumn: { flex: 1, minWidth: 0, justifyContent: "center", paddingLeft: 5, paddingRight: 5 },
   name: { fontSize: 15, fontWeight: "600" },
   nextName: { fontWeight: "700" },
-  city: { fontSize: 11, color: RITV2.muted, marginTop: 1 },
   eta: { fontSize: 12, fontWeight: "600", color: RITV2.blue, marginTop: 2 },
   strike: { textDecorationLine: "line-through" },
   fold: { height: 44, flexDirection: "row", alignItems: "center",

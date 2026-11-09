@@ -7,7 +7,7 @@ const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.met
 const motion = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
 
 test("Statusstrook is ook zichtbaar bij geplande rit en toont geen lege balk", () => {
-  assert.match(screen, /status: \{ minHeight: 56/);
+  assert.match(screen, /status: \{ minHeight: 64/);
   assert.match(screen, /rit\?\.live \? t\("Live"\) : t\("Gepland"\)/);
   assert.match(screen, /<View style=\{s\.status\}>/);
 });

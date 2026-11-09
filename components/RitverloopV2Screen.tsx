@@ -96,7 +96,6 @@ export default function RitverloopV2Screen() {
       + " " + t("en") + " " + haltes[segment.volgendeIndex].naam : "";
   const status = rit?.vervallen ? t("Vervalt") :
     segment ? t("Onderweg") : rit?.live ? t("Live tijden") : t("Gepland");
-  const bronLabel = actueel ? t("GPS actueel") : t("GPS verouderd");
   const bronMs = rit?.bijgewerkt ? Date.parse(rit.bijgewerkt) : NaN;
   const bijgewerktMs = Number.isFinite(bronMs) ? bronMs : poll.laatsteOk?.getTime() ?? 0;
   const leeftijdS = bijgewerktMs ? Math.max(0, Math.floor((nu - bijgewerktMs) / 1000)) : null;
@@ -151,26 +150,26 @@ export default function RitverloopV2Screen() {
 
     {!isKaart ? <>
       <View style={s.status}>
-        <View style={s.statusBoven}>
-          <View style={s.statusLinks}>
-            <View style={[s.liveDot, { backgroundColor: rit?.live ? P.greenDot : P.muted }]} />
-            <Text style={s.statusTitel} numberOfLines={1}>{status}</Text>
-            {rit && !rit.vervallen && Number.isFinite(rit.vertraging_min) ?
-              <Text style={s.statusVertraging} numberOfLines={1}>
-                {rit.vertraging_min > 0 ? "· +" + rit.vertraging_min + " min"
-                  : rit.vertraging_min === 0 ? "· " + t("Op tijd")
-                    : "· " + rit.vertraging_min + " min"}
-              </Text> : null}
-          </View>
-          <View style={[s.gpsChip, { backgroundColor: actueel ? P.gpsBg : P.staleBg }]}>
-            <Ionicons name={actueel ? "checkmark-circle" : "time-outline"}
-              size={14} color={actueel ? P.green : P.muted} />
-            <Text style={[s.gpsTekst, { color: actueel ? P.green : P.muted }]}>{bronLabel}</Text>
-          </View>
+        <View style={s.statusBus}>
+          <Ionicons name={trein ? "train" : "bus"} size={21} color="#FFFFFF" />
         </View>
-        <Text style={s.tussen} numberOfLines={1}>
-          {paar ? t("Tussen") + " " + paar : t("Geen actuele voertuigpositie")}
-        </Text>
+        <View style={s.statusScheiding} />
+        <View style={s.statusInhoud}>
+          <View style={s.statusRegel}>
+            <Text style={s.statusTitel} numberOfLines={1}>{status}</Text>
+            {rit && rit.live && !rit.vervallen && Number.isFinite(rit.vertraging_min) ? (
+              <View style={[s.statusBadge, rit.vertraging_min > 0 && s.statusBadgeLaat]}>
+                <Text style={[s.statusBadgeTekst, rit.vertraging_min > 0 && s.statusBadgeTekstLaat]}>
+                  {rit.vertraging_min === 0 ? t("Op tijd")
+                    : (rit.vertraging_min > 0 ? "+" : "") + rit.vertraging_min + " min"}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={s.tussen} numberOfLines={2}>
+            {paar ? t("Tussen") + " " + paar : t("Geen actuele voertuigpositie")}
+          </Text>
+        </View>
       </View>
       <ScrollView ref={lijstRef} style={s.lijst}
         contentContainerStyle={s.lijstInhoud}
@@ -188,10 +187,8 @@ export default function RitverloopV2Screen() {
             onPress={() => setToonEerder(false)} />
         ) : null}
         {getoond.map(r => {
-          const height = r.index === volgendeIndex ? 64 : r.toonPlaats ? 54 : 48;
-          const vorig = haltes[r.index - 1];
-          const prevHeight = r.index - 1 === volgendeIndex ? 64 :
-            vorig?.toonPlaats ? 54 : 48;
+          const height = r.index === volgendeIndex ? 64 : 48;
+          const prevHeight = r.index - 1 === volgendeIndex ? 64 : 48;
           return <RitverloopStop key={r.h.id + "-" + r.index}
             r={r} volgende={r.index === volgendeIndex}
             laatste={r.index === haltes.length - 1} nu={nu} t={t}
@@ -248,18 +245,23 @@ const s = StyleSheet.create({
   bestemming: { fontSize: 17, fontWeight: "700", color: P.ink },
   vervoerder: { fontSize: 12, color: P.muted },
   kaartKnop: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  status: { minHeight: 56, paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: P.strip, borderBottomWidth: 1, borderBottomColor: "#E1E6EF", gap: 3 },
-  statusBoven: { minHeight: 21, flexDirection: "row", alignItems: "center", gap: 5,
-    justifyContent: "space-between" },
-  statusLinks: { flexDirection: "row", flexShrink: 1, minWidth: 0, alignItems: "center", gap: 6 },
-  statusTitel: { color: P.green, fontSize: 15, fontWeight: "700", flexShrink: 1 },
-  statusVertraging: { color: P.delay, fontSize: 13, fontWeight: "700", flexShrink: 1 },
+  status: { minHeight: 64, marginHorizontal: 12, marginVertical: 8,
+    paddingHorizontal: 11, paddingVertical: 9, borderRadius: 14,
+    borderWidth: 1, borderColor: "#DFE8E1", backgroundColor: "#F8FAF9",
+    flexDirection: "row", alignItems: "center", gap: 10 },
+  statusBus: { width: 36, height: 36, borderRadius: 9,
+    backgroundColor: "#087D35", alignItems: "center", justifyContent: "center" },
+  statusScheiding: { width: 1, height: 37, backgroundColor: "#C8D5CC" },
+  statusInhoud: { flex: 1, minWidth: 0, gap: 3 },
+  statusRegel: { flexDirection: "row", alignItems: "center", gap: 9, minWidth: 0 },
+  statusTitel: { fontSize: 15, fontWeight: "700", color: P.ink, flexShrink: 1 },
+  statusBadge: { backgroundColor: "#E3F3E7", paddingHorizontal: 9,
+    paddingVertical: 3, borderRadius: 12 },
+  statusBadgeTekst: { color: P.green, fontSize: 12, fontWeight: "700" },
+  statusBadgeLaat: { backgroundColor: "#FFF0E3" },
+  statusBadgeTekstLaat: { color: P.delay },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: P.greenDot },
-  gpsChip: { borderRadius: 10, minHeight: 24, paddingHorizontal: 7, flexDirection: "row",
-    alignItems: "center", gap: 4, flexShrink: 0 },
-  gpsTekst: { fontSize: 11, fontWeight: "700" },
-  tussen: { paddingLeft: 13, fontSize: 13, color: "#3D4858" },
+  tussen: { fontSize: 13, lineHeight: 18, color: "#3D4858" },
   lijst: { flex: 1, backgroundColor: "#FFFFFF" },
   lijstInhoud: { paddingHorizontal: 10, paddingBottom: 8 },
   liveFooter: { height: 32, backgroundColor: "#F3F5F8", borderTopWidth: 1,

@@ -30,8 +30,8 @@ const rit = {
   ]
 };
 
-test("Schema: compact kop 56, lijnrij 60, status 56, vaste tijd/rail 68/28", () => {
-  for (const re of [/kop: \{ height: 56,/, /lijnrij: \{ height: 60,/, /status: \{ minHeight: 56,/, /width: 68/, /rail: \{ width: 28/, /height: 44/, /height: 32/]) {
+test("Schema: compact kop 56, lijnrij 60, status 64, vaste tijd/rail 68/28", () => {
+  for (const re of [/kop: \{ height: 56,/, /lijnrij: \{ height: 60,/, /status: \{ minHeight: 64,/, /width: 68/, /rail: \{ width: 28/, /height: 44/, /height: 32/]) {
     assert.match(screen + stopScreen, re);
   }
   assert.equal(RITV2.navy, "#0A3A7A");
@@ -95,7 +95,7 @@ test("No GPS chip when stale; vehicle marker not rendered without current positi
   assert.equal(isGpsActueel(null, now), false);
   assert.match(screen, /const segment = rit && actueel && !rit\.vervallen/);
   assert.match(screen, /projecteerGpsOpRit\(rit, gps\)/);
-  assert.match(screen, /actueel \? t\("GPS actueel"\) : t\("GPS verouderd"\)/);
+  assert.doesNotMatch(screen, /GPS actueel|GPS verouderd|gpsChip/);
   assert.match(marker, /Animated\.timing\(beweging/);
   assert.doesNotMatch(marker, /Date\.now\(\)|volgendeMs/);
 });

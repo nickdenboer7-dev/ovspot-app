@@ -6,11 +6,13 @@ const screen = readFileSync(new URL("../components/RitverloopV2Screen.tsx", impo
 const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
 const motion = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
 
-test("Actuele ritstatus toont Onderweg met vertraging en GPS apart", () => {
+test("Actuele ritstatus toont Onderweg met Op tijd-badge zonder GPS-chip", () => {
   assert.match(screen, /rit\.vertraging_min > 0/);
   assert.match(screen, /"Op tijd"/);
   assert.match(screen, /const status = rit\?\.vervallen/);
-  assert.match(screen, /const bronLabel = actueel \? t\("GPS actueel"\) : t\("GPS verouderd"\)/);
+  assert.match(screen, /rit\.vertraging_min === 0 \? t\("Op tijd"\)/);
+  assert.match(screen, /<View style=\{\[s\.statusBadge/);
+  assert.doesNotMatch(screen, /<View style=\{\[s\.gpsChip|bronLabel/);
 });
 
 test("Voorbij is grijs en volgende stop heeft blauwe achtergrond, donkere naam", () => {

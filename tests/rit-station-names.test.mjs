@@ -22,7 +22,7 @@ test("Geen extra Beginhalte/Eindhalte badges in de compacte ritlijst", () => {
   assert.match(stop, /backgroundColor: volgende \? RITV2\.info/);
 });
 
-test("Naam en plaats gebruiken eigen regels uitsluitend bij plaatswisseling", () => {
-  assert.match(stop, /const showCity = !!plaats && toonPlaats/);
-  assert.match(stop, /\{showCity \? <Text style=\{s\.city\}/);
+test("De ritlijst toont uitsluitend halte, zonder tweede plaatsregel", () => {
+  assert.match(stop, /numberOfLines=\{1\}>\{naam\}/);
+  assert.doesNotMatch(stop, /const showCity|<Text style=\{s\.city\}|city: \{/);
 });

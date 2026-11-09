@@ -25,7 +25,8 @@ test("Per-halte vertraging wordt compact achter tijd gezet", () => {
   assert.match(stop, /timeMain: \{ flexDirection: "row", gap: 3, alignItems: "baseline"/);
 });
 
-test("GPS-chip is veilig en oude status blijft bruikbaar", () => {
-  assert.match(screen, /actueel \? t\("GPS actueel"\) : t\("GPS verouderd"\)/);
+test("GPS bepaalt nog steeds de voertuigmarker, maar niet de statuschip", () => {
+  assert.match(screen, /const segment = rit && actueel && !rit\.vervallen/);
+  assert.doesNotMatch(screen, /<View style=\{\[s\.gpsChip/);
   assert.match(screen, /<LiveRitKaart/);
 });
