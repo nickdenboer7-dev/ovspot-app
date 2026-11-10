@@ -6,7 +6,7 @@ import { RijdendVoertuig } from "./RijdendVoertuig";
 import { RitTijdcel } from "./RitTijdcel";
 import { RitStatusLabel } from "./RitStatusLabel";
 import { useApp } from "../context/AppProvider";
-import { afwijkingTekst, RITV2, volgendeHalteTekst, type RitV2Stop } from "../lib/ritverloopV2";
+import { afwijkingTekst, volgendeHalteTekst, type RitV2Stop } from "../lib/ritverloopV2";
 
 export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fractie, trein, nu, t,
   jouwHalte = false, vertrekhalte = false, onLayout }: {
@@ -49,19 +49,19 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
       </View>
       <View style={s.rail}>
         <View style={[s.topLine, {
-          backgroundColor: index === 0 ? "transparent" : gepasseerd ? RITV2.pastLine : RITV2.blue
+          backgroundColor: index === 0 ? "transparent" : gepasseerd ? colors.rail : colors.accent
         }]} />
         <View style={[s.bottomLine, {
-          backgroundColor: laatste ? "transparent" : gepasseerd ? RITV2.pastLine : RITV2.blue
+          backgroundColor: laatste ? "transparent" : gepasseerd ? colors.rail : colors.accent
         }]} />
         <View style={[s.stopDot, {
-          borderColor: gepasseerd ? RITV2.pastDot : RITV2.blue,
-          backgroundColor: gepasseerd ? RITV2.pastDot : "#FFFFFF"
+          borderColor: gepasseerd ? colors.muted : colors.accent,
+          backgroundColor: gepasseerd ? colors.muted : colors.surface
         }]} />
         {fractie !== null ? (
           <RijdendVoertuig voortgang={fractie} vorigeHoogte={vorigeHoogte}
-            huidigeHoogte={hoogte} geredenKleur={RITV2.pastLine}
-            teRijdenKleur={RITV2.blue} trein={trein} />
+            huidigeHoogte={hoogte} geredenKleur={colors.rail}
+            teRijdenKleur={colors.accent} trein={trein} />
         ) : null}
       </View>
       <View style={s.labelColumn}>
@@ -96,11 +96,12 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
 export function HalteVouwknop({ label, omhoog, onPress }: {
   label: string; omhoog?: boolean; onPress: () => void
 }) {
+  const { colors } = useApp();
   return (
     <Pressable style={s.fold} accessibilityRole="button" accessibilityLabel={label}
       onPress={onPress}>
-      <Text style={s.foldText}>{label}</Text>
-      <Ionicons name={omhoog ? "chevron-up" : "chevron-down"} color={RITV2.blue} size={18} />
+      <Text style={[s.foldText, { color: colors.accent }]}>{label}</Text>
+      <Ionicons name={omhoog ? "chevron-up" : "chevron-down"} color={colors.accent} size={18} />
     </Pressable>
   );
 }
@@ -110,13 +111,13 @@ const s = StyleSheet.create({
   timeColumn: { width: 68, paddingLeft: 0, justifyContent: "center" },
   timeMain: { flexDirection: "row", gap: 3, alignItems: "baseline" },
   time: { fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] },
-  delay: { fontSize: 12, fontWeight: "700", color: RITV2.delay },
-  earlyText: { color: RITV2.early, fontSize: 11, fontWeight: "700", marginTop: 1 },
+  delay: { fontSize: 12, fontWeight: "700" },
+  earlyText: { fontSize: 11, fontWeight: "700", marginTop: 1 },
   jouwChip: { borderWidth: 1, borderRadius: 9, paddingHorizontal: 7,
     alignSelf: "flex-start", paddingVertical: 3, marginTop: 5, maxWidth: "100%" },
   jouwTekst: { fontSize: 12, fontWeight: "700" },
   eersteTekst: { fontSize: 12, fontWeight: "700", marginTop: 4 },
-  planned: { fontSize: 11, color: RITV2.muted, textDecorationLine: "line-through", marginTop: 1 },
+  planned: { fontSize: 11, textDecorationLine: "line-through", marginTop: 1 },
   rail: { width: 28, alignItems: "center", justifyContent: "center", overflow: "visible" },
   topLine: { position: "absolute", left: 13, top: 0, width: 2, height: "50%" },
   bottomLine: { position: "absolute", left: 13, bottom: 0, width: 2, height: "50%" },
@@ -124,9 +125,9 @@ const s = StyleSheet.create({
   labelColumn: { flex: 1, minWidth: 0, justifyContent: "center", paddingLeft: 5, paddingRight: 5 },
   name: { fontSize: 15, fontWeight: "600" },
   nextName: { fontWeight: "700" },
-  eta: { fontSize: 12, fontWeight: "600", color: RITV2.blue, marginTop: 2 },
+  eta: { fontSize: 12, fontWeight: "600", marginTop: 2 },
   strike: { textDecorationLine: "line-through" },
   fold: { height: 44, flexDirection: "row", alignItems: "center",
     justifyContent: "center", gap: 6, minWidth: 44 },
-  foldText: { color: RITV2.blue, fontSize: 13, fontWeight: "700" }
+  foldText: { fontSize: 13, fontWeight: "700" }
 });

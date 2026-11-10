@@ -13,7 +13,7 @@ test("Actuele ritstatus gebruikt dezelfde afgeronde afwijking als volgende halte
 test("Voorbij is grijs en volgende stop heeft volle achtergrond alleen bij echte GPS",()=>{
   assert.match(stop,/gepasseerd \? colors.sub : colors.text/);
   assert.match(stop,/backgroundColor: volgende \? colors.infoBg/);
-  assert.match(stop,/borderColor: gepasseerd \? RITV2.pastDot : RITV2.blue/);
+  assert.match(stop,/borderColor: gepasseerd \? colors.muted : colors.accent/);
   assert.match(screen,/volgende=\{rijdend && r.index === volgendeIndex\}/);
 });
 test("Volgende halte heeft compacte countdown, nooit een dubbel Nu-hier-blok",()=>{

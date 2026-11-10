@@ -275,7 +275,7 @@ export default function Haltebord() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <OVspotSchermKop favoriet={fav}
+      <OVspotSchermKop titel="Haltebord" favoriet={fav}
         onFavoriet={() => wisselFavoriet({ id, naam, plaats })} />
       <OVspotIdentiteit naam={titel} detail={groepSub || undefined} />
       <StatusStrook

@@ -1,35 +1,29 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "./LocalizedText";
 import { useApp } from "../context/AppProvider";
-import { LijnBadge } from "./ui";
+import { Kop, LijnBadge } from "./ui";
 import type { Modus } from "../lib/types";
 
-/** Eén blauwe appbalk voor het haltebord en de ritpagina. */
-export function OVspotSchermKop({ favoriet, onFavoriet, favorietLabel, meer }: {
-  favoriet: boolean; onFavoriet?: () => void; favorietLabel?: string; meer?: React.ReactNode;
+/** Dezelfde themagevoelige schermkop als Dichtbij, Favorieten en Instellingen. */
+export function OVspotSchermKop({ titel = "Haltebord", favoriet, onFavoriet, favorietLabel, meer }: {
+  titel?: string; favoriet: boolean; onFavoriet?: () => void;
+  favorietLabel?: string; meer?: React.ReactNode;
 }) {
-  const insets = useSafeAreaInsets();
-  const { t } = useApp();
+  const { colors, t } = useApp();
   return (
-    <View style={[s.balk, { paddingTop: insets.top + 3 }]}>
-      <Pressable style={s.kopKnop} accessibilityRole="button" accessibilityLabel={t("Terug")}
-        onPress={() => router.canGoBack() ? router.back() : router.replace("/")}>
-        <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
-      </Pressable>
-      <Text style={s.titel} accessibilityRole="header">OVspot</Text>
-      {onFavoriet ? <Pressable style={s.kopKnop} accessibilityRole="button"
-        accessibilityLabel={t(favorietLabel ?? (favoriet ? "Verwijder uit favorieten" : "Bewaar als favoriet"))}
-        accessibilityState={{ selected: favoriet }}
-        onPress={onFavoriet}>
-        <Ionicons name={favoriet ? "star" : "star-outline"} size={25}
-          color={favoriet ? "#FCD34D" : "#FFFFFF"} />
-      </Pressable> : null}
-      {meer}
-    </View>
+    <Kop groot terug titel={titel} rechts={
+      <View style={s.acties}>
+        {onFavoriet ? <Pressable style={s.kopKnop} accessibilityRole="button"
+          accessibilityLabel={t(favorietLabel ?? (favoriet ? "Verwijder uit favorieten" : "Bewaar als favoriet"))}
+          accessibilityState={{ selected: favoriet }} onPress={onFavoriet}>
+          <Ionicons name={favoriet ? "star" : "star-outline"} size={24}
+            color={favoriet ? colors.star : colors.headerText} />
+        </Pressable> : null}
+        {meer}
+      </View>
+    } />
   );
 }
 
@@ -43,7 +37,7 @@ export function OVspotIdentiteit({ naam, detail, lijn, modus, vervoerder, kleur,
   const { colors, t } = useApp();
   const isRit = !!lijn;
   return (
-    <View style={[s.identiteit, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <View style={[s.identiteit, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {isRit ? (
         <LijnBadge groot lijn={lijn!} modus={modus || "bus"} vervoerder={vervoerder}
           kleur={kleur} tekstkleur={tekstkleur} />
@@ -59,13 +53,13 @@ export function OVspotIdentiteit({ naam, detail, lijn, modus, vervoerder, kleur,
   );
 }
 const s = StyleSheet.create({
-  balk: { backgroundColor: "#0A3A7A", minHeight: 60, paddingBottom: 4, paddingHorizontal: 6,
-    flexDirection: "row", alignItems: "center" },
-  kopKnop: { width: 44, height: 48, alignItems: "center", justifyContent: "center" },
-  titel: { flex: 1, fontSize: 20, fontWeight: "800", color: "#FFFFFF", paddingLeft: 10 },
+  acties: { flexDirection: "row", alignItems: "center", gap: 2 },
+  kopKnop: { width: 44, height: 44, borderRadius: 14,
+    alignItems: "center", justifyContent: "center" },
   identiteit: { minHeight: 68, flexDirection: "row", gap: 11, alignItems: "center",
-    borderBottomWidth: 1, paddingHorizontal: 14, paddingVertical: 11 },
+    borderWidth: 1, borderRadius: 18, marginHorizontal: 14, marginTop: 12,
+    paddingHorizontal: 14, paddingVertical: 12 },
   identiteitTekst: { flex: 1, minWidth: 0, gap: 3 },
-  naam: { fontSize: 18, fontWeight: "800", lineHeight: 23, flexShrink: 1 },
+  naam: { fontSize: 18, fontWeight: "700", lineHeight: 24, flexShrink: 1 },
   detail: { fontSize: 12, lineHeight: 17 }
 });

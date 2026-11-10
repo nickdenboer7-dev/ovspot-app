@@ -27,5 +27,5 @@ test("Ritlijst laat hele geselecteerde naam toe, andere namen compact",()=>{
 test("Grotere tekst schaalt markering en nooit truncatie",()=>{
  assert.match(stop,/fontScale >= 1.3/);
  assert.match(stop,/numberOfLines=\{markeer \? undefined : 1\}/);
- assert.match(shared,/minHeight: 46/);
+ assert.match(shared,/minHeight: 47/);
 });

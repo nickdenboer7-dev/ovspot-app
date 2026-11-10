@@ -30,13 +30,14 @@ const rit = {
   ]
 };
 
-test("Schema: compact kop 56, lijnrij 60, platte status 56, vaste tijd/rail 68/28", () => {
-  for (const re of [/kop: \{ height: 56,/, /lijnrij: \{ height: 60,/, /status: \{ height: 56, backgroundColor: P\.strip,/, /width: 68/, /rail: \{ width: 28/, /height: 44/, /height: 32/]) {
-    assert.match(screen + stopScreen, re);
-  }
-  assert.equal(RITV2.navy, "#0A3A7A");
-  assert.equal(RITV2.blue, "#0B57D0");
-  assert.equal(RITV2.info, "#E8F0FE");
+test("Screen uses shared app design with unchanged 68/28 timeline and controls", () => {
+  for (const re of [
+    /<OVspotSchermKop titel="Ritverloop"/,
+    /tijdlijnKaart: \{ borderWidth: 1, borderRadius: 18/,
+    /lijstInhoud: \{ paddingHorizontal: 14/,
+    /width: 68/, /rail: \{ width: 28/, /height: 44/
+  ]) assert.match(screen + stopScreen, re);
+  assert.equal(RITV2.blue, "#0B57D0"); // Maintained for route-color compatibility.
 });
 
 test("Names lose duplicate city prefixes only; city reappears only on change", () => {
@@ -111,7 +112,8 @@ test("No pull to refresh, auto polling, footer data age, one passed stop and fut
   assert.match(screen, /richtIndex \+ aantalKomende/);
   assert.match(screen, /<LiveBalk live=\{liveVoorBalk\}/);
   assert.match(screen, /<OnderBalk actief=\{van\} \/>/);
-  assert.match(nav, /compact \? 64 : 62/);
+  assert.match(nav, /backgroundColor: colors.surface/);
+  assert.match(nav, /height: 62 \+ onder/);
 });
 
 test("No incidents are injected into the journey list", () => {

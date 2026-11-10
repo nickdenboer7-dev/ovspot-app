@@ -7,7 +7,7 @@ const motion=readFileSync(new URL("../components/RijdendVoertuig.tsx", import.me
 const head=readFileSync(new URL("../components/OVspotSchermKop.tsx", import.meta.url),"utf8");
 const cell=readFileSync(new URL("../components/RitTijdcel.tsx", import.meta.url),"utf8");
 test("OVspot-kop houdt favoriet en menu, kaartknop apart in de identiteitsrij",()=>{
- assert.match(screen,/<OVspotSchermKop favoriet=\{fav\}/);
+ assert.match(screen,/<OVspotSchermKop titel="Ritverloop" favoriet=\{fav\}/);
  assert.match(head,/favoriet \? "star" : "star-outline"/);
  assert.match(screen,/icon="ellipsis-vertical"/);
  assert.match(screen,/<OVspotIdentiteit/);

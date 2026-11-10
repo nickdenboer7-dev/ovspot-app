@@ -125,8 +125,8 @@ test("GPS current chip and marker are both gated on matched real coordinates", (
   assert.doesNotMatch(moving, /volgendeMs|Date\.now\(\)/);
 });
 
-test("Approved 56dp flat bar, no new incident or stopboard modifications", () => {
-  assert.match(screen, /status: \{ height: 56, backgroundColor: P\.strip/);
+test("New shared status card retains precise live time, no incident injection", () => {
+  assert.match(screen, /<StatusStrook/);
   assert.doesNotMatch(screen, /<View style=\{s\.statusBus\}|<View style=\{s\.statusScheiding\}/);
   assert.doesNotMatch(screen, /StoringKaart|storingen\.map/);
   assert.match(screen, /<OnderBalk actief=\{van\} \/>/);

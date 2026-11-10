@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,7 +18,7 @@ import { maakLijnFavoriet } from "../lib/favorieten";
 import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { afwijkingTekst, bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, RITV2, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
+import { afwijkingTekst, bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord } from "../lib/types";
 
 type Params = {
@@ -28,14 +27,14 @@ type Params = {
   instap_naam?: string; instap_plaats?: string; instap_ms?: string; richting?: string;
   kleur?: string; tekstkleur?: string;
 };
-const P = RITV2;
 
 function KopKnop({ icon, label, onPress }: {
   icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void
 }) {
+  const { colors } = useApp();
   return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
     hitSlop={4} style={s.kopKnop}>
-    <Ionicons name={icon} size={23} color="#FFFFFF" />
+    <Ionicons name={icon} size={23} color={colors.headerText} />
   </Pressable>;
 }
 
@@ -172,22 +171,21 @@ export default function RitverloopV2Screen() {
   }, [rit?.id, rit?.datum, zetFeedbackContext]);
 
   return <View style={[s.scherm, { backgroundColor: colors.background }]}>
-    <StatusBar style="light" />
-    <View style={s.boven}>
-      <OVspotSchermKop favoriet={fav}
+    <View style={[s.boven, { backgroundColor: colors.header }]}>
+      <OVspotSchermKop titel="Ritverloop" favoriet={fav}
         favorietLabel={lijnFavoriet ? (fav ? "Verwijder lijnfavoriet" : "Bewaar lijn, richting en instaphalte") : undefined}
         onFavoriet={onFavoriet}
         meer={<KopKnop icon="ellipsis-vertical" label={t("Meer")}
           onPress={() => setMenuOpen(v => !v)} />}
       />
-      {menuOpen ? <View style={[s.menu, { top: insets.top + 52 }]}>
+      {menuOpen ? <View style={[s.menu, { backgroundColor: colors.surface, borderColor: colors.border, top: insets.top + 72 }]}>
         <Pressable style={s.menuItem} accessibilityRole="button"
           onPress={() => { setMenuOpen(false); setFeedbackOpen(true); }}>
-          <Text style={s.menuTekst}>{t("Feedback sturen")}</Text>
+          <Text style={[s.menuTekst, { color: colors.text }]}>{t("Feedback sturen")}</Text>
         </Pressable>
         <Pressable style={s.menuItem} accessibilityRole="button"
           onPress={() => { setMenuOpen(false); router.navigate("/instellingen"); }}>
-          <Text style={s.menuTekst}>{t("Instellingen")}</Text>
+          <Text style={[s.menuTekst, { color: colors.text }]}>{t("Instellingen")}</Text>
         </Pressable>
       </View> : null}
     </View>
@@ -223,7 +221,8 @@ export default function RitverloopV2Screen() {
           const h = e.nativeEvent.layout.height;
           setLijstHoogte(v => Math.abs(v - h) < 1 ? v : h);
         }}>
-        {!rit ? <Text style={s.fout}>{poll.laden ? t("Laden…") :
+        <View style={[s.tijdlijnKaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {!rit ? <Text style={[s.fout, { color: colors.sub }]}>{poll.laden ? t("Laden…") :
           poll.fout || t("Rit niet gevonden")}</Text> : null}
         {rit && verborgenEerder > 0 ? (
           <HalteVouwknop label={t("Toon") + " " + verborgenEerder + " " + t("eerdere haltes")}
@@ -262,6 +261,7 @@ export default function RitverloopV2Screen() {
           <HalteVouwknop label={t("Verberg volgende haltes")} omhoog
             onPress={() => setToonLater(false)} />
         ) : null}
+        </View>
       </ScrollView>
       <LiveBalk live={liveVoorBalk} bijgewerktMs={bijgewerktMs} nu={nu} />
       <OnderBalk actief={van} />
@@ -278,39 +278,37 @@ export default function RitverloopV2Screen() {
 }
 
 const s = StyleSheet.create({
-  scherm: { flex: 1, backgroundColor: "#FFFFFF" },
-  boven: { backgroundColor: P.navy, zIndex: 15 },
-  kop: { height: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 6 },
-  titel: { flex: 1, fontSize: 20, fontWeight: "800", color: "#FFFFFF", paddingLeft: 10 },
+  scherm: { flex: 1 },
+  boven: { zIndex: 15 },
   kopKnop: { width: 44, height: 48, alignItems: "center", justifyContent: "center" },
-  menu: { position: "absolute", right: 8, backgroundColor: "#FFFFFF",
-    borderRadius: 10, width: 200, elevation: 7, borderWidth: 1, borderColor: "#C5CCD6" },
+  menu: { position: "absolute", right: 14, borderRadius: 16, width: 216, elevation: 7, borderWidth: 1 },
   menuItem: { minHeight: 44, justifyContent: "center", paddingHorizontal: 15 },
-  menuTekst: { color: P.ink, fontSize: 14, fontWeight: "600" },
-  lijnrij: { height: 60, flexDirection: "row", alignItems: "center",
-    backgroundColor: "#FFFFFF", paddingHorizontal: 12, gap: 10 },
-  badge: { minWidth: 49, maxWidth: 73, height: 42, backgroundColor: P.pale,
+  menuTekst: { fontSize: 14, fontWeight: "600" },
+  lijnrij: { height: 60, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 10 },
+  badge: { minWidth: 49, maxWidth: 73, height: 42,
     borderRadius: 9, justifyContent: "center", alignItems: "center", paddingHorizontal: 8 },
-  badgeTekst: { color: P.navy, fontSize: 17, fontWeight: "800" },
+  badgeTekst: { fontSize: 17, fontWeight: "800" },
   lijnInhoud: { flex: 1, minWidth: 0, gap: 2 },
-  bestemming: { fontSize: 17, fontWeight: "700", color: P.ink },
-  vervoerder: { fontSize: 12, color: P.muted },
+  bestemming: { fontSize: 17, fontWeight: "700" },
+  vervoerder: { fontSize: 12 },
   kaartKnop: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  status: { height: 56, backgroundColor: P.strip,
+  status: { height: 56,
     paddingHorizontal: 12, paddingVertical: 5, justifyContent: "center", gap: 3 },
   statusRegel: { height: 22, flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
-  statusTitel: { fontSize: 15, fontWeight: "700", color: P.ink, flexShrink: 1 },
+  statusTitel: { fontSize: 15, fontWeight: "700", flexShrink: 1 },
   statusAfwijking: { fontSize: 13, fontWeight: "700", flexShrink: 1 },
   statusSpacer: { flex: 1 },
   gpsChip: { borderRadius: 10, minHeight: 22, paddingHorizontal: 8,
     justifyContent: "center", flexShrink: 0 },
   gpsTekst: { fontSize: 11, fontWeight: "700" },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: P.greenDot },
-  tussen: { fontSize: 13, color: "#3D4858" },
-  lijst: { flex: 1, backgroundColor: "#FFFFFF" },
-  lijstInhoud: { paddingHorizontal: 10, paddingBottom: 8 },
-  liveFooter: { height: 32, backgroundColor: "#F3F5F8", borderTopWidth: 1,
-    borderTopColor: "#E0E5EC", flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 7 },
-  liveFooterTekst: { fontSize: 12, color: "#3D4858" },
-  fout: { padding: 18, fontSize: 14, color: P.muted }
+  liveDot: { width: 7, height: 7, borderRadius: 4 },
+  tussen: { fontSize: 13 },
+  lijst: { flex: 1 },
+  lijstInhoud: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 18 },
+  tijdlijnKaart: { borderWidth: 1, borderRadius: 18, paddingHorizontal: 10,
+    paddingVertical: 8, overflow: "visible" },
+  liveFooter: { height: 32, borderTopWidth: 1,
+    flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 7 },
+  liveFooterTekst: { fontSize: 12 },
+  fout: { padding: 18, fontSize: 14 }
 });

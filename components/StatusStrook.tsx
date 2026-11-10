@@ -11,7 +11,7 @@ export function StatusStrook({ live, vervallen, afwijkingMin, tekst, chip, tusse
 }) {
   const { colors, t } = useApp();
   return (
-    <View style={[s.strook, { backgroundColor: colors.surface2, borderBottomColor: colors.border }]}>
+    <View style={[s.strook, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={s.regel}>
         {tekst ? <Text style={[s.titel, { color: colors.text }]}>{t(tekst)}</Text>
           : <RitStatusLabel live={live} vervallen={vervallen} afwijkingMin={afwijkingMin} />}
@@ -24,7 +24,8 @@ export function StatusStrook({ live, vervallen, afwijkingMin, tekst, chip, tusse
   );
 }
 const s = StyleSheet.create({
-  strook: { borderBottomWidth: 1, paddingVertical: 7, paddingHorizontal: 14, gap: 4, minHeight: 46 },
+  strook: { borderWidth: 1, borderRadius: 16, marginHorizontal: 14, marginTop: 10,
+    paddingVertical: 10, paddingHorizontal: 13, gap: 5, minHeight: 47 },
   regel: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 },
   titel: { fontSize: 14, fontWeight: "700", flexShrink: 1 },
   chip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
