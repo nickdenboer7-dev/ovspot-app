@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { AppState, useColorScheme } from "react-native";
 import { dark, light, highContrastDark, highContrastLight, type Palette } from "../constants/theme";
 import { api } from "../lib/api";
+import { herstelFavorietOpPositie, MAX_FAVORIETEN } from "../lib/favorieten";
 import { bewaarFavorieten, bewaarInstellingen, leesFavorieten, leesInstellingen, STANDAARD } from "../lib/storage";
 import type { FavHalte, Instellingen, FeedbackContext, RecentFeedbackContext } from "../lib/types";
 import { bepaalTaal, vertaling, type AppTaal } from "../lib/i18n";
@@ -22,6 +23,7 @@ type AppContext = {
   isFavoriet: (id: string) => boolean;
   wisselFavoriet: (h: FavHalte) => void;
   verwijderFavoriet: (id: string) => void;
+  herstelFavoriet: (halte: FavHalte, index: number) => void;
   verplaatsFavoriet: (id: string, richting: -1 | 1) => void;
   dichtbijIds: string[];
   zetDichtbijIds: (ids: string[]) => void;
@@ -43,6 +45,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const [instellingen, setInstellingen] = useState<Instellingen>(STANDAARD);
   const [favorieten, setFavorieten] = useState<FavHalte[]>([]);
+  const geplandeFavorieten = useRef<FavHalte[] | null>(null);
   const [dichtbijIds, zetDichtbijIds] = useState<string[]>([]);
   const [storingenMijn, setStoringenMijn] = useState(0);
   const [laatsteFeedbackContext, setLaatsteFeedbackContext] = useState<RecentFeedbackContext | null>(null);
@@ -53,6 +56,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     Promise.all([leesInstellingen(), leesFavorieten(), korteUitlegGezien()]).then(([s, f, gezien]) => {
       setInstellingen(s);
+      geplandeFavorieten.current = f;
       setFavorieten(f);
       setUitlegZichtbaar(!gezien);
       setKlaar(true);
@@ -75,24 +79,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const pasFavorietenAan = useCallback((fn: (oud: FavHalte[]) => FavHalte[]) => {
-    setFavorieten((oud) => {
-      const nieuw = fn(oud);
-      bewaarFavorieten(nieuw);
-      return nieuw;
-    });
-  }, []);
+  useEffect(() => {
+    if (!klaar || geplandeFavorieten.current === favorieten) return;
+    geplandeFavorieten.current = favorieten;
+    void bewaarFavorieten(favorieten);
+  }, [klaar, favorieten]);
 
   const favIds = useMemo(() => new Set(favorieten.map((f) => f.id)), [favorieten]);
   const isFavoriet = useCallback((id: string) => favIds.has(id), [favIds]);
   const wisselFavoriet = useCallback(
-    (h: FavHalte) => pasFavorietenAan((oud) => (oud.some((f) => f.id === h.id) ? oud.filter((f) => f.id !== h.id) : [...oud, h].slice(-30))),
-    [pasFavorietenAan]
+    (h: FavHalte) => setFavorieten((oud) => (oud.some((f) => f.id === h.id) ? oud.filter((f) => f.id !== h.id) : [...oud, h].slice(-MAX_FAVORIETEN))),
+    []
   );
-  const verwijderFavoriet = useCallback((id: string) => pasFavorietenAan((oud) => oud.filter((f) => f.id !== id)), [pasFavorietenAan]);
+  const verwijderFavoriet = useCallback((id: string) => setFavorieten((oud) => oud.filter((f) => f.id !== id)), []);
+  const herstelFavoriet = useCallback(
+    (halte: FavHalte, index: number) => setFavorieten((oud) => herstelFavorietOpPositie(oud, halte, index)),
+    []
+  );
   const verplaatsFavoriet = useCallback(
     (id: string, richting: -1 | 1) =>
-      pasFavorietenAan((oud) => {
+      setFavorieten((oud) => {
         const i = oud.findIndex((f) => f.id === id);
         const j = i + richting;
         if (i < 0 || j < 0 || j >= oud.length) return oud;
@@ -100,7 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         [kopie[i], kopie[j]] = [kopie[j], kopie[i]];
         return kopie;
       }),
-    [pasFavorietenAan]
+    []
   );
 
   // Aantal storingen bij favorieten voor het rode bolletje op de tab (elke 3 minuten, alleen als de app open is).
@@ -150,6 +156,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isFavoriet,
       wisselFavoriet,
       verwijderFavoriet,
+      herstelFavoriet,
       verplaatsFavoriet,
       dichtbijIds,
       zetDichtbijIds,
@@ -157,7 +164,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       laatsteFeedbackContext,
       zetFeedbackContext
     }),
-    [klaar, colors, scheme, taal, t, uitlegZichtbaar, toonUitleg, sluitUitleg, instellingen, zetInstellingen, favorieten, isFavoriet, wisselFavoriet, verwijderFavoriet, verplaatsFavoriet, dichtbijIds, storingenMijn, laatsteFeedbackContext, zetFeedbackContext]
+    [klaar, colors, scheme, taal, t, uitlegZichtbaar, toonUitleg, sluitUitleg, instellingen, zetInstellingen, favorieten, isFavoriet, wisselFavoriet, verwijderFavoriet, herstelFavoriet, verplaatsFavoriet, dichtbijIds, storingenMijn, laatsteFeedbackContext, zetFeedbackContext]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

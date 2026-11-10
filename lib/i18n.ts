@@ -71,6 +71,8 @@ export const EN: Record<string, string> = {
   "Veerboot": "Ferry", "Veer": "Ferry",
 
   "WEERGAVE & GEDRAG": "APPEARANCE & BEHAVIOR",
+  "Zoek in instellingen": "Search settings", "Wis zoekterm": "Clear search",
+  "Geen instellingen gevonden.": "No settings found.",
   "KAART & DATA": "MAP & DATA", "MELDINGEN": "NOTIFICATIONS",
   "OVER OVSPOT": "ABOUT OVSPOT",
   "Thema": "Theme", "Systeem": "System", "Licht": "Light", "Donker": "Dark",
@@ -147,6 +149,7 @@ export const EN: Record<string, string> = {
 
   "Zoek een halte": "Search for a stop", "Zoek halte om toe te voegen": "Search for a stop to add",
   "Mijn haltes": "My stops", "Nog geen favorieten": "No favorites yet",
+  "Ongedaan maken": "Undo",
   "Tik op de ster bij een halte om hem hier te bewaren.": "Tap the star on a stop to save it here.",
   "Er is een storing": "There is a disruption",
   "Geen vertrekken in de komende tijd": "No upcoming departures",
@@ -304,6 +307,7 @@ const DYNAMIC: [RegExp, (...parts: string[]) => string][] = [
   [/^(.+) omhoog$/u, (_, x) => "Move " + x + " up"],
   [/^(.+) omlaag$/u, (_, x) => "Move " + x + " down"],
   [/^(.+) verwijderen$/u, (_, x) => "Remove " + x],
+  [/^(.+) verwijderd uit favorieten$/u, (_, x) => x + " removed from favorites"],
   [/^Vertrektijden (.+)$/u, (_, x) => "Departures " + x],
   [/^Haltebord (.+), richting (.+), lijn (.+)$/u, (_, x, y, z) => "Departure board " + x + ", towards " + y + ", line " + z],
   [/^Filter op lijn (.+)$/u, (_, x) => "Filter line " + x],

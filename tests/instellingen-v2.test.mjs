@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { normaliseerInstellingen, STANDAARD_INSTELLINGEN } from "../lib/instellingenDefaults.ts";
+import { instellingKomtOvereen, instellingenZoektermen } from "../lib/instellingenZoeken.ts";
 
 const scherm = readFileSync(new URL("../app/(tabs)/instellingen.tsx",import.meta.url),"utf8");
 const opslag = readFileSync(new URL("../lib/storage.ts",import.meta.url),"utf8");
@@ -50,7 +51,7 @@ test("Alle zes nieuwe voorkeuren hebben veilige initwaarden, validatie en blijve
 
 test("Vier gegroepeerde secties, geen Play Store knop, donker header- en kaartdesign",()=>{
   for(const label of ["WEERGAVE & GEDRAG","KAART & DATA","MELDINGEN","OVER OVSPOT"])
-    assert.ok(scherm.includes('titel="'+label+'"'),label);
+    assert.ok(scherm.includes('titel: "'+label+'"'),label);
   for(const label of ["Thema","Startscherm","Scherm aanhouden","Live voertuigen",
                       "Databesparing","Storingen","Stuur feedback","Over de app"])
     assert.ok(scherm.includes('titel="'+label+'"'),label);
@@ -61,6 +62,18 @@ test("Vier gegroepeerde secties, geen Play Store knop, donker header- en kaartde
   assert.doesNotMatch(scherm,/Play Store|play\.google\.com/);
   assert.match(scherm,/Updates\.updateId \? Updates\.updateId\.slice\(0, 8\)/);
   assert.match(scherm,/Versie \{versie\} \(OTA: \{otaId\}\)/);
+});
+
+test("Instellingen zoeken op Nederlandse en Engelse trefwoorden en combinaties", () => {
+  const zoekt = (term, titel, ...velden) => instellingKomtOvereen(instellingenZoektermen(term), titel, ...velden);
+  assert.equal(zoekt("  DÓNKER  ", "Thema"), true);
+  assert.equal(zoekt("gps", "Databesparing"), true);
+  assert.equal(zoekt("letters", "Grotere tekst"), true);
+  assert.equal(zoekt("font size", "Grotere tekst"), true);
+  assert.equal(zoekt("nearby radius", "Afstand voor Dichtbij", "Nearby search radius"), true);
+  assert.equal(zoekt("home location", "Thuislocatie", "Home location"), true);
+  assert.equal(zoekt("gps letters", "Databesparing"), false);
+  assert.equal(zoekt("  ", "Thema"), true);
 });
 
 test("Thema en startscherm hebben een echte radio-modal, standaard Systeem en route-tab",()=>{

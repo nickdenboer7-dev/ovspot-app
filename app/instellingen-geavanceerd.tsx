@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "../components/LocalizedText";
@@ -11,18 +11,20 @@ import type { Filter } from "../lib/types";
 /** Bestaande GPS-fallback-, afstands- en haltebordvoorkeuren blijven bereikbaar. */
 export default function Geavanceerd() {
   const { colors, instellingen, zetInstellingen } = useApp();
+  const { onderdeel } = useLocalSearchParams<{ onderdeel?: string }>();
+  const alles = onderdeel !== "filter" && onderdeel !== "afstand" && onderdeel !== "thuis";
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Kop terug titel="Locatie & haltebord" />
       <ScrollView contentContainerStyle={s.inhoud}>
-        <View style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {alles || onderdeel === "filter" ? <View style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[s.titel, { color: colors.text }]}>Standaard haltefilter</Text>
           <Text style={[s.uitleg, { color: colors.sub }]}>Zo opent het vertrekbord.</Text>
           <Chips<Filter> vol waarde={instellingen.filter}
             opties={[{key:"alles",label:"Alles"}, {key:"trein",label:"Trein"}, {key:"bus",label:"Bus"}]}
             onKies={filter => zetInstellingen({ filter })}/>
-        </View>
-        <View style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        </View> : null}
+        {alles || onderdeel === "afstand" ? <View style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[s.titel, { color: colors.text }]}>Afstand voor Dichtbij</Text>
           <Text style={[s.uitleg, { color: colors.sub }]}>Haltes tot {afstand(instellingen.straal)} van je locatie.</Text>
           <View style={s.afstand}>
@@ -38,8 +40,8 @@ export default function Geavanceerd() {
               );
             })}
           </View>
-        </View>
-        <View style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        </View> : null}
+        {alles || onderdeel === "thuis" ? <View style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[s.titel, { color: colors.text }]}>Thuislocatie</Text>
           <Text style={[s.uitleg, { color: colors.sub }]}>
             {instellingen.thuis ? `${instellingen.thuis.naam}, ${instellingen.thuis.plaats}`
@@ -58,7 +60,7 @@ export default function Geavanceerd() {
               <Text style={{color:colors.red,fontWeight:"700"}}>Thuislocatie wissen</Text>
             </Pressable>
           ) : null}
-        </View>
+        </View> : null}
       </ScrollView>
     </View>
   );

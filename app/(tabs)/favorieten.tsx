@@ -7,6 +7,7 @@ import { HalteKaart } from "../../components/HalteKaart";
 import { Kaart, Kop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
+import { MAX_FAVORIETEN } from "../../lib/favorieten";
 import { useNu, usePolling } from "../../lib/hooks";
 import type { FavHalte } from "../../lib/types";
 
@@ -33,8 +34,11 @@ function FavKaart({ f, nu }: { f: FavHalte; nu: number }) {
 }
 
 export default function Favorieten() {
-  const { colors, favorieten, verwijderFavoriet, verplaatsFavoriet, t } = useApp();
+  const { colors, favorieten, verwijderFavoriet, herstelFavoriet, verplaatsFavoriet, t } = useApp();
   const [bewerk, setBewerk] = useState(false);
+  const [verwijderd, setVerwijderd] = useState<{ halte: FavHalte; index: number } | null>(null);
+  const kanHerstellen = verwijderd !== null && favorieten.length < MAX_FAVORIETEN &&
+    !favorieten.some((f) => f.id === verwijderd.halte.id);
   const nu = useNu(10_000);
   const plaatsen = [...new Set(favorieten.map((f) => f.plaats).filter(Boolean))];
   const locatieLabel = plaatsen.length === 1 ? plaatsen[0] : `${favorieten.length} haltes`;
@@ -45,7 +49,7 @@ export default function Favorieten() {
         groot
         titel="Favorieten"
         rechts={
-          favorieten.length ? (
+          favorieten.length || kanHerstellen ? (
             <Pressable onPress={() => setBewerk((b) => !b)} accessibilityRole="button" style={s.bewerk} hitSlop={6}>
               <Text style={[s.bewerkText, { color: colors.accent }]}>{bewerk ? "Klaar" : "Bewerk"}</Text>
             </Pressable>
@@ -59,6 +63,19 @@ export default function Favorieten() {
           <Text style={[s.zoekText, { color: colors.sub }]}>Zoek halte om toe te voegen</Text>
         </Pressable>
       </View>
+      {kanHerstellen ? (
+        <View style={[s.herstelStrook, { backgroundColor: colors.infoBg, borderBottomColor: colors.border }]}>
+          <Text accessibilityLiveRegion="polite" style={[s.herstelMelding, { color: colors.text }]}>
+            {`${verwijderd.halte.naam} verwijderd uit favorieten`}
+          </Text>
+          <Pressable onPress={() => {
+            herstelFavoriet(verwijderd.halte, verwijderd.index);
+            setVerwijderd(null);
+          }} accessibilityRole="button" accessibilityLabel={t("Ongedaan maken")} style={s.herstelActie}>
+            <Text style={[s.herstelKnop, { color: colors.infoText }]}>Ongedaan maken</Text>
+          </Pressable>
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={s.lijst}>
         {favorieten.length ? (
           <View style={s.metaRij}>
@@ -92,7 +109,10 @@ export default function Favorieten() {
                 <Pressable onPress={() => verplaatsFavoriet(f.id, 1)} disabled={i === favorieten.length - 1} style={s.icoKnop} accessibilityLabel={t(`${f.naam} omlaag`)}>
                   <Ionicons name="chevron-down" size={22} color={i === favorieten.length - 1 ? colors.border : colors.text} />
                 </Pressable>
-                <Pressable onPress={() => verwijderFavoriet(f.id)} style={s.icoKnop} accessibilityLabel={t(`${f.naam} verwijderen`)}>
+                <Pressable onPress={() => {
+                  setVerwijderd({ halte: f, index: i });
+                  verwijderFavoriet(f.id);
+                }} style={s.icoKnop} accessibilityRole="button" accessibilityLabel={t(`${f.naam} verwijderen`)}>
                   <Ionicons name="trash-outline" size={22} color={colors.red} />
                 </Pressable>
               </View>
@@ -117,6 +137,10 @@ const s = StyleSheet.create({
   locatieTekst: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
   bewerk: { height: 44, justifyContent: "center", paddingHorizontal: 10, borderRadius: 12 },
   bewerkText: { fontSize: 16, fontWeight: "600" },
+  herstelStrook: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, borderBottomWidth: 1 },
+  herstelMelding: { fontSize: 14, flex: 1, paddingVertical: 8 },
+  herstelActie: { minHeight: 44, maxWidth: "50%", justifyContent: "center", paddingHorizontal: 8, paddingVertical: 6 },
+  herstelKnop: { fontSize: 14, fontWeight: "700" },
   bewerkRij: { flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 16, paddingRight: 6, minHeight: 60 },
   bewerkNaam: { fontSize: 16, fontWeight: "600" },
   icoKnop: { width: 44, height: 44, alignItems: "center", justifyContent: "center" }
