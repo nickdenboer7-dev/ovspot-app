@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   bepaalRitStatus, rondAfwijkingMinuten, tijdTotVertrek,
-  liveBalkTekst, heeftActueelLive, jouwHalteIndex, toonVolgendeHighlight
+  liveBalkTekst, heeftActueelLive, jouwHalteIndex, toonVolgendeHighlight,
+  vertrekHalteOmschrijving
 } from "../lib/ritStatus.ts";
 import { lijnKleur } from "../constants/wayfinding.ts";
 import { bouwRitV2Haltes, volgendeHalteTekst } from "../lib/ritverloopV2.ts";
@@ -139,4 +140,12 @@ test("Existing board filters, favorites, disruptions tab and route map remain av
   assert.match(rit,/<LiveRitKaart/);
   assert.match(rit,/<OnderBalk actief=\{van\} \/>/);
   assert.match(bord,/<OnderBalk actief=\{van\} \/>/);
+});
+
+test("Departure location never repeats a platform already included in stop name", () => {
+  assert.equal(vertrekHalteOmschrijving("Leeuwarden, Busstation (Perron E)", "Perron E"),
+    "Leeuwarden, Busstation (Perron E)");
+  assert.equal(vertrekHalteOmschrijving("Busstation", "Perron F"), "Busstation (Perron F)");
+  assert.equal(vertrekHalteOmschrijving("Julianalaan", ""), "Julianalaan");
+  assert.match(rit, /const vertrekVanaf = vertrekHalteOmschrijving\(eersteNaam, perron\)/);
 });

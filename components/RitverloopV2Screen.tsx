@@ -11,7 +11,7 @@ import { FeedbackModal } from "./FeedbackModal";
 import { OVspotSchermKop, OVspotIdentiteit } from "./OVspotSchermKop";
 import { StatusStrook } from "./StatusStrook";
 import { LiveBalk } from "./LiveBalk";
-import { jouwHalteIndex, tijdTotVertrek, toonVolgendeHighlight } from "../lib/ritStatus";
+import { jouwHalteIndex, tijdTotVertrek, toonVolgendeHighlight, vertrekHalteOmschrijving } from "../lib/ritStatus";
 import { HalteVouwknop, RitverloopStop } from "./RitverloopStop";
 import { useApp } from "../context/AppProvider";
 import { api } from "../lib/api";
@@ -129,11 +129,11 @@ export default function RitverloopV2Screen() {
       (!!eerste && (eerste.verwachtMs ?? 0) > nu && !eerste.gepasseerd));
   const eersteNaam = eerste?.h.naam || "";
   const perron = eerste ? spoorLabel(rit?.modus || "bus", eerste.h.spoor) : "";
+  const vertrekVanaf = vertrekHalteOmschrijving(eersteNaam, perron);
   const tijdVanaf = eerste?.verwacht || eerste?.gepland || "";
   const vertrekOver = eerste ? tijdTotVertrek(eerste.verwachtMs, nu) : "";
   const geplandeStatus = nogNietVertrokken
-    ? `${t("Gepland")} · ${t("vertrekt")} ${tijdVanaf} ${t("vanaf")} ${eersteNaam}` +
-      (perron ? ` (${t(perron)})` : "") +
+    ? `${t("Gepland")} · ${t("vertrekt")} ${tijdVanaf} ${t("vanaf")} ${vertrekVanaf}` +
       (vertrekOver && vertrekOver !== "Vertrokken" ? ` · ${vertrekOver}` : "")
     : undefined;
   const bronMs = rit?.bijgewerkt ? Date.parse(rit.bijgewerkt) : NaN;

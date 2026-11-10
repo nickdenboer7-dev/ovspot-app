@@ -66,6 +66,15 @@ export function liveBalkTekst(live: boolean, bijgewerktMs: number | null, nu: nu
   return `Live · bijgewerkt ${sec} s geleden`;
 }
 
+/** Een halte heet soms al 'Busstation (Perron E)': voeg Perron E dan niet nogmaals toe. */
+export function vertrekHalteOmschrijving(naam: string, perron: string): string {
+  const n = String(naam || "").trim();
+  const p = String(perron || "").trim();
+  if (!p || !n) return n;
+  const alInNaam = n.toLocaleLowerCase("nl-NL").includes("(" + p.toLocaleLowerCase("nl-NL") + ")");
+  return alInNaam ? n : `${n} (${p})`;
+}
+
 /** Alleen naar de meegegeven instap-halte scrollen; nooit raden op de huidige GPS-halte. */
 export function jouwHalteIndex(haltes: ReadonlyArray<{ id: string; naam: string }>,
   instapId?: string, instapNaam?: string): number {
