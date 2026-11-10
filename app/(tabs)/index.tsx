@@ -121,11 +121,14 @@ export default function Dichtbij() {
   const key = pos ? `${pos.lat.toFixed(3)}:${pos.lon.toFixed(3)}:${instellingen.straal}` : "geen";
   const poll = usePolling(key, () => (pos
     ? binnenLocatieTimeout(() => api.dichtbij(pos.lat, pos.lon, instellingen.straal), 12_000)
+        .then(data => ({ key, data }))
         .catch(e => { if (e instanceof LocatieTimeoutFout) throw new Error("Haltes laden duurt te lang"); throw e; })
     : Promise.resolve(null)), instellingen.databesparing ? 60_000 : 20_000);
+  const nieuweData = poll.data?.key === key ? poll.data.data : null;
+  const wisseltSleutel = poll.data !== null && poll.data.key !== key;
   const oudeData = vorigeHaltes && vorigeHaltes.key === key && Date.now() - vorigeHaltes.ts < 90_000
     ? vorigeHaltes.data : null;
-  const gegevens = poll.data ?? oudeData;
+  const gegevens = nieuweData ?? oudeData;
   // Paginering voorkomt een limiet op de eerste 8 haltes en houdt het laden snel.
   // Bij verder scrollen worden de volgende GTFS-haltes binnen dezelfde radius opgehaald.
   const [vervolg, setVervolg] = useState<{
@@ -179,8 +182,8 @@ export default function Dichtbij() {
   }, [pos, key, instellingen.straal, heeftMeer, volgendeOffset]);
 
   useEffect(() => {
-    if (poll.data && key !== "geen") vorigeHaltes = { key, data: poll.data, ts: Date.now() };
-  }, [key, poll.data]);
+    if (nieuweData && key !== "geen") vorigeHaltes = { key, data: nieuweData, ts: Date.now() };
+  }, [key, nieuweData]);
 
   useEffect(() => {
     if (haltes.length) zetDichtbijIds(haltes.map((h) => h.id));
@@ -213,7 +216,7 @@ export default function Dichtbij() {
         }
       />
     );
-  } else if (!pos || (poll.laden && !gegevens)) {
+  } else if (!pos || (!gegevens && (poll.laden || wisseltSleutel))) {
     inhoud = <DichtbijSkeleton locatie={!!pos} />;
   } else if (!haltes.length && gegevens) {
     inhoud = (
@@ -235,6 +238,7 @@ export default function Dichtbij() {
         sub={afstand(h.afstand_m)}
         modi={h.modi}
         vertrekken={h.vertrekken.map((x) => x.vertrek)}
+        toonVertrekken={instellingen.toonVertrekpreviews}
         gecombineerdeVertrekken={h.haltes.length > 1 ? h.vertrekken : undefined}
         aantalHaltepalen={h.haltes.length}
         storingen={h.storingen_aantal}

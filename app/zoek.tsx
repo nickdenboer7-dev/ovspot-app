@@ -1,7 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Text } from "../components/LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { OnderBalk } from "../components/OnderBalk";
@@ -32,34 +32,30 @@ function enkeleLijnen(vertrekken: Vertrek[]): LijnVoorbeeld[] {
 }
 
 export default function Zoek() {
-  const { colors, zetInstellingen, t } = useApp();
+  const { colors, zetInstellingen, isFavoriet, wisselFavoriet, t } = useApp();
   const { doel } = useLocalSearchParams<{ doel?: string }>();
   const voorThuis = doel === "thuis";
+  const voorFavorieten = doel === "favorieten";
   const insets = useSafeAreaInsets();
   const [q, setQ] = useState("");
-  const [resultaten, setResultaten] = useState<ZoekResultaat[]>([]);
+  const [gevonden, setGevonden] = useState<{ term: string; resultaten: ZoekResultaat[]; fout?: string }>({ term: "", resultaten: [] });
   const [voorbeelden, setVoorbeelden] = useState<Voorbeelden>({});
-  const [bezig, setBezig] = useState(false);
-  const [fout, setFout] = useState<string | null>(null);
   const volgnr = useRef(0);
+  const term = q.trim();
 
   useEffect(() => {
     const mijn = ++volgnr.current;
-    const term = q.trim();
     setVoorbeelden({});
-    setFout(null);
     if (term.length < 2) {
-      setResultaten([]);
-      setBezig(false);
+      setGevonden({ term, resultaten: [] });
       return;
     }
-    setBezig(true);
     const t = setTimeout(async () => {
       try {
         const r = await api.zoek(term);
         if (mijn !== volgnr.current) return;
         const gerangschikt = rangschikZoekresultaten(r.resultaten, term);
-        setResultaten(gerangschikt);
+        setGevonden({ term, resultaten: gerangschikt });
         // Maximaal vier aanvullende bordqueries, pas ná de zoekresultaten.
         // Zo blijft zoeken snel en blijven de badges echte vertreklijnen.
         if (!voorThuis && term.length >= 5 && r.resultaten.length <= 8) {
@@ -76,15 +72,18 @@ export default function Zoek() {
           }
         }
       } catch (e: any) {
-        if (mijn === volgnr.current) setFout(e?.message || "Zoeken lukt nu niet");
-      } finally {
-        if (mijn === volgnr.current) setBezig(false);
+        if (mijn === volgnr.current) setGevonden({ term, resultaten: [], fout: e?.message || "Zoeken lukt nu niet" });
       }
     }, 260);
-    return () => { clearTimeout(t); };
-  }, [q, voorThuis]);
+    return () => {
+      clearTimeout(t);
+      volgnr.current++;
+    };
+  }, [term, voorThuis]);
 
-  const kaarten = useMemo(() => maakZoekKaarten(resultaten), [resultaten]);
+  const kaarten = useMemo(() => gevonden.term === term ? maakZoekKaarten(gevonden.resultaten) : [], [gevonden, term]);
+  const fout = gevonden.term === term ? gevonden.fout : undefined;
+  const zoekt = term.length >= 2 && gevonden.term !== term;
 
   const kies = (kaart: ZoekKaart) => {
     const r = kaart.halte;
@@ -93,9 +92,10 @@ export default function Zoek() {
       router.back();
       return;
     }
-    router.replace({
+    Keyboard.dismiss();
+    router.push({
       pathname: "/halte/[id]",
-      params: { id: r.id, van: "index", naam: r.naam, plaats: r.plaats,
+      params: { id: r.id, van: voorFavorieten ? "favorieten" : "index", naam: r.naam, plaats: r.plaats,
         groep: zoekKaartSubtitel(kaart),
         ...(kaart.modus ? { modus: kaart.modus } : {}),
         lijnen: JSON.stringify(geldigeLijnen(r.lijnen)) }
@@ -119,13 +119,13 @@ export default function Zoek() {
           <Ionicons name="search" size={21} color={colors.accent} />
           <TextInput
             autoFocus value={q} onChangeText={setQ}
-            placeholder={t(voorThuis ? "Zoek je thuishalte" : "Zoek halte of plaats")}
+            placeholder={t(voorThuis ? "Zoek je thuishalte" : voorFavorieten ? "Zoek halte om toe te voegen" : "Zoek halte of plaats")}
             placeholderTextColor={colors.muted}
             style={[s.input, { color: colors.text }]}
             returnKeyType="search" autoCorrect={false} accessibilityLabel={t("Zoekterm")}
           />
-          {bezig ? <ActivityIndicator size="small" color={colors.accent} /> : null}
-          {q && !bezig ? (
+          {zoekt ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+          {q ? (
             <Pressable onPress={() => setQ("")} accessibilityRole="button" accessibilityLabel={t("Wissen")} hitSlop={10}>
               <Ionicons name="close-circle" size={21} color={colors.muted} />
             </Pressable>
@@ -150,7 +150,7 @@ export default function Zoek() {
             <Leeg icoon="search-outline" titel={voorThuis ? "Kies je thuislocatie" : "Zoek een halte"} tekst="Typ minimaal twee letters, bijvoorbeeld Amsterdam Centraal." />
           ) : fout ? (
             <Leeg icoon="cloud-offline-outline" titel="Zoeken lukt nu niet" tekst={fout} />
-          ) : bezig ? (
+          ) : zoekt ? (
             <View style={s.laden}><ActivityIndicator color={colors.accent} /><Text style={{ color: colors.sub }}>Haltes zoeken…</Text></View>
           ) : (
             <Leeg icoon="help-circle-outline" titel="Niets gevonden" tekst={`Geen haltes voor "${q.trim()}". Probeer een andere naam of plaats.`} />
@@ -174,14 +174,16 @@ export default function Zoek() {
             && item.plaats.trim().toLocaleLowerCase("nl") !== item.naam.trim().toLocaleLowerCase("nl");
           const subZichtbaar = !!sub && (!plaatsZichtbaar
             || sub.trim().toLocaleLowerCase("nl") !== item.plaats.trim().toLocaleLowerCase("nl"));
+          const favoriet = voorFavorieten && isFavoriet(item.id);
           return (
             <View>
               {overige && index === relevantAantal ? (
                 <Text style={[s.sectietitel, s.tussenkop, { color: colors.sub }]}>ANDERE RESULTATEN</Text>
               ) : null}
+              <View style={voorFavorieten ? [s.favorietRij, { backgroundColor: colors.surface, borderColor: colors.border }] : undefined}>
               <Pressable
                 onPress={() => kies(kaart)}
-                style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={[s.kaart, { backgroundColor: colors.surface, borderColor: colors.border }, voorFavorieten && s.kaartMetSter]}
                 android_ripple={{ color: colors.divider }}
                 accessibilityRole="button"
                 accessibilityLabel={[` ${item.naam}`.trim(), ...(plaatsZichtbaar ? [item.plaats] : []),
@@ -225,11 +227,23 @@ export default function Zoek() {
                   </View>
                 ) : null}
               </Pressable>
+              {voorFavorieten ? (
+                <Pressable
+                  onPress={() => wisselFavoriet({ id: item.id, naam: item.naam, plaats: item.plaats })}
+                  accessibilityRole="togglebutton"
+                  accessibilityState={{ checked: favoriet }}
+                  accessibilityLabel={t(favoriet ? "Verwijder uit favorieten" : "Bewaar als favoriet")}
+                  style={[s.favorietKnop, { borderLeftColor: colors.divider }]}
+                >
+                  <Ionicons name={favoriet ? "star" : "star-outline"} size={25} color={favoriet ? colors.star : colors.accent} />
+                </Pressable>
+              ) : null}
+              </View>
             </View>
           );
         }}
       />
-      {!voorThuis ? <OnderBalk actief="index" /> : null}
+      {!voorThuis ? <OnderBalk actief={voorFavorieten ? "favorieten" : "index"} /> : null}
     </View>
   );
 }
@@ -248,6 +262,9 @@ const s = StyleSheet.create({
   tussenkop: { marginHorizontal: 5, marginTop: 15, marginBottom: 10 },
   laden: { alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10, marginTop: 25 },
   kaart: { gap: 11, paddingHorizontal: 14, paddingVertical: 14, minHeight: 86, borderRadius: 18, borderWidth: 1, marginBottom: 10 },
+  favorietRij: { flexDirection: "row", alignItems: "stretch", borderWidth: 1, borderRadius: 18, marginBottom: 10, overflow: "hidden" },
+  kaartMetSter: { flex: 1, minWidth: 0, borderWidth: 0, borderRadius: 0, marginBottom: 0 },
+  favorietKnop: { minWidth: 48, alignItems: "center", justifyContent: "center", borderLeftWidth: StyleSheet.hairlineWidth },
   bovenRij: { flexDirection: "row", alignItems: "center", gap: 11 },
   icoon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   midden: { flex: 1, minWidth: 0 },

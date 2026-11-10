@@ -26,7 +26,8 @@ export function HalteKaart({
   nu,
   van,
   ster,
-  laden
+  laden,
+  toonVertrekken = true
 }: {
   id: string;
   naam: string;
@@ -42,6 +43,7 @@ export function HalteKaart({
   van: TabKey;
   ster?: boolean;
   laden?: boolean;
+  toonVertrekken?: boolean;
 }) {
   const { colors, t } = useApp();
   const trein = (modi || []).includes("train");
@@ -49,10 +51,13 @@ export function HalteKaart({
     pathname: "/halte/[id]", params: { id: halteId, van, naam, plaats: plaats || "" }
   });
   const gecombineerd = aantalHaltepalen > 1 && !!gecombineerdeVertrekken;
+  const toonPlaats = plaats && (ster
+    ? naam.trim().toLocaleLowerCase("nl") !== plaats.trim().toLocaleLowerCase("nl")
+    : !naam.toLowerCase().includes(plaats.toLowerCase()));
   const open = () => openHalte(id);
   return (
     <Kaart>
-      <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={t(`Vertrektijden ${naam}${sub ? `, ${sub}` : ""}`)} android_ripple={{ color: colors.divider }} style={[s.binnen, gecombineerd ? s.gecombineerdeKop : null]}>
+      <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={t(`Vertrektijden ${naam}${sub ? `, ${sub}` : ""}`)} android_ripple={{ color: colors.divider }} style={[s.binnen, gecombineerd && toonVertrekken ? s.gecombineerdeKop : null]}>
         <View style={s.kop}>
           {ster ? (
             <Ionicons name="star" size={24} color={colors.star} />
@@ -74,24 +79,24 @@ export function HalteKaart({
                 <Text style={[s.afstandText, { color: colors.sub }]} numberOfLines={1}>{sub} lopen</Text>
               </View>
             ) : null}
-{gecombineerd ? (
+            {gecombineerd ? (
               <Text style={[s.sub, { color: colors.sub }]}>{aantalHaltepalen} haltepalen · beide richtingen</Text>
-            ) : !sub && plaats && !naam.toLowerCase().includes(plaats.toLowerCase()) ? (
+            ) : !sub && toonPlaats ? (
               <Text style={[s.sub, { color: colors.sub }]} numberOfLines={1}>{plaats}</Text>
             ) : null}
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.sub} />
         </View>
-        {!gecombineerd ? vertrekken.slice(0, 2).map((v, i) => (
+        {toonVertrekken && !gecombineerd ? vertrekken.slice(0, 2).map((v, i) => (
           <VertrekRegel key={`${v.lijn}-${v.vertrek_ms}-${i}`} v={v} nu={nu} compact eerste={false} />
         )) : null}
-        {!gecombineerd && !vertrekken.length ? (
+        {toonVertrekken && !gecombineerd && !vertrekken.length ? (
           <Text style={[s.geen, { color: colors.sub, borderTopColor: colors.divider }]}>
             {laden ? "Laden…" : fout ? fout : "Geen vertrekken in de komende tijd"}
           </Text>
         ) : null}
       </Pressable>
-      {gecombineerd ? (
+      {toonVertrekken && gecombineerd ? (
         <View style={s.gecombineerdeLijst}>
           {gecombineerdeVertrekken?.map(({ halteId, vertrek: v }, i) => (
             <Pressable key={`${halteId}-${v.lijn}-${v.vertrek_ms}-${i}`}

@@ -7,8 +7,10 @@ import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, Switch, TextInput, 
 import { Text } from "../../components/LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FeedbackModal } from "../../components/FeedbackModal";
+import { KorteUitleg } from "../../components/KorteUitleg";
 import { Kop } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
+import { afstand } from "../../lib/format";
 import type { Startscherm, Thema } from "../../lib/types";
 import { EN, type TaalVoorkeur } from "../../lib/i18n";
 import { instellingKomtOvereen, instellingenZoektermen } from "../../lib/instellingenZoeken";
@@ -59,11 +61,9 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
   const { colors, scheme, instellingen, t } = useApp();
   // In de grotere-tekststand mag een lange gekozen waarde nooit 'Automatis…' worden.
   const waardeOnder = instellingen.groteTekst && !!waarde && !!onPress;
-  return (
-    <Pressable onPress={onPress ? () => { Keyboard.dismiss(); onPress(); } : undefined} disabled={!onPress}
-      accessibilityRole={onPress ? "button" : undefined}
-      accessibilityLabel={onPress ? `${t(titel)}, ${t(waarde || uitleg)}` : undefined}
-      style={[s.rij, !laatste && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+  const rijStijl = [s.rij, !laatste && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }];
+  const inhoud = (
+    <>
       <View style={[s.icoonAchtergrond, { backgroundColor: instellingen.hoogContrast ? colors.surface2 : scheme === "dark" ? "#334155" : colors.surface2 }]}>
         <Ionicons name={icoon} size={21} color={colors.accent} />
       </View>
@@ -91,16 +91,26 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
           <Ionicons name="chevron-forward" size={19} color={colors.muted} />
         </View>
       ) : null}
+    </>
+  );
+  return schakel ? <View style={rijStijl}>{inhoud}</View> : (
+    <Pressable onPress={onPress ? () => { Keyboard.dismiss(); onPress(); } : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={`${t(titel)}, ${t(waarde || uitleg)}`}
+      style={rijStijl}>
+      {inhoud}
     </Pressable>
   );
 }
 
 export default function Instellingen() {
-  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext, t, toonUitleg } = useApp();
+  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext, t } = useApp();
   const insets = useSafeAreaInsets();
   const [kiezer, zetKiezer] = useState<Kiezer>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [zoektekst, zetZoektekst] = useState("");
+  const [meerOpen, zetMeerOpen] = useState(false);
+  const [uitlegOpen, zetUitlegOpen] = useState(false);
   const feedbackContext = laatsteFeedbackContext
     && Date.now() - laatsteFeedbackContext.vastgelegdOp < 30 * 60 * 1000
     ? {
@@ -118,15 +128,11 @@ export default function Instellingen() {
 
   const termen = instellingenZoektermen(zoektekst);
   const zoekt = termen.length > 0;
-  const secties: { titel: string; rijen: React.ReactElement<RijProps>[] }[] = [
-    { titel: "WEERGAVE & GEDRAG", rijen: [
+  const secties: { titel: string; meer?: true; rijen: React.ReactElement<RijProps>[] }[] = [
+    { titel: "WEERGAVE", rijen: [
       <InstellingsRij key="thema" icoon="color-palette-outline" titel="Thema"
         uitleg="Donker, licht of systeem" waarde={THEMAS.find(o => o.key === instellingen.thema)?.label || "Systeem"}
         onPress={() => zetKiezer("thema")} />,
-      <InstellingsRij key="taal" icoon="language-outline" titel="Taal"
-        uitleg="Taal van je telefoon of zelf kiezen"
-        waarde={TAALOPTIES.find(o => o.key === instellingen.taalVoorkeur)?.label || "Automatisch"}
-        onPress={() => zetKiezer("taal")} />,
       <InstellingsRij key="tekst" icoon="text-outline" titel="Grotere tekst"
         uitleg="Maak de teksten in de app beter leesbaar"
         schakel={{ value: instellingen.groteTekst,
@@ -135,16 +141,27 @@ export default function Instellingen() {
         uitleg="Duidelijker onderscheid tussen tekst en achtergrond"
         schakel={{ value: instellingen.hoogContrast,
           onChange: hoogContrast => zetInstellingen({ hoogContrast }) }} />,
+    ] },
+    { titel: "DICHTBIJ", rijen: [
+      <InstellingsRij key="afstand" icoon="locate-outline" titel="Zoekafstand"
+        uitleg="Afstand voor Dichtbij" waarde={afstand(instellingen.straal)}
+        onPress={() => router.push({ pathname: "/instellingen-geavanceerd", params: { onderdeel: "afstand" } })} />,
+      <InstellingsRij key="previews" icoon="time-outline" titel="Vertrektijden op haltekaarten"
+        uitleg="Toon de eerste twee vertrekken"
+        schakel={{ value: instellingen.toonVertrekpreviews,
+          onChange: toonVertrekpreviews => zetInstellingen({ toonVertrekpreviews }) }} />,
       <InstellingsRij key="start" icoon="apps-outline" titel="Startscherm"
         uitleg="Kies welk scherm als eerste opstart"
         waarde={STARTSCHERMEN.find(o => o.key === instellingen.startscherm)?.label || "Dichtbij"}
         onPress={() => zetKiezer("startscherm")} />,
-      <InstellingsRij key="scherm" icoon="phone-portrait-outline" titel="Scherm aanhouden"
-        uitleg="Voorkom dat het scherm uitgaat"
-        schakel={{ value: instellingen.schermAanhouden,
-          onChange: schermAanhouden => zetInstellingen({ schermAanhouden }) }} />,
     ] },
-    { titel: "KAART & DATA", rijen: [
+    { titel: "MELDINGEN", rijen: [
+      <InstellingsRij key="storingen" icoon="notifications-outline" titel="Storingen"
+        uitleg="Pushberichten bij vertragingen op favoriete lijnen"
+        schakel={{ value: instellingen.storingenPush,
+          onChange: storingenPush => zetInstellingen({ storingenPush }) }} />,
+    ] },
+    { titel: "KAART & DATA", meer: true, rijen: [
       <InstellingsRij key="voertuigen" icoon="bus-outline" titel="Live voertuigen"
         uitleg="Toon bussen en treinen op de achtergrond"
         schakel={{ value: instellingen.liveVoertuigen,
@@ -157,9 +174,6 @@ export default function Instellingen() {
         <InstellingsRij key="filter" icoon="options-outline" titel="Standaard haltefilter"
           uitleg="Zo opent het vertrekbord."
           onPress={() => router.push({ pathname: "/instellingen-geavanceerd", params: { onderdeel: "filter" } })} />,
-        <InstellingsRij key="afstand" icoon="locate-outline" titel="Afstand voor Dichtbij"
-          uitleg="Locatie & haltebord"
-          onPress={() => router.push({ pathname: "/instellingen-geavanceerd", params: { onderdeel: "afstand" } })} />,
         <InstellingsRij key="thuis" icoon="home-outline" titel="Thuislocatie"
           uitleg="Locatie & haltebord"
           onPress={() => router.push({ pathname: "/instellingen-geavanceerd", params: { onderdeel: "thuis" } })} />,
@@ -167,16 +181,20 @@ export default function Instellingen() {
         uitleg="Afstand, thuislocatie en standaardfilter"
         onPress={() => router.push("/instellingen-geavanceerd")} />]),
     ] },
-    { titel: "MELDINGEN", rijen: [
-      <InstellingsRij key="storingen" icoon="notifications-outline" titel="Storingen"
-        uitleg="Pushberichten bij vertragingen op favoriete lijnen"
-        schakel={{ value: instellingen.storingenPush,
-          onChange: storingenPush => zetInstellingen({ storingenPush }) }} />,
+    { titel: "GEDRAG", meer: true, rijen: [
+      <InstellingsRij key="taal" icoon="language-outline" titel="Taal"
+        uitleg="Taal van je telefoon of zelf kiezen"
+        waarde={TAALOPTIES.find(o => o.key === instellingen.taalVoorkeur)?.label || "Automatisch"}
+        onPress={() => zetKiezer("taal")} />,
+      <InstellingsRij key="scherm" icoon="phone-portrait-outline" titel="Scherm aanhouden"
+        uitleg="Voorkom dat het scherm uitgaat"
+        schakel={{ value: instellingen.schermAanhouden,
+          onChange: schermAanhouden => zetInstellingen({ schermAanhouden }) }} />,
     ] },
-    { titel: "OVER OVSPOT", rijen: [
+    { titel: "OVER OVSPOT", meer: true, rijen: [
       <InstellingsRij key="uitleg" icoon="help-circle-outline" titel="Korte uitleg"
         uitleg="Uitleg over Nu, Live, vertraging, GPS en favorieten"
-        onPress={() => { toonUitleg(); router.navigate("/"); }} />,
+        onPress={() => zetUitlegOpen(open => !open)} />,
       <InstellingsRij key="feedback" icoon="chatbubble-ellipses-outline" titel="Stuur feedback"
         uitleg="Meld een bug of geef een suggestie"
         onPress={() => setFeedbackOpen(true)} />,
@@ -185,8 +203,9 @@ export default function Instellingen() {
         onPress={() => router.push("/info")} />,
     ] },
   ];
-  const zichtbaar = secties.map(({ titel, rijen }) => ({
+  const zichtbaar = secties.map(({ titel, meer, rijen }) => ({
     titel,
+    meer,
     rijen: rijen.filter(({ props }) => {
       const velden = [props.titel, props.uitleg, titel];
       return instellingKomtOvereen(termen, props.titel, props.uitleg, titel,
@@ -194,6 +213,16 @@ export default function Instellingen() {
     })
   })).filter(({ rijen }) => rijen.length > 0);
   const zoeklabel = t("Zoek in instellingen");
+  const toonSecties = (meer: boolean) => zichtbaar.filter(sectie => !!sectie.meer === meer)
+    .map(({ titel, rijen }) => (
+      <React.Fragment key={titel}>
+        <Sectie titel={titel}>
+          {rijen.map((rij, index) => React.cloneElement(rij, { laatste: index === rijen.length - 1 }))}
+        </Sectie>
+        {uitlegOpen && rijen.some(rij => rij.key === "uitleg")
+          ? <KorteUitleg onSluit={() => zetUitlegOpen(false)} /> : null}
+      </React.Fragment>
+    ));
 
   return (
     <View style={{ flex: 1, backgroundColor: instellingen.hoogContrast ? colors.background : scheme === "dark" ? "#0F172A" : colors.background }}>
@@ -220,11 +249,17 @@ export default function Instellingen() {
             </Pressable>
           ) : null}
         </View>
-        {zichtbaar.map(({ titel, rijen }) => (
-          <Sectie key={titel} titel={titel}>
-            {rijen.map((rij, index) => React.cloneElement(rij, { laatste: index === rijen.length - 1 }))}
-          </Sectie>
-        ))}
+        {toonSecties(false)}
+        {!zoekt ? (
+          <Pressable onPress={() => zetMeerOpen(open => !open)}
+            accessibilityRole="button" accessibilityState={{ expanded: meerOpen }}
+            accessibilityLabel={t("Meer instellingen")}
+            style={[s.meerKnop, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name={meerOpen ? "chevron-down" : "chevron-forward"} size={19} color={colors.accent} />
+            <Text style={[s.meerTekst, { color: colors.accent }]}>Meer instellingen</Text>
+          </Pressable>
+        ) : null}
+        {zoekt || meerOpen ? toonSecties(true) : null}
         {zichtbaar.length === 0 ? (
           <Text style={[s.geenResultaat, { color: colors.sub }]} accessibilityLiveRegion="polite">
             Geen instellingen gevonden.
@@ -273,7 +308,7 @@ export default function Instellingen() {
 }
 
 const s = StyleSheet.create({
-  lijst: { padding: 16, gap: 22 },
+  lijst: { padding: 16, gap: 16 },
   zoekbalk: { flexDirection: "row", alignItems: "center", gap: 10, paddingLeft: 14,
     paddingRight: 6, minHeight: 48, borderWidth: StyleSheet.hairlineWidth, borderRadius: 14 },
   zoekveld: { flex: 1, minWidth: 0, paddingVertical: 10, fontSize: 16 },
@@ -282,7 +317,7 @@ const s = StyleSheet.create({
   sectie: { gap: 10 },
   sectieTitel: { fontSize: 11, fontWeight: "800", letterSpacing: 1.2, marginLeft: 6 },
   kaart: { borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  rij: { flexDirection: "row", alignItems: "center", minHeight: 75, paddingHorizontal: 14, paddingVertical: 13, gap: 12 },
+  rij: { flexDirection: "row", alignItems: "center", minHeight: 64, paddingHorizontal: 14, paddingVertical: 10, gap: 12 },
   icoonAchtergrond: { height: 39, width: 39, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   rijTekst: { flex: 1, minWidth: 0, gap: 4 },
   rijTitel: { fontSize: 15, fontWeight: "700" },
@@ -290,6 +325,9 @@ const s = StyleSheet.create({
   rechterDeel: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: 112 },
   waardeOnder: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 4, marginTop: 4 },
   waarde: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
+  meerKnop: { minHeight: 48, borderWidth: StyleSheet.hairlineWidth, borderRadius: 14,
+    flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 13, paddingVertical: 8 },
+  meerTekst: { fontSize: 14, fontWeight: "700" },
   versie: { marginTop: 0, textAlign: "center", fontSize: 11, lineHeight: 18 },
   modalAchtergrond: { flex: 1, justifyContent: "center", paddingHorizontal: 28, backgroundColor: "rgba(2,6,23,0.65)" },
   modalKaart: { borderRadius: 20, borderWidth: 1, padding: 18, gap: 10, elevation: 12 },

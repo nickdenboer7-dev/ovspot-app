@@ -9,20 +9,28 @@ test("lijn-chip haalt eigen volledige GTFS-vertrekdag op", () => {
   assert.match(api, /lijnVertrekken: \(id: string, lijn: string, modus: string, cluster: boolean\)/);
   assert.match(api, /\/lijnvertrekken\?halte_id=/);
   assert.match(screen, /api\.lijnVertrekken\(id, geselecteerdeLijn, actieveModus, isStation\)/);
-  assert.match(screen, /const vertrekken = geselecteerdeLijn \? \(lijnData\?\.vertrekken \?\? \[\]\) : basisVertrekken/);
+  assert.match(screen, /const bordVertrekken = lijnData\?\.vertrekken \?\? basisVertrekken/);
+  assert.match(screen, /filterHalteVertrekken\(h\?\.vertrekken \?\? \[\], actieveModus, geselecteerdeLijn\)/);
 });
 
 test("wisselen van lijn mag geen oudere ritten van andere lijn tonen", () => {
   assert.match(screen, /lijnPoll\.data\?\.lijn === geselecteerdeLijn/);
   assert.match(screen, /lijnPoll\.data\?\.modus === actieveModus/);
   assert.match(screen, /lijnPoll\.data\?\.halte_id === id/);
-  assert.match(screen, /setSelectedLine\(lijn === geselecteerdeLijn \? null : lijn\)/);
+  assert.match(screen, /setSelectedLine\(lijn === geselecteerdeLijn && !richtingActief \? null : lijn\)/);
 });
 
 test("lege lijn is pas leeg na eigen API antwoord; geen onware 2-uursmelding", () => {
-  assert.match(screen, /geselecteerdeLijn && !lijnData && !lijnPoll\.fout/);
+  assert.match(screen, /geselecteerdeLijn && !lijnData && !vertrekken\.length && !lijnPoll\.fout/);
   assert.match(screen, /Volledige dienstregeling niet bereikbaar/);
   assert.match(screen, /Geen vertrekken meer vandaag voor lijn/);
   assert.match(screen, /lijnData\?\.volgende_rit/);
   assert.match(screen, /geselecteerdeLijn \? lijnPoll\.verversen\(\) : Promise\.resolve\(\)/);
+});
+
+test("Een lijnfavoriet blijft op richting gefilterd terwijl het dagbord ophaalt", () => {
+  assert.match(screen, /lijnFavoriet\?\.lijn \?\? null/);
+  assert.match(screen, /bordVertrekken\.filter\(v => vertrekBijLijnFavoriet\(v, richting\)\)/);
+  assert.match(screen, /volgendeRit && \(!richting \|\| vertrekBijLijnFavoriet\(volgendeRit, richting\)\)/);
+  assert.match(screen, /setRichtingActief\(false\)/);
 });

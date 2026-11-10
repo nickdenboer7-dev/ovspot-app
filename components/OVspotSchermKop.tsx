@@ -9,8 +9,8 @@ import { LijnBadge } from "./ui";
 import type { Modus } from "../lib/types";
 
 /** Eén blauwe appbalk voor het haltebord en de ritpagina. */
-export function OVspotSchermKop({ favoriet, onFavoriet, meer }: {
-  favoriet: boolean; onFavoriet: () => void; meer?: React.ReactNode;
+export function OVspotSchermKop({ favoriet, onFavoriet, favorietLabel, meer }: {
+  favoriet: boolean; onFavoriet?: () => void; favorietLabel?: string; meer?: React.ReactNode;
 }) {
   const insets = useSafeAreaInsets();
   const { t } = useApp();
@@ -21,12 +21,13 @@ export function OVspotSchermKop({ favoriet, onFavoriet, meer }: {
         <Ionicons name="arrow-back" size={25} color="#FFFFFF" />
       </Pressable>
       <Text style={s.titel} accessibilityRole="header">OVspot</Text>
-      <Pressable style={s.kopKnop} accessibilityRole="button"
-        accessibilityLabel={t(favoriet ? "Verwijder uit favorieten" : "Bewaar als favoriet")}
+      {onFavoriet ? <Pressable style={s.kopKnop} accessibilityRole="button"
+        accessibilityLabel={t(favorietLabel ?? (favoriet ? "Verwijder uit favorieten" : "Bewaar als favoriet"))}
+        accessibilityState={{ selected: favoriet }}
         onPress={onFavoriet}>
         <Ionicons name={favoriet ? "star" : "star-outline"} size={25}
           color={favoriet ? "#FCD34D" : "#FFFFFF"} />
-      </Pressable>
+      </Pressable> : null}
       {meer}
     </View>
   );

@@ -272,6 +272,16 @@ export type ZoekResultaat = {
 export type Zoek = { ok: boolean; query: string; resultaten: ZoekResultaat[] };
 
 export type FavHalte = { id: string; naam: string; plaats: string };
+export type FavLijn = {
+  id: string;
+  halte: FavHalte;
+  lijn: string;
+  richting: string;
+  modus: Modus;
+  vervoerder: string;
+  kleur?: string;
+  tekstkleur?: string;
+};
 
 export type Thema = "systeem" | "licht" | "donker";
 export type Filter = "alles" | "trein" | "bus";
@@ -284,6 +294,7 @@ export type Instellingen = {
   schermAanhouden: boolean;
   groteTekst: boolean;
   hoogContrast: boolean;
+  toonVertrekpreviews: boolean;
   liveVoertuigen: boolean;
   databesparing: boolean;
   storingenPush: boolean;

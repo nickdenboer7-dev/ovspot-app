@@ -16,6 +16,7 @@ import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { storingPastBijModus } from "../../lib/storingPerModus";
 import { klok } from "../../lib/format";
+import { vertrekBijLijnFavoriet } from "../../lib/favorieten";
 import { combineerStatischeLijnen, filterHalteVertrekken, zoekStatischeLijnen, zichtbareStatischeLijnen } from "../../lib/halteLijnFilter";
 import { voegStationVertrektijdenToe } from "../../lib/stationGroups";
 import { useNu, usePolling } from "../../lib/hooks";
@@ -36,26 +37,38 @@ function modaliteitChip(modus: string): ModusChip {
 }
 
 export default function Haltebord() {
-  const p = useLocalSearchParams<{ id: string; van?: string; naam?: string; plaats?: string; groep?: string; lijnen?: string; modus?: string }>();
+  const p = useLocalSearchParams<{
+    id: string; van?: string; naam?: string; plaats?: string; groep?: string; lijnen?: string; modus?: string;
+    lijn?: string; richting?: string; vervoerder?: string;
+  }>();
   const id = String(p.id || "");
   const van = isTab(p.van) ? p.van : "index";
   const { colors, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext, t, taal } = useApp();
   // De opgeslagen instelling blijft een voorkeur; op haltes zonder die modus tonen we alles.
   const gevraagdeModus = ["train", "metro", "tram", "bus", "ferry"].includes(String(p.modus))
     ? String(p.modus) : null;
+  const favorietLijn = typeof p.lijn === "string" ? p.lijn.trim() : "";
+  const favorietRichting = typeof p.richting === "string" ? p.richting.trim() : "";
+  const favorietVervoerder = typeof p.vervoerder === "string" ? p.vervoerder.trim() : "";
+  const lijnFavoriet = useMemo(() => favorietLijn && favorietRichting && gevraagdeModus ? {
+    lijn: favorietLijn, richting: favorietRichting, modus: gevraagdeModus, vervoerder: favorietVervoerder
+  } : null, [favorietLijn, favorietRichting, gevraagdeModus, favorietVervoerder]);
   const [gekozenModus, setGekozenModus] = useState<string>(
     gevraagdeModus || (instellingen.filter === "trein" ? "train" : instellingen.filter)
   );
-  const [selectedLine, setSelectedLine] = useState<string | null>(null);
+  const [selectedLine, setSelectedLine] = useState<string | null>(lijnFavoriet?.lijn ?? null);
+  const [richtingActief, setRichtingActief] = useState(!!lijnFavoriet);
   const [lijnZoektekst, setLijnZoektekst] = useState("");
   const [zoekveldOpen, setZoekveldOpen] = useState(false);
+  const [handmatigeModus, setHandmatigeModus] = useState(false);
   React.useEffect(() => {
-    setSelectedLine(null);
+    setSelectedLine(lijnFavoriet?.lijn ?? null);
+    setRichtingActief(!!lijnFavoriet);
+    setHandmatigeModus(false);
     setLijnZoektekst("");
     setZoekveldOpen(false);
-  }, [id]);
+  }, [id, lijnFavoriet]);
   const [storingenOpen, setStoringenOpen] = useState(false);
-  const [handmatigeModus, setHandmatigeModus] = useState(false);
   const [ververst, setVervers] = useState(false);
   const nu = useNu(10_000);
 
@@ -91,9 +104,10 @@ export default function Haltebord() {
   }, [p.lijnen]);
   const statischeLijnen = useMemo(
     () => combineerStatischeLijnen(
-      stationPoll.data?.lijncatalogus, h?.lijncatalogus, lijnCatalogus
+      stationPoll.data?.lijncatalogus, h?.lijncatalogus, lijnCatalogus,
+      lijnFavoriet ? [lijnFavoriet] : []
     ),
-    [stationPoll.data?.lijncatalogus, h?.lijncatalogus, lijnCatalogus]
+    [stationPoll.data?.lijncatalogus, h?.lijncatalogus, lijnCatalogus, lijnFavoriet]
   );
   // De gekozen zoekkaart blijft filterbaar, zelfs als die modus momenteel
   // geen vertrektijden in het API-tijdvenster heeft (bijv. laatste pont).
@@ -111,7 +125,8 @@ export default function Haltebord() {
   const meerdereModi = modi.length >= 2;
   const multimodaalStation = modi.includes("train") && (modi.includes("bus") || modi.includes("tram"));
   const tabModi = multimodaalStation ? ["alles", ...modi] : modi;
-  const actieveModus = multimodaalStation && !handmatigeModus ? "alles"
+  const actieveModus = richtingActief && lijnFavoriet ? lijnFavoriet.modus
+    : multimodaalStation && !handmatigeModus ? "alles"
     : meerdereModi
       ? (tabModi.includes(gekozenModus) ? gekozenModus
         : gevraagdeModus && tabModi.includes(gevraagdeModus) ? gevraagdeModus
@@ -144,12 +159,18 @@ export default function Haltebord() {
     && lijnPoll.data?.modus === actieveModus && lijnPoll.data?.halte_id === id
     ? lijnPoll.data : null;
   const basisVertrekken = filterHalteVertrekken(h?.vertrekken ?? [], actieveModus, geselecteerdeLijn);
-  const vertrekken = geselecteerdeLijn ? (lijnData?.vertrekken ?? []) : basisVertrekken;
+  const richting = richtingActief ? lijnFavoriet : null;
+  // Filter de reeds geladen vertrekken meteen. De volledige dienstdag vult deze aan zodra die binnen is.
+  const bordVertrekken = lijnData?.vertrekken ?? basisVertrekken;
+  const vertrekken = richting ? bordVertrekken.filter(v => vertrekBijLijnFavoriet(v, richting)) : bordVertrekken;
+  const volgendeRit = lijnData?.volgende_rit;
+  const volgendeInRichting = volgendeRit && (!richting || vertrekBijLijnFavoriet(volgendeRit, richting)) ? volgendeRit : null;
 
   const kiesLijn = (lijn: string | null) => {
     // Chips zijn al gefilterd op de actieve modaliteit.
     // Nogmaals op dezelfde chip tikken brengt 'Alles' terug.
-    setSelectedLine(lijn === geselecteerdeLijn ? null : lijn);
+    setSelectedLine(lijn === geselecteerdeLijn && !richtingActief ? null : lijn);
+    setRichtingActief(false);
     if (lijn === null) setLijnZoektekst("");
   };
   const wisselModus = (modus: string) => {
@@ -157,6 +178,7 @@ export default function Haltebord() {
     setGekozenModus(modus);
     setSelectedLine(null);
     setLijnZoektekst("");
+    setRichtingActief(false);
   };
 
   // Alleen horizontale gebaren (geen verticale scroll) wisselen het tabblad.
@@ -181,12 +203,16 @@ export default function Haltebord() {
   const groepSub = [plaatsSub, haltegroep].filter(Boolean).join(" · ");
   const openRit = (v: Vertrek) => {
     if (!v.rit) return;
+    const fysiekeHalte = "stop_id" in v && typeof v.stop_id === "string" ? v.stop_id : "";
+    const fysiekeNaam = "halte" in v && typeof v.halte === "string" ? v.halte : "";
     router.push({
       pathname: "/rit",
       params: {
         ...v.rit, van, lijn: v.lijn, bestemming: v.bestemming, vervoerder: v.vervoerder, modus: v.modus,
         kleur: v.kleur || v.lijn_kleur || "", tekstkleur: v.tekstkleur || v.lijn_tekstkleur || "",
-        instap_halte: id, instap_naam: naam, instap_ms: v.vertrek_ms ? String(v.vertrek_ms) : "",
+        instap_halte: v.rit.instap_halte || fysiekeHalte || id,
+        instap_naam: v.rit.instap_naam || fysiekeNaam || naam,
+        instap_plaats: plaats, instap_ms: v.vertrek_ms ? String(v.vertrek_ms) : "",
         richting: v.bestemming
       }
     });
@@ -199,14 +225,14 @@ export default function Haltebord() {
   );
 
   let lijst: React.ReactNode;
-  if (poll.laden && !h) lijst = <Laden />;
-  else if (!h && poll.fout)
+  if (poll.laden && !h && !lijnData) lijst = <Laden />;
+  else if (!h && poll.fout && !lijnData)
     lijst = <Leeg icoon="cloud-offline-outline" titel="Kan vertrektijden niet laden" tekst={poll.fout} knop={{ label: "Opnieuw", onPress: () => void poll.verversen() }} />;
-  else if (geselecteerdeLijn && !lijnData && !lijnPoll.fout)
+  else if (geselecteerdeLijn && !lijnData && !vertrekken.length && !lijnPoll.fout)
     lijst = <Laden />;
-  else if (geselecteerdeLijn && !lijnData && lijnPoll.fout)
+  else if (geselecteerdeLijn && !lijnData && !vertrekken.length && lijnPoll.fout)
     lijst = <Leeg icoon="cloud-offline-outline" titel="Volledige dienstregeling niet bereikbaar" tekst={lijnPoll.fout} knop={{ label: "Opnieuw", onPress: () => void lijnPoll.verversen() }} />;
-  else if (h && !vertrekken.length)
+  else if ((h || lijnData) && !vertrekken.length)
     lijst = (
       <Kaart style={s.geenVertrekken}>
         {lijnCatalogus.length > 0 && actieveModus === "alles" ? (
@@ -228,9 +254,9 @@ export default function Haltebord() {
           <Ionicons name="information-circle-outline" size={22} color={colors.infoText} />
           <Text style={[s.geenTekst, { color: colors.infoText }]}>
             {geselecteerdeLijn
-              ? lijnData?.volgende_rit?.rit?.datum
-                ? `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}. Volgende rit: ${new Date(`${lijnData.volgende_rit.rit.datum}T12:00:00`).toLocaleDateString(taal === "en" ? "en-GB" : "nl-NL", { weekday: "long", day: "numeric", month: "long" })} om ${lijnData.volgende_rit.gepland}.`
-                : `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}.`
+              ? volgendeInRichting?.rit?.datum
+                ? `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}. Volgende rit: ${new Date(`${volgendeInRichting.rit.datum}T12:00:00`).toLocaleDateString(taal === "en" ? "en-GB" : "nl-NL", { weekday: "long", day: "numeric", month: "long" })} om ${volgendeInRichting.gepland}.`
+                : richting ? "Geen vertrekken meer vandaag in deze richting." : `Geen vertrekken meer vandaag voor lijn ${geselecteerdeLijn}.`
               : actieveModus === "alles"
                 ? "Momenteel geen vertrekken in de komende tijd."
                 : `Geen ${modaliteitChip(actieveModus).label.toLowerCase()}vertrekken in de komende tijd.`}
@@ -238,7 +264,7 @@ export default function Haltebord() {
         </View>
       </Kaart>
     );
-  else if (h)
+  else if (vertrekken.length)
     lijst = (
       <Kaart>
         {vertrekken.map((v, i) => (
@@ -350,6 +376,9 @@ export default function Haltebord() {
               <Text style={[s.lijnFilterHint, { color: colors.sub }]}>Geen lijnen gevonden</Text>
             ) : null}
           </ScrollView>
+          {richting ? <Text style={[s.richtingLabel, { color: colors.accent }]}>
+            Richting {richting.richting}
+          </Text> : null}
         </View>
       ) : null}
       <ScrollView
@@ -385,6 +414,10 @@ export default function Haltebord() {
         ) : null}
         {poll.fout && h ? <FoutBalk tekst={poll.fout} /> : null}
         {lijst}
+        {geselecteerdeLijn && !lijnData && vertrekken.length > 0 ? (
+          lijnPoll.fout ? <FoutBalk tekst={t("Volledige dienstregeling niet bereikbaar")} /> :
+            <Text style={[s.lijnFilterHint, { color: colors.sub }]}>Volledige dienstregeling wordt geladen…</Text>
+        ) : null}
       </ScrollView>
       <LiveBalk live={!!h && !h.verouderd && vertrekken.some(v => v.live)}
         bijgewerktMs={h && Number.isFinite(Date.parse(h.bijgewerkt))
@@ -396,6 +429,7 @@ export default function Haltebord() {
 
 const s = StyleSheet.create({
   lijnFilterBalk: { borderBottomWidth: StyleSheet.hairlineWidth },
+  richtingLabel: { paddingHorizontal: 14, paddingBottom: 8, fontSize: 13, fontWeight: "700" },
   lijnFilterKop: { paddingHorizontal: 14, paddingTop: 7, flexDirection: "row",
     alignItems: "center", justifyContent: "space-between", gap: 12 },
   lijnFilterHint: { fontSize: 12, fontWeight: "600" },

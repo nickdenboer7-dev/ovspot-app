@@ -10,6 +10,8 @@ const TREFWOORDEN: Record<string, string> = {
   "Scherm aanhouden": "schermtijd schermvergrendeling screen timeout sleep",
   Databesparing: "dataverbruik gps data usage",
   "Afstand voor Dichtbij": "zoekafstand zoekstraal radius loopafstand afstand locatie haltebord location departures",
+  Zoekafstand: "afstanden straal loopafstand dichtbij haltes locatie nearby radius",
+  "Vertrektijden op haltekaarten": "preview voorbeeld eerstvolgende vertrekken haltekaart nearby cards preview upcoming",
   "Standaard haltefilter": "vervoermiddel modaliteit filter locatie haltebord location departures",
   Thuislocatie: "thuis gps locatie haltebord location departures",
   Storingen: "vertraging push notificaties waarschuwing delay notifications alerts",

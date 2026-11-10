@@ -1,9 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { MAX_FAVORIETEN } from "./favorieten";
-import type { FavHalte, Instellingen } from "./types";
+import { MAX_FAVORIETEN, normaliseerLijnFavorieten } from "./favorieten";
+import type { FavHalte, FavLijn, Instellingen } from "./types";
 import { normaliseerInstellingen, STANDAARD_INSTELLINGEN } from "./instellingenDefaults";
 
 const FAV_KEY = "ovspot.favorieten.v1";
+const FAV_LIJN_KEY = "ovspot.favorieteLijnen.v1";
 const SET_KEY = "ovspot.instellingen.v1";
 
 export const STANDAARD: Instellingen = STANDAARD_INSTELLINGEN;
@@ -31,10 +32,17 @@ export async function leesFavorieten(): Promise<FavHalte[]> {
 }
 
 let favorietenSchrijfrij = Promise.resolve();
-export function bewaarFavorieten(list: FavHalte[]): Promise<void> {
-  favorietenSchrijfrij = favorietenSchrijfrij.then(() => schrijf(FAV_KEY, list));
+function schrijfFavorieten(key: string, list: FavHalte[] | FavLijn[]): Promise<void> {
+  favorietenSchrijfrij = favorietenSchrijfrij.then(() => schrijf(key, list));
   return favorietenSchrijfrij;
 }
+export const bewaarFavorieten = (list: FavHalte[]) => schrijfFavorieten(FAV_KEY, list);
+
+export async function leesLijnFavorieten(): Promise<FavLijn[]> {
+  return normaliseerLijnFavorieten(await lees<unknown>(FAV_LIJN_KEY, []));
+}
+
+export const bewaarLijnFavorieten = (list: FavLijn[]) => schrijfFavorieten(FAV_LIJN_KEY, list);
 
 export async function leesInstellingen(): Promise<Instellingen> {
   const s = await lees<Partial<Instellingen>>(SET_KEY, {});

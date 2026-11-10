@@ -6,6 +6,7 @@ import { Text } from "../components/LocalizedText";
 import { Chips, Kop } from "../components/ui";
 import { useApp } from "../context/AppProvider";
 import { afstand } from "../lib/format";
+import { DICHTBIJ_AFSTANDEN } from "../lib/instellingenDefaults";
 import type { Filter } from "../lib/types";
 
 /** Bestaande GPS-fallback-, afstands- en haltebordvoorkeuren blijven bereikbaar. */
@@ -28,7 +29,7 @@ export default function Geavanceerd() {
           <Text style={[s.titel, { color: colors.text }]}>Afstand voor Dichtbij</Text>
           <Text style={[s.uitleg, { color: colors.sub }]}>Haltes tot {afstand(instellingen.straal)} van je locatie.</Text>
           <View style={s.afstand}>
-            {[500,1000,1500,3000].map(m => {
+            {DICHTBIJ_AFSTANDEN.map(m => {
               const actief = m === instellingen.straal;
               return (
                 <Pressable key={m} onPress={() => zetInstellingen({ straal:m })}

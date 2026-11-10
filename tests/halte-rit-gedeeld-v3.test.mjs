@@ -132,11 +132,12 @@ test("Long Jouw halte with 1.3 text scale expands instead of truncating or overl
 });
 
 test("Existing board filters, favorites, disruptions tab and route map remain available", () => {
-  assert.match(bord,/setSelectedLine\(lijn === geselecteerdeLijn \? null : lijn\)/);
+  assert.match(bord,/setSelectedLine\(lijn === geselecteerdeLijn && !richtingActief \? null : lijn\)/);
   assert.match(bord,/wisselModus\(tabModi\[volgende\]\)/);
   assert.match(bord,/storingenOpen \? storingen.map/);
   assert.match(bord,/onFavoriet=\{\(\) => wisselFavoriet/);
-  assert.match(rit,/onFavoriet=\{\(\) => favStop && wisselFavoriet/);
+  assert.match(rit,/const onFavoriet = lijnFavoriet \? \(\) => wisselLijnFavoriet\(lijnFavoriet\)/);
+  assert.match(rit,/onFavoriet=\{onFavoriet\}/);
   assert.match(rit,/<LiveRitKaart/);
   assert.match(rit,/<OnderBalk actief=\{van\} \/>/);
   assert.match(bord,/<OnderBalk actief=\{van\} \/>/);

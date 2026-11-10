@@ -58,7 +58,7 @@ test("Storage errors do not block the app on first use", async () => {
 });
 
 test("Guide loads with app settings without creating a new API request", () => {
-  assert.match(provider, /Promise\.all\(\[leesInstellingen\(\), leesFavorieten\(\), korteUitlegGezien\(\)\]\)/);
+  assert.match(provider, /Promise\.all\(\[leesInstellingen\(\), leesFavorieten\(\), korteUitlegGezien\(\)/);
   assert.match(provider, /setUitlegZichtbaar\(!gezien\)/);
   assert.match(provider, /setUitlegZichtbaar\(false\)/);
   assert.match(provider, /void markeerKorteUitlegGezien\(\)/);
@@ -76,9 +76,9 @@ test("A dismissible guide includes Now, Live, delays, GPS and favorites, but no 
   assert.doesNotMatch(component, /<Modal\b/);
 });
 
-test("Guide reopens from Settings and translations cover the entire explanation", () => {
+test("Guide reopens inside Settings and translations cover the entire explanation", () => {
   assert.match(settings, /titel="Korte uitleg"/);
-  assert.match(settings, /toonUitleg\(\); router\.navigate\("\/"\)/);
+  assert.match(settings, /<KorteUitleg onSluit=\{\(\) => zetUitlegOpen\(false\)\}/);
   const t = translateExports.vertaling;
   const cases = [
     ["Korte uitleg", "Quick guide"],

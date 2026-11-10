@@ -60,7 +60,7 @@ test("Visuele volgorde is modaliteitskeuze, daarna lijnchips, dan vertrektijden"
   assert.match(source,/onKies=\{wisselModus\}/);
   assert.match(source,/wisselModus\(tabModi\[volgende\]\)/);
   assert.match(source,/setGekozenModus\(modus\);\s*setSelectedLine\(null\);\s*setLijnZoektekst\(""\)/);
-  assert.match(source,/setSelectedLine\(lijn === geselecteerdeLijn \? null : lijn\)/);
+  assert.match(source,/setSelectedLine\(lijn === geselecteerdeLijn && !richtingActief \? null : lijn\)/);
   assert.match(source,/filterHalteVertrekken\(h\?\.vertrekken \?\? \[\], actieveModus, geselecteerdeLijn\)/);
 });
 

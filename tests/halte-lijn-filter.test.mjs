@@ -54,8 +54,8 @@ test("Routekleuren en GTFS-kleur worden meegenomen zonder ongeldige lege chips",
 });
 
 test("Een chip wordt opnieuw Alles bij tweede tik; na moduswissel reset selectie",()=>{
-  assert.match(bron,/const \[selectedLine, setSelectedLine\] = useState<string \| null>\(null\)/);
-  assert.match(bron,/setSelectedLine\(lijn === geselecteerdeLijn \? null : lijn\)/);
+  assert.match(bron,/const \[selectedLine, setSelectedLine\] = useState<string \| null>\(lijnFavoriet\?\.lijn \?\? null\)/);
+  assert.match(bron,/setSelectedLine\(lijn === geselecteerdeLijn && !richtingActief \? null : lijn\)/);
   assert.match(bron,/zichtbareStatischeLijnen\(statischeLijnen, actieveModus\)/);
   assert.match(bron,/const geselecteerdeLijn = selectedLine && uniekeLijnen.some/);
   assert.match(bron,/filterHalteVertrekken\(h\?\.vertrekken \?\? \[\], actieveModus, geselecteerdeLijn\)/);

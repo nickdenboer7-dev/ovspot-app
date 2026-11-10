@@ -15,6 +15,7 @@ import { jouwHalteIndex, tijdTotVertrek, toonVolgendeHighlight, vertrekHalteOmsc
 import { HalteVouwknop, RitverloopStop } from "./RitverloopStop";
 import { useApp } from "../context/AppProvider";
 import { api } from "../lib/api";
+import { maakLijnFavoriet } from "../lib/favorieten";
 import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
@@ -24,7 +25,7 @@ import type { LiveRitVoertuigAntwoord } from "../lib/types";
 type Params = {
   trip?: string; datum?: string; voertuig?: string; van?: string; lijn?: string;
   bestemming?: string; vervoerder?: string; modus?: string; instap_halte?: string;
-  instap_naam?: string; instap_ms?: string; richting?: string;
+  instap_naam?: string; instap_plaats?: string; instap_ms?: string; richting?: string;
   kleur?: string; tekstkleur?: string;
 };
 const P = RITV2;
@@ -42,7 +43,7 @@ export default function RitverloopV2Screen() {
   const p = useLocalSearchParams<Params>();
   const van = isTab(p.van) ? p.van : "index";
   const insets = useSafeAreaInsets();
-  const { t, colors, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext } = useApp();
+  const { t, colors, instellingen, isFavoriet, wisselFavoriet, isLijnFavoriet, wisselLijnFavoriet, zetFeedbackContext } = useApp();
   const [toonEerder, setToonEerder] = useState(false);
   const [toonLater, setToonLater] = useState(false);
   const [lijstHoogte, setLijstHoogte] = useState(0);
@@ -106,8 +107,9 @@ export default function RitverloopV2Screen() {
   const vanaf = toonEerder || richtIndex < 1 ? 0 : richtIndex - 1;
   const aantalKomende = zichtbaarKomendeHaltes(
     lijstHoogte, richtIndex > 0, !toonEerder && richtIndex > 1);
-  const tot = toonLater || richtIndex < 0 ? haltes.length
+  const totInVoorbeeld = richtIndex < 0 ? haltes.length
     : Math.min(haltes.length, richtIndex + aantalKomende);
+  const tot = toonLater ? haltes.length : totInVoorbeeld;
   const getoond = haltes.slice(vanaf, tot);
   const verborgenEerder = vanaf;
   const verborgenLater = haltes.length - tot;
@@ -118,8 +120,25 @@ export default function RitverloopV2Screen() {
   // De status toont exact de op deze regel al eenmaal afgeronde afwijking.
   const statusAfwijkingMin = rit?.live && volgendeRij && !volgendeRij.h.vervalt
     ? volgendeRij.vertragingMin : null;
-  const favStop = volgendeRij?.h ?? null;
-  const fav = favStop ? isFavoriet(favStop.id) : false;
+  const gekozenInstap = ref.instap_halte ? haltes.find(({ h }) => h.id === ref.instap_halte)?.h : undefined;
+  const lijnFavoriet = ref.instap_halte ? maakLijnFavoriet({
+    halte: {
+      id: ref.instap_halte,
+      naam: ref.instap_naam || gekozenInstap?.naam || "",
+      plaats: p.instap_plaats || gekozenInstap?.plaats || ""
+    },
+    lijn: String(p.lijn || rit?.lijn || ""),
+    richting: String(ref.richting || p.bestemming || rit?.bestemming || ""),
+    modus: String(p.modus || rit?.modus || ""),
+    vervoerder: String(p.vervoerder ?? rit?.vervoerder ?? ""),
+    kleur: p.kleur || rit?.route_color,
+    tekstkleur: p.tekstkleur
+  }) : null;
+  // Ritten die zonder vertrekbord zijn geopend behouden hun haltefavoriet.
+  const favStop = ref.instap_halte ? null : volgendeRij?.h;
+  const fav = lijnFavoriet ? isLijnFavoriet(lijnFavoriet.id) : !!favStop && isFavoriet(favStop.id);
+  const onFavoriet = lijnFavoriet ? () => wisselLijnFavoriet(lijnFavoriet) : favStop
+    ? () => wisselFavoriet({ id: favStop.id, naam: favStop.naam, plaats: favStop.plaats }) : undefined;
   const paar = segment && haltes[segment.vorigeIndex] && haltes[segment.volgendeIndex]
     ? compacteHalteNaam(haltes[segment.vorigeIndex].h.naam, haltes[segment.vorigeIndex].plaats)
       + " " + t("en") + " " + haltes[segment.volgendeIndex].naam : "";
@@ -156,8 +175,8 @@ export default function RitverloopV2Screen() {
     <StatusBar style="light" />
     <View style={s.boven}>
       <OVspotSchermKop favoriet={fav}
-        onFavoriet={() => favStop && wisselFavoriet({
-          id: favStop.id, naam: favStop.naam, plaats: favStop.plaats })}
+        favorietLabel={lijnFavoriet ? (fav ? "Verwijder lijnfavoriet" : "Bewaar lijn, richting en instaphalte") : undefined}
+        onFavoriet={onFavoriet}
         meer={<KopKnop icon="ellipsis-vertical" label={t("Meer")}
           onPress={() => setMenuOpen(v => !v)} />}
       />
@@ -210,7 +229,7 @@ export default function RitverloopV2Screen() {
           <HalteVouwknop label={t("Toon") + " " + verborgenEerder + " " + t("eerdere haltes")}
             onPress={() => setToonEerder(true)} />
         ) : null}
-        {rit && toonEerder && volgendeIndex > 1 ? (
+        {rit && toonEerder && richtIndex > 1 ? (
           <HalteVouwknop label={t("Verberg eerdere haltes")} omhoog
             onPress={() => setToonEerder(false)} />
         ) : null}
@@ -239,8 +258,7 @@ export default function RitverloopV2Screen() {
           <HalteVouwknop label={t("Toon") + " " + verborgenLater + " " + t("volgende haltes")}
             onPress={() => setToonLater(true)} />
         ) : null}
-        {rit && toonLater && volgendeIndex >= 0 && tot === haltes.length &&
-          haltes.length - volgendeIndex > 6 ? (
+        {rit && toonLater && totInVoorbeeld < haltes.length ? (
           <HalteVouwknop label={t("Verberg volgende haltes")} omhoog
             onPress={() => setToonLater(false)} />
         ) : null}
