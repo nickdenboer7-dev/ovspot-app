@@ -1,34 +1,51 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
 import { Text } from "./LocalizedText";
 import { RijdendVoertuig } from "./RijdendVoertuig";
+import { RitTijdcel } from "./RitTijdcel";
+import { RitStatusLabel } from "./RitStatusLabel";
+import { useApp } from "../context/AppProvider";
 import { afwijkingTekst, RITV2, volgendeHalteTekst, type RitV2Stop } from "../lib/ritverloopV2";
 
-export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fractie, trein, nu, t }: {
+export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fractie, trein, nu, t,
+  jouwHalte = false, vertrekhalte = false, onLayout }: {
   r: RitV2Stop; volgende: boolean; laatste: boolean; vorigeHoogte: number; hoogte: number;
   fractie: number | null; trein: boolean; nu: number; t: (s: string) => string;
+  jouwHalte?: boolean; vertrekhalte?: boolean; onLayout?: (e: LayoutChangeEvent) => void;
 }) {
-  const { h, index, naam, plaats, toonPlaats, verwacht, gepland, vertragingMin, verwachtMs, gepasseerd } = r;
+  const { colors, scheme, instellingen } = useApp();
+  const { fontScale } = useWindowDimensions();
+  const groteTekst = instellingen.groteTekst || fontScale >= 1.3;
+  const { h, index, naam, plaats, verwacht, gepland, vertragingMin, verwachtMs, gepasseerd } = r;
   const eta = volgende && !gepasseerd ? volgendeHalteTekst(verwachtMs, nu, t) : null;
-  const afwijkend = !h.vervalt && vertragingMin !== 0;
-  const vroeg = vertragingMin < 0;
+  const afwijkend = r.live && !h.vervalt && vertragingMin !== 0;
+  const vroeg = afwijkend && vertragingMin < 0;
+  const zichtbaarNaam = jouwHalte ? h.naam : naam;
+  const markeer = jouwHalte || vertrekhalte;
   return (
     <View
-      style={[s.row, { height: hoogte, backgroundColor: volgende ? RITV2.info : "#FFFFFF", zIndex: fractie !== null ? 3 : 0 }]}
+      onLayout={onLayout}
+      style={[s.row, { minHeight: markeer ? (groteTekst ? 100 : 82) : hoogte,
+        backgroundColor: volgende ? colors.infoBg : jouwHalte ? colors.surface2 : colors.surface,
+        zIndex: fractie !== null ? 3 : 0 },
+        !markeer && { height: hoogte },
+        markeer && { paddingVertical: 8 },
+        jouwHalte && { borderWidth: 1, borderColor: colors.accent, borderRadius: 10 }]}
       accessible accessibilityRole="text"
-      accessibilityLabel={verwacht + ", " + naam +
+      accessibilityLabel={verwacht + ", " + zichtbaarNaam +
         (plaats ? ", " + plaats : "") +
         (afwijkend ? ", " + t(afwijkingTekst(vertragingMin)) : "") +
+        (jouwHalte ? ", " + t("Jouw halte") : "") +
+        (vertrekhalte ? ", " + t("Vertrekhalte") : "") +
         (volgende ? ", " + t("Volgende halte") : "")}
     >
       <View style={s.timeColumn}>
-        <View style={s.timeMain}>
-          <Text style={[s.time, { color: gepasseerd ? RITV2.muted : RITV2.ink },
-            h.vervalt && s.strike]}>{verwacht}</Text>
-          {afwijkend && !vroeg ? <Text style={s.delay}>+{vertragingMin}</Text> : null}
-        </View>
-        {afwijkend ? <Text style={s.planned}>{gepland}</Text> : null}
+        <RitTijdcel
+          verwacht={verwacht} gepland={gepland}
+          afwijkingMin={vertragingMin} live={r.live}
+          vervallen={h.vervalt} compact
+        />
       </View>
       <View style={s.rail}>
         <View style={[s.topLine, {
@@ -48,16 +65,26 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
         ) : null}
       </View>
       <View style={s.labelColumn}>
-        <Text style={[s.name, { color: gepasseerd ? RITV2.muted : RITV2.ink },
+        <Text style={[s.name, { color: gepasseerd ? colors.sub : colors.text },
           volgende && s.nextName, h.vervalt && s.strike]}
-          numberOfLines={1}>{naam}</Text>
-        {vroeg && !h.vervalt ? (
-          <Text style={s.earlyText} numberOfLines={1}>
+          numberOfLines={markeer ? undefined : 1}>{zichtbaarNaam}</Text>
+        {jouwHalte ? (
+          <View style={[s.jouwChip, { backgroundColor: colors.infoBg, borderColor: colors.accent }]}>
+            <Text style={[s.jouwTekst, { color: colors.infoText }]}>Jouw halte</Text>
+          </View>
+        ) : null}
+        {vertrekhalte ? (
+          <Text style={[s.eersteTekst, { color: colors.sub }]}>Vertrekhalte</Text>
+        ) : null}
+        {h.vervalt ? (
+          <RitStatusLabel live={false} vervallen afwijkingMin={0} />
+        ) : vroeg ? (
+          <Text style={[s.earlyText, { color: scheme === "dark" ? "#E9D5FF" : "#6B21A8" }]} numberOfLines={1}>
             {t(afwijkingTekst(vertragingMin))}
           </Text>
         ) : null}
         {volgende && eta !== null ? (
-          <Text style={s.eta} numberOfLines={1}>
+          <Text style={[s.eta, { color: colors.infoText }]} numberOfLines={1}>
             {eta}
           </Text>
         ) : null}
@@ -85,6 +112,10 @@ const s = StyleSheet.create({
   time: { fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] },
   delay: { fontSize: 12, fontWeight: "700", color: RITV2.delay },
   earlyText: { color: RITV2.early, fontSize: 11, fontWeight: "700", marginTop: 1 },
+  jouwChip: { borderWidth: 1, borderRadius: 9, paddingHorizontal: 7,
+    alignSelf: "flex-start", paddingVertical: 3, marginTop: 5, maxWidth: "100%" },
+  jouwTekst: { fontSize: 12, fontWeight: "700" },
+  eersteTekst: { fontSize: 12, fontWeight: "700", marginTop: 4 },
   planned: { fontSize: 11, color: RITV2.muted, textDecorationLine: "line-through", marginTop: 1 },
   rail: { width: 28, alignItems: "center", justifyContent: "center", overflow: "visible" },
   topLine: { position: "absolute", left: 13, top: 0, width: 2, height: "50%" },

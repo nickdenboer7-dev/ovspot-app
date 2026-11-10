@@ -7,7 +7,7 @@ const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.met
 const motion = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
 
 test("GTFS-haltenaam wordt niet willekeurig afgeknipt: alleen plaats-prefix wordt verwijderd", () => {
-  assert.match(stop, /\{naam\}/);
+  assert.match(stop, /\{zichtbaarNaam\}/);
   assert.match(stop, /numberOfLines=\{1\}/);
   assert.doesNotMatch(stop, /naam\.slice\(|naam\.substring\(|truncat/);
   assert.match(screen, /compacteHalteNaam\(/);

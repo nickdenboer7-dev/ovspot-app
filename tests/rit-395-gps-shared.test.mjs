@@ -64,7 +64,7 @@ test("Different GPS failure types are labelled accurately instead of all saying 
   assert.equal(ritGpsStatus(null, now, false), "Geen voertuig-GPS");
   assert.equal(ritGpsStatus(gps, now, true, { enabled: false }), "GPS uitgeschakeld");
   assert.equal(ritGpsStatus(gps, now, true, { trein: true }), "Geen voertuig-GPS");
-  assert.match(screen, /t\(gpsStatus\)/);
+  assert.match(screen, /chip=\{nogNietVertrokken \? "Geen voertuig-GPS" : !trein \? gpsStatus/);
 });
 
 test("Map stops rendering a live marker when position is stale", () => {

@@ -1,5 +1,6 @@
 import type { Palette } from "../constants/theme";
 import type { Modus, Vertrek } from "./types";
+import { bepaalRitStatus } from "./ritStatus.ts";
 
 /** "Nu", "1 min", "12 min", of de kloktijd als het langer dan een uur duurt. */
 export function aftellen(ms: number | null, now: number, klok: string): string {
@@ -53,12 +54,12 @@ export function periode(vanaf: number | null, tot: number | null, now = Date.now
 
 export type Status = { text: string; color: string; dot: boolean };
 
-/** Groen stipje = echte live-data; oranje tekst = vertraging. Vroeg rijden tonen we niet. */
+/** Vertrekrijen gebruiken dezelfde statussen als ritverloop. */
 export function status(v: Pick<Vertrek, "vervallen" | "live" | "vertraging_min">, c: Palette): Status {
-  if (v.vervallen) return { text: "", color: c.red, dot: false };
-  if (v.live && v.vertraging_min > 0) return { text: `+${v.vertraging_min} min`, color: c.delay, dot: true };
-  if (v.live) return { text: "Live", color: c.live, dot: true };
-  return { text: "Gepland", color: c.sub, dot: false };
+  const st = bepaalRitStatus({ live: v.live, vervallen: v.vervallen, afwijkingMin: v.vertraging_min });
+  const kleur = st.soort === "vervallen" ? c.red : st.soort === "gepland" ? c.sub
+    : st.soort === "vertraagd" ? c.delay : st.soort === "te_vroeg" ? "#A855F7" : c.live;
+  return { text: st.tekst, color: kleur, dot: st.heeftLive };
 }
 
 export function isTrein(m: Modus): boolean {

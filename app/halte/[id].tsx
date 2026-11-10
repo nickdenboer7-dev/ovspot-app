@@ -5,8 +5,11 @@ import { PanResponder, Pressable, RefreshControl, ScrollView, StyleSheet, TextIn
 import { Text } from "../../components/LocalizedText";
 import { isTab, OnderBalk } from "../../components/OnderBalk";
 import { StoringKaart } from "../../components/StoringKaart";
-import { Chips, FoutBalk, Kaart, Kop, KopKnop, Laden, Leeg } from "../../components/ui";
+import { Chips, FoutBalk, Kaart, Laden, Leeg } from "../../components/ui";
 import { VertrekRegel } from "../../components/VertrekRegel";
+import { OVspotSchermKop, OVspotIdentiteit } from "../../components/OVspotSchermKop";
+import { StatusStrook } from "../../components/StatusStrook";
+import { LiveBalk } from "../../components/LiveBalk";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
 import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
@@ -246,20 +249,13 @@ export default function Haltebord() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Kop
-        terug
-        titel={titel}
-        titelRegels={2}
-        detail={groepSub || undefined}
-        sub={h ? `${h.verouderd ? "Verouderd · " : ""}Bijgewerkt ${klok(h.bijgewerkt)}` : "Laden…"}
-        rechts={
-          <KopKnop
-            icoon={fav ? "star" : "star-outline"}
-            kleur={fav ? colors.star : undefined}
-            label={fav ? "Verwijder uit favorieten" : "Bewaar als favoriet"}
-            onPress={() => wisselFavoriet({ id, naam, plaats })}
-          />
-        }
+      <OVspotSchermKop favoriet={fav}
+        onFavoriet={() => wisselFavoriet({ id, naam, plaats })} />
+      <OVspotIdentiteit naam={titel} detail={groepSub || undefined} />
+      <StatusStrook
+        live={!!vertrekken[0]?.live}
+        vervallen={!!vertrekken[0]?.vervallen}
+        afwijkingMin={vertrekken[0]?.vertraging_min ?? 0}
       />
       {meerdereModi ? (
         <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
@@ -390,6 +386,9 @@ export default function Haltebord() {
         {poll.fout && h ? <FoutBalk tekst={poll.fout} /> : null}
         {lijst}
       </ScrollView>
+      <LiveBalk live={!!h && !h.verouderd && vertrekken.some(v => v.live)}
+        bijgewerktMs={h && Number.isFinite(Date.parse(h.bijgewerkt))
+          ? Date.parse(h.bijgewerkt) : null} nu={nu} />
       <OnderBalk actief={van} />
     </View>
   );

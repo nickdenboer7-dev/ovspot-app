@@ -1,25 +1,23 @@
-import assert from "node:assert/strict";
 import test from "node:test";
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-
 const screen = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
-const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
-const motion = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
-
-test("Statusstrook is ook zichtbaar bij geplande rit en toont geen lege balk", () => {
-  assert.match(screen, /status: \{ height: 56, backgroundColor: P\.strip/);
-  assert.match(screen, /rit\?\.live \? t\("Live"\) : t\("Gepland"\)/);
-  assert.match(screen, /<View style=\{s\.status\}>/);
+const shared = readFileSync(new URL("../components/StatusStrook.tsx", import.meta.url), "utf8");
+const live = readFileSync(new URL("../components/LiveBalk.tsx", import.meta.url), "utf8");
+test("Statusstrook ook bij geplande rit, met geplande vertrekregel en livebalk", () => {
+ assert.match(screen,/<StatusStrook/);
+ assert.match(screen,/const geplandeStatus = nogNietVertrokken/);
+ assert.match(screen,/tekst=\{geplandeStatus\}/);
+ assert.match(screen,/<LiveBalk live=\{liveVoorBalk\}/);
+ assert.match(live,/isLive \? colors.live : colors.muted/);
 });
-
-test("Vervallen en live hebben afzonderlijke veilige status", () => {
-  assert.match(screen, /rit\?\.vervallen \? t\("Vervalt"\)/);
-  assert.match(screen, /segment \? t\("Onderweg"\)/);
-  assert.match(screen, /rit\?\.live \? t\("Live tijden"\)/);
+test("Vervallen en live hebben aparte gedeelde status, nooit een nep-live-indicator", () => {
+ assert.match(shared,/<RitStatusLabel live=\{live\} vervallen=\{vervallen\}/);
+ assert.match(screen,/vervallen=\{!!rit\?\.vervallen\}/);
+ assert.match(screen,/const liveVoorBalk = !!rit && rit.live && !rit.vervallen/);
 });
-
-test("Haltelijst sluit na de statusstrook direct aan en laadt zonder pull-to-refresh", () => {
-  assert.match(screen, /<ScrollView ref=\{lijstRef\}/);
-  assert.doesNotMatch(screen, /RefreshControl/);
-  assert.match(screen, /<RitverloopStop/);
+test("Haltelijst volgt statusstrook en laadt zonder pull-to-refresh",()=>{
+ assert.match(screen,/<ScrollView ref=\{lijstRef\}/);
+ assert.doesNotMatch(screen,/RefreshControl/);
+ assert.match(screen,/<RitverloopStop/);
 });

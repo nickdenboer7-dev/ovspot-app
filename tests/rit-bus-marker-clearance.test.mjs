@@ -58,7 +58,7 @@ test("Quiet centered 2dp line, gray above GPS vehicle and blue below", () => {
 
 test("Next-stop information exists only in the stop row, never in an extra banner", () => {
   assert.doesNotMatch(screen, /Volgende halte · GPS|<VolgendeHalteKaart|<NextStopBanner/);
-  assert.match(screen, /<\/View>\s*<ScrollView ref=\{lijstRef\}/);
+  assert.match(screen, /<StatusStrook[\s\S]*?<ScrollView ref=\{lijstRef\}/);
   assert.match(stop, /t\("Volgende halte"\)/);
   assert.match(stop, /<RijdendVoertuig/);
 });

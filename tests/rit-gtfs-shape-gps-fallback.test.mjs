@@ -76,9 +76,9 @@ test("GPS timestamp and route mapping are independently represented", () => {
 test("GPS precision never implies a stop marker without a unique projected segment", () => {
   assert.match(screen, /const segment = useMemo/);
   assert.match(screen, /projecteerGpsOpRit\(rit, gps\)/);
-  assert.match(screen, /segment && actueel && r\.index === segment\.volgendeIndex/);
-  assert.match(screen, /gps && actueel \? t\("GPS actueel · haltepositie nog niet vastgesteld"\)/);
-  assert.match(screen, /!trein \? <View style=\{\[s\.gpsChip/);
+  assert.match(screen, /segment && actueel && rijdend && r.index === segment.volgendeIndex/);
+  assert.match(screen, /chip=\{nogNietVertrokken \? "Geen voertuig-GPS" : !trein \? gpsStatus/);
+  assert.match(screen, /<StatusStrook/);
   assert.doesNotMatch(screen, /gpsStatus === "GPS niet op route"/);
 });
 

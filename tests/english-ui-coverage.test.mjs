@@ -16,6 +16,8 @@ function loadTs(content, locale = "en_US") {
       if (name === "react-native") return {
         I18nManager: { getConstants: () => ({ localeIdentifier: locale }) }
       };
+      if (name === "./ritStatus.ts" || name === "./ritStatus")
+        return loadTs(source("../lib/ritStatus.ts"), locale);
       throw new Error("Unexpected dependency " + name);
     }
   });
@@ -98,8 +100,8 @@ test("Journey GPS, early status, and disruption dates respect English", () => {
   const map = source("../components/LiveRitKaart.tsx");
   const notice = source("../components/StoringKaart.tsx");
   const dateFormat = loadTs(source("../lib/format.ts"));
-  assert.match(journey, /t\(gpsStatus\)/);
-  assert.match(journey, /t\(afwijkingTekst\(statusAfwijkingMin\)\)/);
+  assert.match(journey, /chip=\{nogNietVertrokken \? "Geen voertuig-GPS" : !trein \? gpsStatus/);
+  assert.match(journey, /afwijkingMin=\{statusAfwijkingMin \?\? 0\}/);
   assert.match(map, /min te vroeg/);
   assert.match(notice, /periode\(st\.vanaf_ms, st\.tot_ms, Date\.now\(\), taal\)/);
   const march = new Date(2026, 2, 12).getTime();

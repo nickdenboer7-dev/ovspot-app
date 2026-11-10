@@ -61,7 +61,7 @@ test("Ritverloop heeft een keuzescherm voor de volledige kaart, zonder inline ka
   assert.match(app,/kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
   assert.match(app,/setWeergave\(isKaart \? "lijst" : "kaart"\)/);
   assert.match(app,/<LiveRitKaart/);
-  assert.match(app,/<OnderBalk actief=\{van\} compact/);
+  assert.match(app, /<OnderBalk actief=\{van\} \/>/);
   const api = readFileSync(new URL("../lib/api.ts", import.meta.url), "utf8");
   assert.match(api,/liveRitVoertuig: \(ritId: string, datum: string\)/);
   assert.match(api,/\/voertuig\?rit_id=/);

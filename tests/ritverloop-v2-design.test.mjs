@@ -95,8 +95,8 @@ test("Stale GPS receives grey chip, vehicle marker only with current projected G
   assert.equal(isGpsActueel(null, now), false);
   assert.match(screen, /\(\) => rit && actueel && !rit\.vervallen/);
   assert.match(screen, /projecteerGpsOpRit\(rit, gps\)/);
-  assert.match(screen, /t\(gpsStatus\)/);
-  assert.match(screen, /segment && actueel && r\.index === segment\.volgendeIndex/);
+  assert.match(screen, /chip=\{nogNietVertrokken \? "Geen voertuig-GPS" : !trein \? gpsStatus/);
+  assert.match(screen, /segment && actueel && rijdend && r.index === segment.volgendeIndex/);
   assert.match(marker, /Animated\.timing\(beweging/);
   assert.doesNotMatch(marker, /Date\.now\(\)|volgendeMs/);
 });
@@ -106,11 +106,11 @@ test("No pull to refresh, auto polling, footer data age, one passed stop and fut
   assert.match(screen, /usePolling\(/);
   assert.match(screen, /api\.liveRitVoertuig\(rit\.id, rit\.datum\)/);
   assert.match(api, /get<LiveRitVoertuigAntwoord>/);
-  assert.match(screen, /volgendeIndex - 1/);
+  assert.match(screen, /richtIndex - 1/);
   assert.match(screen, /zichtbaarKomendeHaltes\(/);
-  assert.match(screen, /volgendeIndex \+ aantalKomende/);
-  assert.match(screen, /leeftijdS.*Math\.max/);
-  assert.match(screen, /<OnderBalk actief=\{van\} compact/);
+  assert.match(screen, /richtIndex \+ aantalKomende/);
+  assert.match(screen, /<LiveBalk live=\{liveVoorBalk\}/);
+  assert.match(screen, /<OnderBalk actief=\{van\} \/>/);
   assert.match(nav, /compact \? 64 : 62/);
 });
 

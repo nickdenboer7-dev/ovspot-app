@@ -1,24 +1,19 @@
-import assert from "node:assert/strict";
 import test from "node:test";
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-
-const screen = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
-const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
-const motion = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
-
-test("Tijden staan compact, met klein plan onder de vertraagde klok", () => {
-  assert.match(stop, /\{afwijkend \? <Text style=\{s\.planned\}>\{gepland\}<\/Text>/);
-  assert.match(stop, /textDecorationLine: "line-through"/);
-  assert.match(stop, /afwijkend && !vroeg \? <Text style=\{s\.delay\}>/);
-  assert.match(stop, /s\.earlyText/);
+const stop=readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url),"utf8");
+const cell=readFileSync(new URL("../components/RitTijdcel.tsx", import.meta.url),"utf8");
+test("Compacte tijdcel deelt afwijking en doorgestreepte planning",()=>{
+ assert.match(stop,/<RitTijdcel/);
+ assert.match(cell,/textDecorationLine: "line-through"/);
+ assert.match(cell,/s.afwijking/);
+ assert.match(stop,/s.earlyText/);
 });
-
-test("De compacte lijst heeft geen tweede aankomst/vertrek-paragraaf", () => {
-  assert.doesNotMatch(stop, /aankomst .* vertrek|s\.wacht|numberOfLines=\{0\}/);
-  assert.match(stop, /height: hoogte/);
+test("Compacte lijst heeft geen tweede aankomst/vertrek-paragraaf",()=>{
+ assert.doesNotMatch(stop,/aankomst .* vertrek|s.wacht|numberOfLines=\{0\}/);
+ assert.match(stop,/minHeight: markeer/);
 });
-
-test("Kleine Android-schermen krijgen de volledige resterende naamkolom", () => {
-  assert.match(stop, /labelColumn: \{ flex: 1, minWidth: 0/);
-  assert.match(stop, /numberOfLines=\{1\}/);
+test("Smalle schermen hebben volledige naamkolom zonder afkappen bij Jouw halte",()=>{
+ assert.match(stop,/labelColumn: \{ flex: 1, minWidth: 0/);
+ assert.match(stop,/numberOfLines=\{markeer \? undefined : 1\}/);
 });

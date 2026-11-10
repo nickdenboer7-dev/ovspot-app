@@ -51,7 +51,7 @@ test("GTFS catalogus uit echte stationhaltes behoudt de modaliteit ook zonder ve
 });
 
 test("Visuele volgorde is modaliteitskeuze, daarna lijnchips, dan vertrektijden",()=>{
-  const header=source.search(/<Kop\s+terug/);
+  const header=source.search(/<OVspotSchermKop/);
   const modality=source.indexOf("{meerdereModi ? (",header);
   const lines=source.indexOf("{uniekeLijnen.length >= 1 ? (",modality);
   const departures=source.indexOf("{...swipeResponder.panHandlers}",lines);

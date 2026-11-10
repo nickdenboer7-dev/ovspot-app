@@ -8,10 +8,14 @@ import { Text } from "./LocalizedText";
 import { isTab, OnderBalk } from "./OnderBalk";
 import { LiveRitKaart } from "./LiveRitKaart";
 import { FeedbackModal } from "./FeedbackModal";
+import { OVspotSchermKop, OVspotIdentiteit } from "./OVspotSchermKop";
+import { StatusStrook } from "./StatusStrook";
+import { LiveBalk } from "./LiveBalk";
+import { jouwHalteIndex, tijdTotVertrek, toonVolgendeHighlight } from "../lib/ritStatus";
 import { HalteVouwknop, RitverloopStop } from "./RitverloopStop";
 import { useApp } from "../context/AppProvider";
 import { api } from "../lib/api";
-import { bestemmingVoorWeergave, isTrein } from "../lib/format";
+import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
 import { afwijkingTekst, bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, RITV2, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
@@ -21,6 +25,7 @@ type Params = {
   trip?: string; datum?: string; voertuig?: string; van?: string; lijn?: string;
   bestemming?: string; vervoerder?: string; modus?: string; instap_halte?: string;
   instap_naam?: string; instap_ms?: string; richting?: string;
+  kleur?: string; tekstkleur?: string;
 };
 const P = RITV2;
 
@@ -37,7 +42,7 @@ export default function RitverloopV2Screen() {
   const p = useLocalSearchParams<Params>();
   const van = isTab(p.van) ? p.van : "index";
   const insets = useSafeAreaInsets();
-  const { t, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext } = useApp();
+  const { t, colors, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext } = useApp();
   const [toonEerder, setToonEerder] = useState(false);
   const [toonLater, setToonLater] = useState(false);
   const [lijstHoogte, setLijstHoogte] = useState(0);
@@ -45,6 +50,7 @@ export default function RitverloopV2Screen() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [weergave, setWeergave] = useState<"lijst" | "kaart">("lijst");
   const lijstRef = useRef<ScrollView>(null);
+  const eenmaalGesprongenNaarHalte = useRef<string | null>(null);
   const nu = useNu(1000);
   const ref = {
     trip: p.trip ? String(p.trip) : undefined,
@@ -89,11 +95,19 @@ export default function RitverloopV2Screen() {
   const kandidaat = gpsCursor >= 0 ? gpsCursor : fallbackCursor;
   const volgendeIndex = kandidaat >= 0 && kandidaat < haltes.length && !haltes[kandidaat].h.vervalt
     ? kandidaat : haltes.findIndex(h => !h.gepasseerd && !h.h.vervalt);
-  const vanaf = toonEerder || volgendeIndex < 1 ? 0 : volgendeIndex - 1;
+  const rijdend = toonVolgendeHighlight(!!segment && actueel,
+    !!rit && !rit.vervallen && rit.rit_status !== "SCHEDULED" &&
+    rit.rit_status !== "ARRIVED");
+  const instapIndex = jouwHalteIndex(
+    haltes.map(r => ({ id: r.h.id, naam: r.h.naam })),
+    ref.instap_halte, ref.instap_naam
+  );
+  const richtIndex = instapIndex >= 0 ? instapIndex : volgendeIndex;
+  const vanaf = toonEerder || richtIndex < 1 ? 0 : richtIndex - 1;
   const aantalKomende = zichtbaarKomendeHaltes(
-    lijstHoogte, volgendeIndex > 0, !toonEerder && volgendeIndex > 1);
-  const tot = toonLater || volgendeIndex < 0 ? haltes.length
-    : Math.min(haltes.length, volgendeIndex + aantalKomende);
+    lijstHoogte, richtIndex > 0, !toonEerder && richtIndex > 1);
+  const tot = toonLater || richtIndex < 0 ? haltes.length
+    : Math.min(haltes.length, richtIndex + aantalKomende);
   const getoond = haltes.slice(vanaf, tot);
   const verborgenEerder = vanaf;
   const verborgenLater = haltes.length - tot;
@@ -109,35 +123,44 @@ export default function RitverloopV2Screen() {
   const paar = segment && haltes[segment.vorigeIndex] && haltes[segment.volgendeIndex]
     ? compacteHalteNaam(haltes[segment.vorigeIndex].h.naam, haltes[segment.vorigeIndex].plaats)
       + " " + t("en") + " " + haltes[segment.volgendeIndex].naam : "";
-  const status = rit?.vervallen ? t("Vervalt") :
-    segment ? t("Onderweg") : rit?.live ? t("Live tijden") : t("Gepland");
+  const eerste = haltes[0] ?? null;
+  const nogNietVertrokken = !rijdend && !!rit && !rit.vervallen &&
+    (rit.rit_status === "SCHEDULED" ||
+      (!!eerste && (eerste.verwachtMs ?? 0) > nu && !eerste.gepasseerd));
+  const eersteNaam = eerste?.h.naam || "";
+  const perron = eerste ? spoorLabel(rit?.modus || "bus", eerste.h.spoor) : "";
+  const tijdVanaf = eerste?.verwacht || eerste?.gepland || "";
+  const vertrekOver = eerste ? tijdTotVertrek(eerste.verwachtMs, nu) : "";
+  const geplandeStatus = nogNietVertrokken
+    ? `${t("Gepland")} · ${t("vertrekt")} ${tijdVanaf} ${t("vanaf")} ${eersteNaam}` +
+      (perron ? ` (${t(perron)})` : "") +
+      (vertrekOver && vertrekOver !== "Vertrokken" ? ` · ${vertrekOver}` : "")
+    : undefined;
   const bronMs = rit?.bijgewerkt ? Date.parse(rit.bijgewerkt) : NaN;
-  const bijgewerktMs = Number.isFinite(bronMs) ? bronMs : poll.laatsteOk?.getTime() ?? 0;
-  const leeftijdS = bijgewerktMs ? Math.max(0, Math.floor((nu - bijgewerktMs) / 1000)) : null;
+  const bijgewerktMs = Number.isFinite(bronMs) ? bronMs : null;
+  const liveVoorBalk = !!rit && rit.live && !rit.vervallen &&
+    haltes.some(h => h.live);
+
   const kaartHaltes = useMemo(() => markeerRitHaltes(rit?.stops, rit?.haltes || []),
     [rit?.stops, rit?.haltes]);
 
   useEffect(() => {
     setToonEerder(false); setToonLater(false);
-    lijstRef.current?.scrollTo({ y: 0, animated: false });
+    eenmaalGesprongenNaarHalte.current = null;
   }, [rit?.id, rit?.datum]);
   useEffect(() => {
     if (rit?.id && rit.datum) zetFeedbackContext({ view: "rit", rit_id: rit.id, rit_datum: rit.datum });
   }, [rit?.id, rit?.datum, zetFeedbackContext]);
 
-  return <View style={s.scherm}>
+  return <View style={[s.scherm, { backgroundColor: colors.background }]}>
     <StatusBar style="light" />
-    <View style={[s.boven, { paddingTop: insets.top }]}>
-      <View style={s.kop}>
-        <KopKnop icon="arrow-back" label={t("Terug")} onPress={() =>
-          router.canGoBack() ? router.back() : router.replace("/")} />
-        <Text style={s.titel} accessibilityRole="header">OVspot</Text>
-        <KopKnop icon={fav ? "star" : "star-outline"}
-          label={fav ? t("Verwijder uit favorieten") : t("Bewaar als favoriet")}
-          onPress={() => favStop && wisselFavoriet({
-            id: favStop.id, naam: favStop.naam, plaats: favStop.plaats })} />
-        <KopKnop icon="ellipsis-vertical" label={t("Meer")} onPress={() => setMenuOpen(v => !v)} />
-      </View>
+    <View style={s.boven}>
+      <OVspotSchermKop favoriet={fav}
+        onFavoriet={() => favStop && wisselFavoriet({
+          id: favStop.id, naam: favStop.naam, plaats: favStop.plaats })}
+        meer={<KopKnop icon="ellipsis-vertical" label={t("Meer")}
+          onPress={() => setMenuOpen(v => !v)} />}
+      />
       {menuOpen ? <View style={[s.menu, { top: insets.top + 52 }]}>
         <Pressable style={s.menuItem} accessibilityRole="button"
           onPress={() => { setMenuOpen(false); setFeedbackOpen(true); }}>
@@ -149,48 +172,33 @@ export default function RitverloopV2Screen() {
         </Pressable>
       </View> : null}
     </View>
-    <View style={s.lijnrij}>
-      <View style={s.badge}><Text style={s.badgeTekst}>{lijn || "OV"}</Text></View>
-      <View style={s.lijnInhoud}>
-        <Text style={s.bestemming} numberOfLines={1}>{t("naar")} {bestemming}</Text>
-        <Text style={s.vervoerder} numberOfLines={1}>{vervoerder}</Text>
-      </View>
-      <Pressable style={s.kaartKnop} accessibilityRole="button"
-        accessibilityLabel={t(isKaart ? "Bekijk haltelijst" : "Toon de live voertuigkaart")}
-        disabled={!kaartBeschikbaar} onPress={() => setWeergave(isKaart ? "lijst" : "kaart")}>
-        <Ionicons name={isKaart ? "list-outline" : "map-outline"} size={23}
-          color={kaartBeschikbaar ? P.navy : P.pastDot} />
-      </Pressable>
-    </View>
+    <OVspotIdentiteit
+      naam={bestemming} lijn={lijn || "OV"} modus={rit?.modus || String(p.modus || "bus")}
+      vervoerder={vervoerder} kleur={p.kleur ? String(p.kleur) : undefined}
+      tekstkleur={p.tekstkleur ? String(p.tekstkleur) : undefined}
+      detail={vervoerder}
+      actie={
+        <Pressable style={s.kaartKnop} accessibilityRole="button"
+          accessibilityLabel={t(isKaart ? "Bekijk haltelijst" : "Toon de live voertuigkaart")}
+          disabled={!kaartBeschikbaar} onPress={() => setWeergave(isKaart ? "lijst" : "kaart")}>
+          <Ionicons name={isKaart ? "list-outline" : "map-outline"} size={23}
+            color={kaartBeschikbaar ? colors.accent : colors.muted} />
+        </Pressable>
+      }
+    />
 
     {!isKaart ? <>
-      <View style={s.status}>
-        <View style={s.statusRegel}>
-          <Text style={s.statusTitel} numberOfLines={1}>{status}</Text>
-          {statusAfwijkingMin !== null ? (
-            <Text style={[
-              s.statusAfwijking,
-              { color: statusAfwijkingMin > 0 ? P.delay :
-                  statusAfwijkingMin < 0 ? P.early : P.green }
-            ]} numberOfLines={1}>
-              · {t(afwijkingTekst(statusAfwijkingMin))}
-            </Text>
-          ) : null}
-          <View style={s.statusSpacer} />
-          {!trein ? <View style={[s.gpsChip, { backgroundColor: gpsStatus === "GPS actueel" ? P.gpsBg : P.staleBg }]}>
-            <Text style={[s.gpsTekst, { color: gpsStatus === "GPS actueel" ? P.green : P.muted }]}
-              numberOfLines={1}>{t(gpsStatus)}</Text>
-          </View> : null}
-        </View>
-        <Text style={s.tussen} numberOfLines={1}>
-          {paar ? t("Tussen") + " " + paar
-            : trein ? t("Treinpositie volgens beschikbare ritgegevens")
-            : gps && actueel ? t("GPS actueel · haltepositie nog niet vastgesteld")
-            : rit?.live ? t("Live tijden · geen bevestigde voertuigpositie")
-            : t("Geen actuele voertuigpositie")}
-        </Text>
-      </View>
-      <ScrollView ref={lijstRef} style={s.lijst}
+      <StatusStrook
+        live={!!volgendeRij?.live}
+        vervallen={!!rit?.vervallen}
+        afwijkingMin={statusAfwijkingMin ?? 0}
+        tekst={geplandeStatus}
+        chip={nogNietVertrokken ? "Geen voertuig-GPS" : !trein ? gpsStatus : undefined}
+        tussen={nogNietVertrokken ? undefined :
+          paar ? `${t("Tussen")} ${paar}` :
+          rijdend ? t("Onderweg") : undefined}
+      />
+      <ScrollView ref={lijstRef} style={[s.lijst, { backgroundColor: colors.background }]}
         contentContainerStyle={s.lijstInhoud}
         onLayout={(e) => {
           const h = e.nativeEvent.layout.height;
@@ -207,13 +215,24 @@ export default function RitverloopV2Screen() {
             onPress={() => setToonEerder(false)} />
         ) : null}
         {getoond.map(r => {
-          const height = r.index === volgendeIndex ? 64 : 48;
-          const prevHeight = r.index - 1 === volgendeIndex ? 64 : 48;
+          const height = r.index === volgendeIndex && rijdend ? 64 : 48;
+          const prevHeight = r.index - 1 === volgendeIndex && rijdend ? 64 : 48;
+          const isJouwHalte = instapIndex >= 0 && r.index === instapIndex;
           return <RitverloopStop key={r.h.id + "-" + r.index}
-            r={r} volgende={r.index === volgendeIndex}
+            r={r} volgende={rijdend && r.index === volgendeIndex}
+            jouwHalte={isJouwHalte}
+            vertrekhalte={nogNietVertrokken && r.index === 0}
+            onLayout={isJouwHalte && !!ref.instap_halte ? e => {
+              const uniekeSleutel = [rit?.id, rit?.datum, ref.instap_halte].join(":");
+              if (eenmaalGesprongenNaarHalte.current === uniekeSleutel) return;
+              eenmaalGesprongenNaarHalte.current = uniekeSleutel;
+              lijstRef.current?.scrollTo({
+                y: Math.max(0, e.nativeEvent.layout.y - 20), animated: false
+              });
+            } : undefined}
             laatste={r.index === haltes.length - 1} nu={nu} t={t}
             hoogte={height} vorigeHoogte={prevHeight} trein={trein}
-            fractie={segment && actueel && r.index === segment.volgendeIndex &&
+            fractie={segment && actueel && rijdend && r.index === segment.volgendeIndex &&
               segment.vorigeIndex >= vanaf ? segment.fractie : null} />;
         })}
         {rit && verborgenLater > 0 ? (
@@ -226,15 +245,8 @@ export default function RitverloopV2Screen() {
             onPress={() => setToonLater(false)} />
         ) : null}
       </ScrollView>
-      <View style={s.liveFooter}>
-        <View style={s.liveDot} />
-        <Text style={s.liveFooterTekst}>
-          {rit?.live ? t("Live") : t("Gepland")} · {leeftijdS !== null
-            ? t("bijgewerkt") + " " + leeftijdS + " " + t("s geleden")
-            : t("nog niet bijgewerkt")}
-        </Text>
-      </View>
-      <OnderBalk actief={van} compact />
+      <LiveBalk live={liveVoorBalk} bijgewerktMs={bijgewerktMs} nu={nu} />
+      <OnderBalk actief={van} />
     </> : rit ? <LiveRitKaart
       key={rit.id + ":" + rit.datum} ritId={rit.id} datum={rit.datum}
       positie={actueel ? gps : null}

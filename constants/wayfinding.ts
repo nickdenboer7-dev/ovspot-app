@@ -68,8 +68,13 @@ function contrastKleur(bg: string): string {
   return (0.2126 * lum[0] + 0.7152 * lum[1] + 0.0722 * lum[2]) > 0.179 ? "#000000" : "#FFFFFF";
 }
 
+/** Regel voor bord én rit: één gedeelde vervoerderskleur via lijnKleur.
+ * Qbuzz-bus: altijd de oranje operatorkleur van het haltebord; GVB-metro
+ * behoudt zijn echte lijnkleuren, overige GTFS-routekleuren blijven ondersteund.
+ */
 export function lijnKleur(lijn: string, modus: Modus, vervoerder?: string, kleur?: string, tekstkleur?: string): WayfindingColor {
   const key = carrierKey(vervoerder);
+  if (modus === "bus" && key === "QBUZZ") return COLORS.QBUZZ;
   let fallback: WayfindingColor;
   if (modus === "metro" && key === "GVB" && GVB_METRO[lijn]) fallback = GVB_METRO[lijn];
   else if (modus === "train") fallback = COLORS[key] || COLORS.NS;

@@ -1,3 +1,5 @@
+import { rondAfwijkingMinuten, afwijkingTekst, tijdTotVertrek } from "./ritStatus.ts";
+export { rondAfwijkingMinuten, afwijkingTekst } from "./ritStatus.ts";
 import type { LiveRitPositie, Rit, RitHalte, RitKaartHalte } from "./types";
 
 export const RITV2 = {
@@ -13,7 +15,7 @@ export type RitV2Stop = {
   index: number; h: RitHalte; naam: string; plaats: string;
   toonPlaats: boolean; verwacht: string; gepland: string;
   verwachtMs: number | null; vertragingSec: number; vertragingMin: number;
-  gepasseerd: boolean;
+  gepasseerd: boolean; live: boolean;
 };
 
 /** NL-plaats staat al in h.plaats; haal alleen het redundante letterlijke
@@ -66,17 +68,6 @@ function klokVanTimestamp(ms: number): string {
   return val("hour").padStart(2, "0") + ":" + val("minute").padStart(2, "0");
 }
 
-export function rondAfwijkingMinuten(seconds: number): number {
-  if (!Number.isFinite(seconds)) return 0;
-  const rounded = Math.round(Math.abs(seconds) / 60);
-  return rounded === 0 ? 0 : Math.sign(seconds) * rounded;
-}
-
-export function afwijkingTekst(minuten: number): string {
-  return minuten > 0 ? "+" + minuten + " min"
-    : minuten < 0 ? Math.abs(minuten) + " min te vroeg" : "Op tijd";
-}
-
 /** Round once for the stop countdown. 0 is handled as 'aankomend' in the row. */
 export function verwachteAankomstMin(verwachtMs: number | null, nu: number): number | null {
   if (verwachtMs == null || !Number.isFinite(verwachtMs)) return null;
@@ -90,7 +81,7 @@ export function volgendeHalteTekst(
   const min = verwachteAankomstMin(verwachtMs, nu);
   if (min === null) return null;
   return t("Volgende halte") + " · " +
-    (min === 0 ? t("aankomend") : t("over") + " " + min + " min");
+    (min === 0 ? t("aankomend") : tijdTotVertrek(verwachtMs, nu));
 }
 
 /** Calculate visible upcoming stops from the *measured scroll viewport*;
@@ -152,7 +143,8 @@ export function bouwRitV2Haltes(rit: Rit, gpsLaatsteGepasseerd: number | null): 
     const plaats = String(h.plaats || "").trim();
     return { index, h, naam: compacteHalteNaam(h.naam, plaats), plaats,
       toonPlaats: !!plaats && (index === 0 || plaats !== String(vorige?.plaats || "").trim()),
-      verwacht, gepland, verwachtMs, vertragingSec: seconds, vertragingMin, gepasseerd };
+      verwacht, gepland, verwachtMs, vertragingSec: seconds, vertragingMin, gepasseerd,
+      live: !h.vervalt && (explicit || (rit.live && (source || carrySec !== 0))) };
   });
 }
 

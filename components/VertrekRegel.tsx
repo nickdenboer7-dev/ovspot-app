@@ -4,7 +4,10 @@ import { Text } from "./LocalizedText";
 import { useApp } from "../context/AppProvider";
 import { bestemmingVoorWeergave, spoorLabel, vertrekTijden } from "../lib/format";
 import type { Vertrek } from "../lib/types";
-import { LijnBadge, LiveStip, StatusLabel } from "./ui";
+import { LijnBadge } from "./ui";
+import { RitTijdcel } from "./RitTijdcel";
+import { RitStatusLabel } from "./RitStatusLabel";
+import { bepaalRitStatus } from "../lib/ritStatus";
 
 /**
  * Eén vertrek. compact = kaartje op Dichtbij/Favorieten (badge · bestemming · status · minuten).
@@ -15,6 +18,9 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
   const { width, fontScale } = useWindowDimensions();
   const smalScherm = width < 380 || fontScale > 1.2 || instellingen.groteTekst;
   const { vertrokken, vertraagd, tijd, kloktijd, tweedeTijd, oorspronkelijk } = vertrekTijden(v, nu);
+  const statusRit = bepaalRitStatus({
+    live: v.live, vervallen: v.vervallen, afwijkingMin: v.vertraging_min
+  });
   const info = [spoorLabel(v.modus, v.spoor), v.vervoerder].filter(Boolean).join(" · ");
   const displayBestemming = bestemmingVoorWeergave(v.lijn, v.bestemming);
   // Screen readers receive translated labels without altering operator destinations.
@@ -22,7 +28,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
     `${v.lijn_naam || v.lijn} ${t("naar")} ${displayBestemming}`,
     v.vervallen ? t("Vervalt") : vertrokken ? t("Vertrokken") : t(tijd),
     kloktijd ? `${t("vertrek")} ${kloktijd}` : "",
-    !v.live && !vertraagd ? t("gepland") : "",
+    t(statusRit.tekst),
     vertraagd ? `${v.vertraging_min} ${t("minuten vertraging")}` : "",
     oorspronkelijk ? `${t("oorspronkelijk")} ${oorspronkelijk}` : "",
     v.spoor ? t(spoorLabel(v.modus, v.spoor)) : ""
@@ -53,11 +59,6 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
           >
             {displayBestemming}
           </Text>
-          {v.vervallen ? (
-            <View style={[s.vervaltLabel, { backgroundColor: colors.redBg }]}>
-              <Text style={[s.vervaltText, { color: colors.red }]}>Vervalt</Text>
-            </View>
-          ) : null}
         </View>
         {((!compact && info) || (!vertrokken && !v.vervallen)) ? <View style={s.detailRij}>
           {!compact && info ? (
@@ -65,24 +66,21 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
               {info}
             </Text>
           ) : null}
-          {!vertrokken && (v.live && !v.vervallen ? (
-            <View style={[s.liveStatus, { backgroundColor: colors.liveGlow }]}>
-              <LiveStip kleur={colors.live} />
-              <Text style={[s.liveTekst, { color: vertraagd ? colors.delay : colors.live }]}>
-                {vertraagd ? `+${v.vertraging_min} min` : "Live"}
-              </Text>
-            </View>
-          ) : <StatusLabel v={v} compact />)}
+          {!vertrokken ? (
+            <RitStatusLabel live={v.live} vervallen={v.vervallen} afwijkingMin={v.vertraging_min} />
+          ) : null}
         </View> : null}
       </View>
       <View style={[s.rechts, smalScherm && s.rechtsSmal, vertrokken && s.rechtsVertrokken]}>
-        <Text style={[s.minuten, smalScherm && s.minutenSmal, vertrokken && s.vertrokkenTekst, { color: v.vervallen || vertrokken ? colors.muted : vertraagd ? colors.delay : colors.text }]}>{tijd}</Text>
-        {tweedeTijd ? (
-          <Text style={[s.kloktijd, { color: colors.sub }]}>{tweedeTijd}</Text>
-        ) : null}
-        {oorspronkelijk ? (
-          <Text style={[s.gepland, { color: colors.sub, textDecorationLine: "line-through" }]}>{oorspronkelijk}</Text>
-        ) : null}
+        {vertrokken && !v.vervallen ? (
+          <Text style={[s.vertrokkenTekst, { color: colors.muted }]}>Vertrokken</Text>
+        ) : (
+          <RitTijdcel
+            verwacht={kloktijd} gepland={v.gepland}
+            live={v.live} vervallen={v.vervallen} afwijkingMin={v.vertraging_min}
+            aftel={!v.vervallen && tijd !== kloktijd ? tijd : undefined}
+          />
+        )}
       </View>
     </View>
   );

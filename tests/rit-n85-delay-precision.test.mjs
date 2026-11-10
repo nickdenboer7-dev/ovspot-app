@@ -9,6 +9,7 @@ import {
 
 const screen = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
 const row = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
+const timecell = readFileSync(new URL("../components/RitTijdcel.tsx", import.meta.url), "utf8");
 const moving = readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url), "utf8");
 const epoch = clock => new Date("2026-11-09T" + clock + "+01:00").getTime();
 const stop = (name, planned, expected, live, delay = 0) => ({
@@ -84,9 +85,9 @@ test("Early -80 sec displays '1 min te vroeg' with purple warning and struck pla
   assert.equal(RITV2.early, "#8A3E91");
   assert.notEqual(RITV2.early, RITV2.green);
   assert.match(row, /s\.earlyText/);
-  assert.match(row, /afwijkend \? <Text style=\{s\.planned\}>\{gepland\}/);
-  assert.match(row, /textDecorationLine: "line-through"/);
-  assert.match(screen, /statusAfwijkingMin < 0 \? P\.early : P\.green/);
+  assert.match(timecell, /\{gewijzigd \? \(/);
+  assert.match(timecell, /textDecorationLine: "line-through"/);
+  assert.match(screen, /afwijkingMin=\{statusAfwijkingMin \?\? 0\}/);
 });
 
 test("More available viewport height yields more stops while never fewer than six", () => {
@@ -103,7 +104,7 @@ test("More available viewport height yields more stops while never fewer than si
   assert.ok(550 - used(550) < 48);
   assert.ok(720 - used(720) < 48);
   assert.match(screen, /setLijstHoogte\(/);
-  assert.match(screen, /volgendeIndex \+ aantalKomende/);
+  assert.match(screen, /richtIndex \+ aantalKomende/);
   assert.match(screen, /<HalteVouwknop label=\{t\("Toon"\) \+ " " \+ verborgenLater/);
 });
 
@@ -119,8 +120,8 @@ test("GPS current chip and marker are both gated on matched real coordinates", (
   assert.ok(Math.abs(result.fractie - .5) < .03);
   assert.equal(isGpsActueel(current, now), true);
   assert.equal(isGpsActueel(stale, now), false);
-  assert.match(screen, /t\(gpsStatus\)/);
-  assert.match(screen, /segment && actueel && r\.index === segment\.volgendeIndex/);
+  assert.match(screen, /chip=\{nogNietVertrokken \? "Geen voertuig-GPS" : !trein \? gpsStatus/);
+  assert.match(screen, /segment && actueel && rijdend && r.index === segment.volgendeIndex/);
   assert.doesNotMatch(moving, /volgendeMs|Date\.now\(\)/);
 });
 
@@ -128,5 +129,5 @@ test("Approved 56dp flat bar, no new incident or stopboard modifications", () =>
   assert.match(screen, /status: \{ height: 56, backgroundColor: P\.strip/);
   assert.doesNotMatch(screen, /<View style=\{s\.statusBus\}|<View style=\{s\.statusScheiding\}/);
   assert.doesNotMatch(screen, /StoringKaart|storingen\.map/);
-  assert.match(screen, /<OnderBalk actief=\{van\} compact/);
+  assert.match(screen, /<OnderBalk actief=\{van\} \/>/);
 });

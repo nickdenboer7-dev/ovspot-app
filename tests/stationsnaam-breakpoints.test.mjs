@@ -22,7 +22,7 @@ test("Opnieuw formatteren voegt nooit dubbele zero-width spaces toe", () => {
 
 test("Nieuwe compacte ritlijst toont haltenaam op één regel zonder woordmanipulatie", () => {
   const stop = readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url), "utf8");
-  assert.match(stop,/numberOfLines=\{1\}>\{naam\}/);
+  assert.match(stop,/numberOfLines=\{markeer \? undefined : 1\}>\{zichtbaarNaam\}/);
   assert.doesNotMatch(stop,/stationsnaamMetBreekpunten|\.slice\(/);
   assert.match(stop,/labelColumn: \{ flex: 1, minWidth: 0/);
 });

@@ -19,7 +19,7 @@ test("Kaart is full-screen en sluit compacte haltelijst/tabbar uit", () => {
   assert.match(modern,/!isKaart \? <>/);
   assert.match(modern,/<ScrollView ref=\{lijstRef\}/);
   assert.match(modern,/<LiveRitKaart/);
-  assert.match(modern,/<OnderBalk actief=\{van\} compact/);
+  assert.match(modern, /<OnderBalk actief=\{van\} \/>/);
   assert.match(kaart,/provider=\{PROVIDER_GOOGLE\}/);
   assert.match(kaart,/style=\{StyleSheet\.absoluteFill\}/);
   assert.doesNotMatch(kaart,/height: 250|UrlTile|tile\.openstreetmap/);
