@@ -18,7 +18,7 @@ import { maakLijnFavoriet } from "../lib/favorieten";
 import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
+import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritNummerKort, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord } from "../lib/types";
 
 type Params = {
@@ -156,6 +156,16 @@ export default function RitverloopV2Screen() {
     : undefined;
   const bronMs = rit?.bijgewerkt ? Date.parse(rit.bijgewerkt) : NaN;
   const bijgewerktMs = Number.isFinite(bronMs) ? bronMs : null;
+  const bijHalteNaam = !nogNietVertrokken && !paar && !!rit && !rit.vervallen && !trein &&
+    !!rit.nu_hier?.bij_halte && volgendeRij ? volgendeRij.naam : "";
+  const voertuigInfo = voertuigRegel(rit, gps);
+  const ritNr = !trein && !!rit && !rit.vervallen ? ritNummerKort(rit.rit_nummer) : "";
+  const voertuigDelen = [
+    ritNr ? `${t("Rit")} ${ritNr}` : "",
+    voertuigInfo ? `${t("Voertuig")} ${voertuigInfo.nummer}` : "",
+    voertuigInfo && voertuigInfo.snelheidKmh !== null ? `${voertuigInfo.snelheidKmh} km/h` : ""
+  ].filter(Boolean);
+  const voertuigTekst = voertuigDelen.length ? voertuigDelen.join(" · ") : undefined;
   const liveVoorBalk = !!rit && rit.live && !rit.vervallen &&
     haltes.some(h => h.live);
 
@@ -213,7 +223,9 @@ export default function RitverloopV2Screen() {
         chip={nogNietVertrokken ? "Geen voertuig-GPS" : !trein ? gpsStatus : undefined}
         tussen={nogNietVertrokken ? undefined :
           paar ? `${t("Tussen")} ${paar}` :
+          bijHalteNaam ? `${t("Halteert op")} ${bijHalteNaam}` :
           rijdend ? t("Onderweg") : undefined}
+        voertuig={voertuigTekst}
       />
       <ScrollView ref={lijstRef} style={[s.lijst, { backgroundColor: colors.background }]}
         contentContainerStyle={s.lijstInhoud}

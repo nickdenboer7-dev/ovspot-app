@@ -363,3 +363,41 @@ export function ritGpsStatus(
   }
   return opts.laden ? "GPS ophalen…" : "Geen voertuig-GPS";
 }
+
+/** Voertuignummer zonder vervoerderprefix ("QBUZZ_1412" -> "1412"). */
+export function voertuigNummerKort(nummer: unknown): string {
+  const s = typeof nummer === "string" ? nummer.trim() : typeof nummer === "number" ? String(nummer) : "";
+  if (!s) return "";
+  const i = s.lastIndexOf("_");
+  return (i >= 0 ? s.slice(i + 1) : s).trim();
+}
+
+/**
+ * Compacte voertuigregel voor de ritpagina: "1412" of "1412 · 38 km/h".
+ * Alleen een bekend nummer wordt getoond; snelheid alleen als de bron vers is
+ * (<= 45 s, gelijk aan de GPS-versheidsregel) en een geldig getal.
+ * Geen voertuigregel voor vervallen ritten of treinen.
+ */
+export function voertuigRegel(
+  rit: Pick<Rit, "voertuig" | "voertuig_info" | "vervallen" | "modus"> | null | undefined,
+  gps: Pick<LiveRitPositie, "voertuignummer"> | null | undefined,
+  nuMs?: number
+): { nummer: string; snelheidKmh: number | null } | null {
+  void nuMs;
+  if (!rit || rit.vervallen || rit.modus === "train") return null;
+  const info = rit.voertuig_info ?? rit.voertuig ?? null;
+  const nummer = voertuigNummerKort(info?.nummer) || voertuigNummerKort(gps?.voertuignummer);
+  if (!nummer) return null;
+  const v = info?.snelheid_kmh;
+  const leeftijd = info?.leeftijd_s;
+  const vers = typeof leeftijd === "number" && Number.isFinite(leeftijd) && leeftijd >= -5 && leeftijd <= 45;
+  const snelheid = typeof v === "number" && Number.isFinite(v) && v >= 0 && v < 200 && vers
+    ? Math.round(v) : null;
+  return { nummer, snelheidKmh: snelheid };
+}
+
+/** Ritnummer voor de ritpagina; alleen een kort, numeriek nummer wordt getoond. */
+export function ritNummerKort(nummer: unknown): string {
+  const s = typeof nummer === "number" ? String(nummer) : typeof nummer === "string" ? nummer.trim() : "";
+  return /^\d{1,8}$/.test(s) ? s : "";
+}

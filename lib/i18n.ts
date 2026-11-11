@@ -236,6 +236,9 @@ export const EN: Record<string, string> = {
   "Bij halte gemeld (KV8)": "Reported at stop (KV8)",
   "Volgende halte (KV8)": "Next stop (KV8)",
   "Halteert nu": "At stop now",
+  "Voertuig": "Vehicle",
+  "Rit": "Trip",
+  "Halteert op": "Stopped at",
   "Nu hier": "Currently here",
   "Onderweg naar beginhalte": "Approaching first stop",
   "Dienstregeling": "Timetable",
@@ -283,6 +286,7 @@ export const EN: Record<string, string> = {
 const DYNAMIC: [RegExp, (...parts: string[]) => string][] = [
   [/^(\d+) min te vroeg$/u, (_, n) => n + " min early"],
   [/^Onderweg naar (.+)$/u, (_, x) => "Heading towards " + vertaling(x, "en")],
+  [/^Halteert op (.+)$/u, (_, x) => "Stopped at " + x],
   [/^Lijn (.+) · (\d+) sec geleden$/u, (_, x, y) => "Line " + x + " · " + y + " sec ago"],
   [/^Toon (\d+) eerdere halte(s?)$/u, (_, x, y) => "Show " + x + " earlier stop" + (y ? "s" : "")],
   [/^Spoor (.+)$/u, (_, x) => "Platform " + x],
