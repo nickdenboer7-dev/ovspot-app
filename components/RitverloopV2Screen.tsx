@@ -9,6 +9,7 @@ import { LiveRitKaart } from "./LiveRitKaart";
 import { FeedbackModal } from "./FeedbackModal";
 import { OVspotSchermKop, OVspotIdentiteit } from "./OVspotSchermKop";
 import { StatusStrook } from "./StatusStrook";
+import { RitInfoKaart } from "./RitInfoKaart";
 import { LiveBalk } from "./LiveBalk";
 import { jouwHalteIndex, tijdTotVertrek, toonVolgendeHighlight, vertrekHalteOmschrijving } from "../lib/ritStatus";
 import { HalteVouwknop, RitverloopStop } from "./RitverloopStop";
@@ -18,7 +19,7 @@ import { maakLijnFavoriet } from "../lib/favorieten";
 import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritNummerKort, vorigeRitDelen, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
+import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritInfoRijen, ritNummerKort, vorigeRitDelen, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord } from "../lib/types";
 
 type Params = {
@@ -160,16 +161,12 @@ export default function RitverloopV2Screen() {
     !!rit.nu_hier?.bij_halte && volgendeRij ? volgendeRij.naam : "";
   const voertuigInfo = voertuigRegel(rit, gps);
   const ritNr = !trein && !!rit && !rit.vervallen ? ritNummerKort(rit.rit_nummer) : "";
-  const voertuigDelen = [
-    ritNr ? `${t("Rit")} ${ritNr}` : "",
-    voertuigInfo ? `${t("Voertuig")} ${voertuigInfo.nummer}` : "",
-    voertuigInfo && voertuigInfo.snelheidKmh !== null ? `${voertuigInfo.snelheidKmh} km/h` : ""
-  ].filter(Boolean);
-  const voertuigTekst = voertuigDelen.length ? voertuigDelen.join(" · ") : undefined;
   const vorige = !trein && !!rit && !rit.vervallen ? vorigeRitDelen(rit.vorige_rit) : null;
-  const eerderTekst = vorige
-    ? `${t("Reed eerder als")} ${t("lijn")} ${vorige.lijn}${vorige.bestemming ? " " + vorige.bestemming : ""} · ${vorige.vertrek}`
-    : undefined;
+  const laatste = haltes.length ? haltes[haltes.length - 1] : null;
+  const infoRijen = !rit || rit.vervallen || trein ? [] : ritInfoRijen({
+    ritNr, voertuig: voertuigInfo, vorige,
+    eindNaam: laatste?.h.naam, eindTijd: laatste?.verwacht || laatste?.gepland || ""
+  }).map(r => r.label === "Reed eerder als" ? { ...r, waarde: r.waarde.replace(" lijn ", ` ${t("lijn")} `) } : r);
   const liveVoorBalk = !!rit && rit.live && !rit.vervallen &&
     haltes.some(h => h.live);
 
@@ -229,8 +226,6 @@ export default function RitverloopV2Screen() {
           paar ? `${t("Tussen")} ${paar}` :
           bijHalteNaam ? `${t("Halteert op")} ${bijHalteNaam}` :
           rijdend ? t("Onderweg") : undefined}
-        voertuig={voertuigTekst}
-        eerder={eerderTekst}
       />
       <ScrollView ref={lijstRef} style={[s.lijst, { backgroundColor: colors.background }]}
         contentContainerStyle={s.lijstInhoud}
@@ -279,6 +274,7 @@ export default function RitverloopV2Screen() {
             onPress={() => setToonLater(false)} />
         ) : null}
         </View>
+        <RitInfoKaart rijen={infoRijen} />
       </ScrollView>
       <LiveBalk live={liveVoorBalk} bijgewerktMs={bijgewerktMs} nu={nu} />
       <OnderBalk actief={van} />

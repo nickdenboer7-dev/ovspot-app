@@ -51,9 +51,8 @@ test("ritpagina toont voertuigregel en 'Halteert op' zonder losse hex-codes", ()
   const scherm = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
   const strook = readFileSync(new URL("../components/StatusStrook.tsx", import.meta.url), "utf8");
   assert.match(scherm, /voertuigRegel\(rit, gps\)/);
-  assert.match(scherm, /voertuig=\{voertuigTekst\}/);
+  assert.match(scherm, /<RitInfoKaart rijen=\{infoRijen\} \/>/);
   assert.match(scherm, /Halteert op/);
-  assert.match(strook, /voertuig\?: string/);
   assert.doesNotMatch(strook, /#[0-9a-fA-F]{6}/);
 });
 
@@ -70,7 +69,7 @@ test("ritnummer: alleen kort en numeriek", () => {
 test("ritpagina zet ritnummer voor de voertuigregel", () => {
   const scherm = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
   assert.match(scherm, /ritNummerKort\(rit\.rit_nummer\)/);
-  assert.match(scherm, /voertuigDelen\.join\(" · "\)/);
+  assert.match(scherm, /ritInfoRijen\(\{/);
 });
 
 import { vorigeRitDelen } from "../lib/ritverloopV2.ts";
@@ -81,4 +80,15 @@ test("vorige rit: geldig, ongeldig en onvolledig", () => {
   assert.equal(vorigeRitDelen({ lijn: "10", vertrek: "25:99" }), null);
   assert.equal(vorigeRitDelen({ bestemming: "X", vertrek: "10:00" }), null);
   assert.equal(vorigeRitDelen("x"), null);
+});
+
+import { ritInfoRijen } from "../lib/ritverloopV2.ts";
+test("ritinfo-rijen: volgorde en lege waarden", () => {
+  const r = ritInfoRijen({ ritNr: "1151", voertuig: { nummer: "4316", snelheidKmh: 38 },
+    eindNaam: "Zaans Medisch Centrum", eindTijd: "00:33",
+    vorige: { lijn: "395", bestemming: "Amsterdam Sloterdijk", vertrek: "23:41" } });
+  assert.deepEqual(r.map(x => x.label), ["Rit", "Voertuig", "Snelheid", "Aankomst", "Reed eerder als"]);
+  assert.equal(r[3].waarde, "00:33 Zaans Medisch Centrum");
+  assert.deepEqual(ritInfoRijen({}), []);
+  assert.equal(ritInfoRijen({ voertuig: { nummer: "1", snelheidKmh: null } }).length, 1);
 });

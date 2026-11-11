@@ -239,6 +239,7 @@ export const EN: Record<string, string> = {
   "Voertuig": "Vehicle",
   "Rit": "Trip",
   "Reed eerder als": "Previously ran as",
+  "Ritinformatie": "Trip information", "Snelheid": "Speed", "Aankomst": "Arrival",
   "Halteert op": "Stopped at",
   "Nu hier": "Currently here",
   "Onderweg naar beginhalte": "Approaching first stop",
