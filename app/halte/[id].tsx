@@ -15,7 +15,6 @@ import { api } from "../../lib/api";
 import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { storingPastBijModus } from "../../lib/storingPerModus";
-import { klok } from "../../lib/format";
 import { vertrekBijLijnFavoriet } from "../../lib/favorieten";
 import { combineerStatischeLijnen, filterHalteVertrekken, zoekStatischeLijnen, zichtbareStatischeLijnen } from "../../lib/halteLijnFilter";
 import { voegStationVertrektijdenToe } from "../../lib/stationGroups";

@@ -18,7 +18,7 @@ import { maakLijnFavoriet } from "../lib/favorieten";
 import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { afwijkingTekst, bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
+import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord } from "../lib/types";
 
 type Params = {

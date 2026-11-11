@@ -15,7 +15,7 @@ test("Feedbackknop opent een echt native bottom sheet, geen browser/contact-link
   assert.match(settings,/<FeedbackModal zichtbaar=\{feedbackOpen\}/);
   assert.doesNotMatch(settings,/Linking\.openURL\("https:\/\/ovspot\.nl\/contact"\)/);
   assert.match(sheet,/<Modal[\s\S]*?transparent[\s\S]*?animationType="slide"/);
-  assert.match(sheet,/const \{ colors, scheme, t \} = useApp\(\)/);
+  assert.match(sheet,/const \{ colors, t \} = useApp\(\)/);
   assert.match(sheet,/borderTopLeftRadius: 26, borderTopRightRadius: 26/);
 });
 

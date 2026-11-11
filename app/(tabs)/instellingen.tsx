@@ -40,7 +40,7 @@ function Sectie({ titel, children }: { titel: string; children: React.ReactNode 
   return (
     <View style={s.sectie}>
       <Text style={[s.sectieTitel, { color: colors.sub }]} accessibilityRole="header">{titel}</Text>
-      <View style={[s.kaart, { backgroundColor: instellingen.hoogContrast ? colors.surface : scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
+      <View style={[s.kaart, { backgroundColor: !instellingen.hoogContrast && scheme === "dark" ? colors.surface2 : colors.surface, borderColor: colors.border }]}>
         {children}
       </View>
     </View>
@@ -64,7 +64,7 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
   const rijStijl = [s.rij, !laatste && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }];
   const inhoud = (
     <>
-      <View style={[s.icoonAchtergrond, { backgroundColor: instellingen.hoogContrast ? colors.surface2 : scheme === "dark" ? "#334155" : colors.surface2 }]}>
+      <View style={[s.icoonAchtergrond, { backgroundColor: !instellingen.hoogContrast && scheme === "dark" ? colors.border : colors.surface2 }]}>
         <Ionicons name={icoon} size={21} color={colors.accent} />
       </View>
       <View style={s.rijTekst}>
@@ -82,7 +82,7 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
           accessibilityLabel={t(titel)}
           value={schakel.value}
           onValueChange={schakel.onChange}
-          trackColor={{ false: colors.border, true: scheme === "dark" ? "#0E7490" : "#7DD3FC" }}
+          trackColor={{ false: colors.border, true: colors.switchOn }}
           thumbColor={schakel.value ? colors.accent : colors.muted}
         />
       ) : !waardeOnder ? (
@@ -225,7 +225,7 @@ export default function Instellingen() {
     ));
 
   return (
-    <View style={{ flex: 1, backgroundColor: instellingen.hoogContrast ? colors.background : scheme === "dark" ? "#0F172A" : colors.background }}>
+    <View style={{ flex: 1, backgroundColor: !instellingen.hoogContrast && scheme === "dark" ? colors.header : colors.background }}>
       <Kop groot titel="Instellingen" />
       <ScrollView showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -275,7 +275,7 @@ export default function Instellingen() {
         <View style={s.modalAchtergrond}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => zetKiezer(null)}
             accessibilityRole="button" accessibilityLabel={t("Keuzemenu sluiten")} />
-          <View style={[s.modalKaart, { backgroundColor: instellingen.hoogContrast ? colors.surface : scheme === "dark" ? "#1E293B" : colors.surface, borderColor: colors.border }]}>
+          <View style={[s.modalKaart, { backgroundColor: !instellingen.hoogContrast && scheme === "dark" ? colors.surface2 : colors.surface, borderColor: colors.border }]}>
             <Text style={[s.modalTitel, { color: colors.text }]}>
               {kiezer === "thema" ? "Kies thema" : kiezer === "taal" ? "Kies taal" : "Kies startscherm"}
             </Text>

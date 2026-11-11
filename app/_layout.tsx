@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
 import { useKeepAwake } from "expo-keep-awake";
 import React, { useEffect } from "react";
 import { AppProvider, useApp } from "../context/AppProvider";
@@ -18,6 +19,11 @@ function Navigatie() {
   useEffect(() => {
     if (klaar) SplashScreen.hideAsync().catch(() => {});
   }, [klaar]);
+
+  // Match Android native window background to in-app light/dark/contrast.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
+  }, [colors.background]);
 
   const basis = scheme === "dark" ? DarkTheme : DefaultTheme;
   const thema = {

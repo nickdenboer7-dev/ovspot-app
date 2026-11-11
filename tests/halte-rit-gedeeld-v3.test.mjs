@@ -70,7 +70,7 @@ test("Same expected/plan/delta fields drive both time cells; early purple and ca
   assert.match(tijdcel, /afwijkingMin=|afwijkingMin,/);
   assert.match(tijdcel, /s.plan/);
   assert.match(tijdcel, /textDecorationLine: "line-through"/);
-  assert.match(tijdcel, /scheme === "dark" \? "#E9D5FF" : "#6B21A8"/);
+  assert.match(tijdcel, /colors\.early/);
   assert.match(tijdcel, /vervallen \? gepland \|\| verwacht/);
   assert.match(src("components/RitStatusLabel.tsx"), /"vervallen"/);
 });

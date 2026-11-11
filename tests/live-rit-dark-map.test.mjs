@@ -35,7 +35,7 @@ test("Haltestippen, badge en richting behouden scherp contrast met donkere onder
   assert.match(kaart, /\$\{stop.gepasseerd \? "voorbij" : "komend"\}:\$\{scheme\}/);
   assert.match(kaart, /halteKomendDonker: \{ backgroundColor: "#FFFFFF", borderColor: "#38BDF8" \}/);
   assert.match(kaart, /halteGepasseerdDonker: \{ backgroundColor: "#94A3B8", borderColor: "#E2E8F0" \}/);
-  assert.match(kaart, /const voertuigKleur = isDark \? "#075985" : colors.accent/);
+  assert.match(kaart, /const voertuigKleur = colors\.vehicle/);
   assert.match(kaart, /borderBottomColor: voertuigKleur/);
   assert.match(kaart, /backgroundColor: voertuigKleur/);
   assert.match(kaart, /borderColor: "#FFFFFF"/);
@@ -43,7 +43,7 @@ test("Haltestippen, badge en richting behouden scherp contrast met donkere onder
 });
 
 test("Vizier is donkerblauw met wit pictogram in donkere modus; licht blijft hetzelfde", () => {
-  assert.match(kaart, /backgroundColor: isDark \? "#1E293B" : colors.surface/);
-  assert.match(kaart, /borderColor: isDark \? "#475569" : colors.border/);
+  assert.match(kaart, /backgroundColor: colors\.mapButton/);
+  assert.match(kaart, /borderColor: colors\.mapButtonBorder/);
   assert.match(kaart, /name="locate" size=\{23\} color=\{isDark \? "#FFFFFF" : colors.accent\}/);
 });

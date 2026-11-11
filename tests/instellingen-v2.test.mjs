@@ -56,8 +56,8 @@ test("Belangrijkste instellingen staan boven Meer instellingen; zoekresultaten b
                       "Databesparing","Storingen","Stuur feedback","Over de app"])
     assert.ok(scherm.includes('titel="'+label+'"'),label);
   assert.match(scherm,/ScrollView showsVerticalScrollIndicator=\{false\}/);
-  assert.match(scherm,/#0F172A/);
-  assert.match(scherm,/#1E293B/);
+  assert.match(scherm,/colors\.header/);
+  assert.match(scherm,/colors\.surface2/);
   assert.match(scherm,/borderRadius: 18/);
   assert.match(scherm,/accessibilityState=\{\{ expanded: meerOpen \}\}/);
   assert.match(scherm,/zoekt \|\| meerOpen \? toonSecties\(true\)/);

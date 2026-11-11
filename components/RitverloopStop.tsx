@@ -14,7 +14,7 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
   fractie: number | null; trein: boolean; nu: number; t: (s: string) => string;
   jouwHalte?: boolean; vertrekhalte?: boolean; onLayout?: (e: LayoutChangeEvent) => void;
 }) {
-  const { colors, scheme, instellingen } = useApp();
+  const { colors, instellingen } = useApp();
   const { fontScale } = useWindowDimensions();
   const groteTekst = instellingen.groteTekst || fontScale >= 1.3;
   const { h, index, naam, plaats, verwacht, gepland, vertragingMin, verwachtMs, gepasseerd } = r;
@@ -79,7 +79,7 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
         {h.vervalt ? (
           <RitStatusLabel live={false} vervallen afwijkingMin={0} />
         ) : vroeg ? (
-          <Text style={[s.earlyText, { color: scheme === "dark" ? "#E9D5FF" : "#6B21A8" }]} numberOfLines={1}>
+          <Text style={[s.earlyText, { color: colors.early }]} numberOfLines={1}>
             {t(afwijkingTekst(vertragingMin))}
           </Text>
         ) : null}

@@ -17,13 +17,12 @@ export type RitTijdcelProps = {
 
 /** Exact dezelfde klok, afwijking en doorgestreepte planning voor bord en rit. */
 export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, aftel, compact }: RitTijdcelProps) {
-  const { colors, scheme } = useApp();
+  const { colors } = useApp();
   const status = bepaalRitStatus({ live, vervallen, afwijkingMin });
   const gewijzigd = status.heeftLive && status.afwijkingMin !== 0 && gepland && gepland !== verwacht;
   const getoondeTijd = !live ? gepland || verwacht : verwacht || gepland;
   const afwijkt = status.afwijkingMin;
-  const afwijkingKleur = afwijkt > 0 ? colors.delay :
-    (scheme === "dark" ? "#E9D5FF" : "#6B21A8");
+  const afwijkingKleur = afwijkt > 0 ? colors.delay : colors.early;
   return (
     <View style={[s.cel, compact ? s.compact : s.bord]}>
       {aftel && !vervallen ? (

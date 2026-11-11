@@ -28,7 +28,7 @@ function nieuwBerichtId(): string {
 }
 
 export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
-  const { colors, scheme, t } = useApp();
+  const { colors, t } = useApp();
   const insets = useSafeAreaInsets();
   const [categorie, zetCategorie] = useState<FeedbackCategorie>("kaart_data");
   const [bericht, zetBericht] = useState("");

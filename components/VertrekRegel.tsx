@@ -17,7 +17,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
   const { colors, t, instellingen } = useApp();
   const { width, fontScale } = useWindowDimensions();
   const smalScherm = width < 380 || fontScale > 1.2 || instellingen.groteTekst;
-  const { vertrokken, vertraagd, tijd, kloktijd, tweedeTijd, oorspronkelijk } = vertrekTijden(v, nu);
+  const { vertrokken, vertraagd, tijd, kloktijd, oorspronkelijk } = vertrekTijden(v, nu);
   const statusRit = bepaalRitStatus({
     live: v.live, vervallen: v.vervallen, afwijkingMin: v.vertraging_min
   });

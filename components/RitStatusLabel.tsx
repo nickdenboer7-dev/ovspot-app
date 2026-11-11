@@ -6,12 +6,12 @@ import { bepaalRitStatus } from "../lib/ritStatus";
 import type { RitStatusInvoer } from "../lib/ritStatus";
 
 export function RitStatusLabel({ live, vervallen, afwijkingMin }: RitStatusInvoer) {
-  const { colors, taal, scheme } = useApp();
+  const { colors, taal } = useApp();
   const st = bepaalRitStatus({ live, vervallen, afwijkingMin });
   const kleur = st.soort === "vervallen" ? colors.red
     : st.soort === "gepland" ? colors.sub
     : st.soort === "vertraagd" ? colors.delay
-    : st.soort === "te_vroeg" ? (scheme === "dark" ? "#E9D5FF" : "#6B21A8") : colors.live;
+    : st.soort === "te_vroeg" ? colors.early : colors.live;
   const tekst = taal !== "en" ? st.tekst :
     st.soort === "gepland" ? "Scheduled" :
     st.soort === "vervallen" ? "Cancelled" :

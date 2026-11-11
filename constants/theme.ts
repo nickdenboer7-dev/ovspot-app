@@ -18,9 +18,13 @@ export type Palette = {
   delay: string;
   red: string;
   redBg: string;
-  busBadge: string;
-  trainBadge: string;
   badgeText: string;
+  /** Unified color for negative delays (early arrival). */
+  early: string;
+  vehicle: string;
+  mapButton: string;
+  mapButtonBorder: string;
+  switchOn: string;
   warnBg: string;
   warnBorder: string;
   warnText: string;
@@ -51,9 +55,12 @@ export const light: Palette = {
   delay: "#B45309",
   red: "#B91C1C",
   redBg: "#FEF2F2",
-  busBadge: "#0284C7",
-  trainBadge: "#0F2942",
   badgeText: "#FFFFFF",
+  early: "#6B21A8",
+  vehicle: "#0284C7",
+  mapButton: "#FFFFFF",
+  mapButtonBorder: "#E2E8F0",
+  switchOn: "#7DD3FC",
   warnBg: "#FFFBEB",
   warnBorder: "#FDE68A",
   warnText: "#92400E",
@@ -84,9 +91,12 @@ export const dark: Palette = {
   delay: "#FBBF24",
   red: "#FCA5A5",
   redBg: "#451A1A",
-  busBadge: "#38BDF8",
-  trainBadge: "#334155",
   badgeText: "#FFFFFF",
+  early: "#E9D5FF",
+  vehicle: "#075985",
+  mapButton: "#1E293B",
+  mapButtonBorder: "#475569",
+  switchOn: "#0E7490",
   warnBg: "#3B2F13",
   warnBorder: "#704F1E",
   warnText: "#FDE68A",
@@ -109,7 +119,8 @@ export const highContrastLight: Palette = {
   infoBg: "#E6F1FF", infoText: "#003D75",
   warnBg: "#FFF1D4", warnText: "#623600",
   rail: "#64748B", tabInactive: "#334155",
-  busBadge: "#005A9C", trainBadge: "#142E45", badgeText: "#FFFFFF"
+  badgeText: "#FFFFFF",
+  vehicle: "#005A9C", mapButton: "#FFFFFF", mapButtonBorder: "#526176", switchOn: "#005A9C"
 };
 
 export const highContrastDark: Palette = {
@@ -123,5 +134,6 @@ export const highContrastDark: Palette = {
   infoBg: "#0D2A43", infoText: "#BAE6FD",
   warnBg: "#32260A", warnText: "#FEF08A",
   rail: "#94A3B8", tabInactive: "#E2E8F0",
-  busBadge: "#075985", trainBadge: "#1E3A5F", badgeText: "#FFFFFF"
+  badgeText: "#FFFFFF",
+  vehicle: "#075985", mapButton: "#19212C", mapButtonBorder: "#94A3B8", switchOn: "#0E7490"
 };

@@ -49,7 +49,7 @@ export function LiveRitKaart({
   const isDark = scheme === "dark";
   const routePunten = useMemo(() => geldigeKaartPunten(shape), [shape]);
   const lijnKleur = isDark ? ritRouteKleurDonker(routeColor) : ritRouteKleur(routeColor);
-  const voertuigKleur = isDark ? "#075985" : colors.accent;
+  const voertuigKleur = colors.vehicle;
   // Android moet eerst de custom marker inclusief tekst/snavel kunnen rasteren.
   const [markerTracksViewChanges, setMarkerTracksViewChanges] = useState(true);
   const heeftGeldigeVoertuigPositie = Number.isFinite(positie?.lat) && Number.isFinite(positie?.lon);
@@ -237,8 +237,8 @@ export function LiveRitKaart({
         accessibilityLabel={t("Centreer kaart op live voertuig")}
         accessibilityState={{ disabled: !positie }}
         style={[s.centreerKnop, {
-          backgroundColor: isDark ? "#1E293B" : colors.surface,
-          borderColor: isDark ? "#475569" : colors.border,
+          backgroundColor: colors.mapButton,
+          borderColor: colors.mapButtonBorder,
           opacity: positie ? 1 : 0.55
         }]}
       >
