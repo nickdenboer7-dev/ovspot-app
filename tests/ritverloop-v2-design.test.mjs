@@ -33,8 +33,8 @@ const rit = {
 test("Screen uses shared app design with unchanged 68/28 timeline and controls", () => {
   for (const re of [
     /<OVspotSchermKop titel="Ritverloop"/,
-    /tijdlijnKaart: \{ borderWidth: 1, borderRadius: 18/,
-    /lijstInhoud: \{ paddingHorizontal: 14/,
+    /tijdlijnKaart: \{ borderTopWidth: StyleSheet.hairlineWidth/,
+    /lijstInhoud: \{ paddingHorizontal: 0/,
     /width: 68/, /rail: \{ width: 28/, /height: 44/
   ]) assert.match(screen + stopScreen, re);
   assert.equal(RITV2.blue, "#0B57D0"); // Maintained for route-color compatibility.

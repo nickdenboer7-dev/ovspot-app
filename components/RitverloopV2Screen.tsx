@@ -9,7 +9,7 @@ import { LiveRitKaart } from "./LiveRitKaart";
 import { FeedbackModal } from "./FeedbackModal";
 import { OVspotSchermKop, OVspotIdentiteit } from "./OVspotSchermKop";
 import { StatusStrook } from "./StatusStrook";
-import { RitInfoKaart } from "./RitInfoKaart";
+import { LijnBadge } from "./ui";
 import { LiveBalk } from "./LiveBalk";
 import { jouwHalteIndex, tijdTotVertrek, toonVolgendeHighlight, vertrekHalteOmschrijving } from "../lib/ritStatus";
 import { HalteVouwknop, RitverloopStop } from "./RitverloopStop";
@@ -19,7 +19,7 @@ import { maakLijnFavoriet } from "../lib/favorieten";
 import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritInfoRijen, ritNummerKort, vorigeRitDelen, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
+import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritNummerKort, vorigeRitDelen, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord } from "../lib/types";
 
 type Params = {
@@ -162,11 +162,13 @@ export default function RitverloopV2Screen() {
   const voertuigInfo = voertuigRegel(rit, gps);
   const ritNr = !trein && !!rit && !rit.vervallen ? ritNummerKort(rit.rit_nummer) : "";
   const vorige = !trein && !!rit && !rit.vervallen ? vorigeRitDelen(rit.vorige_rit) : null;
-  const laatste = haltes.length ? haltes[haltes.length - 1] : null;
-  const infoRijen = !rit || rit.vervallen || trein ? [] : ritInfoRijen({
-    ritNr, voertuig: voertuigInfo, vorige,
-    eindNaam: laatste?.h.naam, eindTijd: laatste?.verwacht || laatste?.gepland || ""
-  }).map(r => r.label === "Reed eerder als" ? { ...r, waarde: r.waarde.replace(" lijn ", ` ${t("lijn")} `) } : r);
+  const voertuigDelen = [
+    ritNr ? `${t("Rit")} ${ritNr}` : "",
+    voertuigInfo ? `${t("Voertuig")} ${voertuigInfo.nummer}` : ""
+  ].filter(Boolean);
+  const voertuigTekst = voertuigDelen.length ? voertuigDelen.join(" · ") : undefined;
+  const snelheidTekst = voertuigInfo && voertuigInfo.snelheidKmh !== null
+    ? `${voertuigInfo.snelheidKmh} km/h` : undefined;
   const liveVoorBalk = !!rit && rit.live && !rit.vervallen &&
     haltes.some(h => h.live);
 
@@ -221,6 +223,8 @@ export default function RitverloopV2Screen() {
         vervallen={!!rit?.vervallen}
         afwijkingMin={statusAfwijkingMin ?? 0}
         tekst={geplandeStatus}
+        voertuig={voertuigTekst}
+        snelheid={snelheidTekst}
         chip={nogNietVertrokken ? "Geen voertuig-GPS" : !trein ? gpsStatus : undefined}
         tussen={nogNietVertrokken ? undefined :
           paar ? `${t("Tussen")} ${paar}` :
@@ -233,6 +237,15 @@ export default function RitverloopV2Screen() {
           const h = e.nativeEvent.layout.height;
           setLijstHoogte(v => Math.abs(v - h) < 1 ? v : h);
         }}>
+        {vorige ? (
+          <View style={s.eerderRij} accessible accessibilityRole="text">
+            <Text style={[s.eerderLabel, { color: colors.sub }]}>{t("Reed eerder als")}</Text>
+            <LijnBadge lijn={vorige.lijn} modus="bus" vervoerder={vervoerder}
+              kleur={vorige.lijn === lijn ? (p.kleur ? String(p.kleur) : rit?.route_color) : undefined} />
+            {vorige.bestemming ? <Text style={[s.eerderBestemming, { color: colors.body }]} numberOfLines={1}>
+              {vorige.bestemming}</Text> : null}
+          </View>
+        ) : null}
         <View style={[s.tijdlijnKaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {!rit ? <Text style={[s.fout, { color: colors.sub }]}>{poll.laden ? t("Laden…") :
           poll.fout || t("Rit niet gevonden")}</Text> : null}
@@ -274,7 +287,6 @@ export default function RitverloopV2Screen() {
             onPress={() => setToonLater(false)} />
         ) : null}
         </View>
-        <RitInfoKaart rijen={infoRijen} />
       </ScrollView>
       <LiveBalk live={liveVoorBalk} bijgewerktMs={bijgewerktMs} nu={nu} />
       <OnderBalk actief={van} />
@@ -317,9 +329,12 @@ const s = StyleSheet.create({
   liveDot: { width: 7, height: 7, borderRadius: 4 },
   tussen: { fontSize: 13 },
   lijst: { flex: 1 },
-  lijstInhoud: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 18 },
-  tijdlijnKaart: { borderWidth: 1, borderRadius: 18, paddingHorizontal: 10,
-    paddingVertical: 8, overflow: "visible" },
+  lijstInhoud: { paddingHorizontal: 0, paddingTop: 4, paddingBottom: 18 },
+  tijdlijnKaart: { borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16, paddingVertical: 4, overflow: "visible" },
+  eerderRij: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 10 },
+  eerderLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase" },
+  eerderBestemming: { fontSize: 14, fontWeight: "600", flexShrink: 1 },
   liveFooter: { height: 32, borderTopWidth: 1,
     flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 7 },
   liveFooterTekst: { fontSize: 12 },

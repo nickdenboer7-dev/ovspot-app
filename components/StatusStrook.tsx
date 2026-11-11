@@ -5,9 +5,9 @@ import { useApp } from "../context/AppProvider";
 import { RitStatusLabel } from "./RitStatusLabel";
 
 /** Dezelfde statusstrook op bord en ritpagina, zonder onjuiste GPS-aannames. */
-export function StatusStrook({ live, vervallen, afwijkingMin, tekst, chip, tussen, voertuig, eerder }: {
+export function StatusStrook({ live, vervallen, afwijkingMin, tekst, chip, tussen, voertuig, snelheid }: {
   live: boolean; vervallen: boolean; afwijkingMin: number;
-  tekst?: string; chip?: string; tussen?: string; voertuig?: string; eerder?: string;
+  tekst?: string; chip?: string; tussen?: string; voertuig?: string; snelheid?: string;
 }) {
   const { colors, t } = useApp();
   return (
@@ -18,10 +18,10 @@ export function StatusStrook({ live, vervallen, afwijkingMin, tekst, chip, tusse
         {chip ? <View style={[s.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[s.chipTekst, { color: colors.sub }]}>{t(chip)}</Text>
         </View> : null}
+        {snelheid ? <Text style={[s.snelheid, { color: colors.text }]}>{snelheid}</Text> : null}
       </View>
       {tussen ? <Text style={[s.tussen, { color: colors.body }]} numberOfLines={2}>{t(tussen)}</Text> : null}
       {voertuig ? <Text style={[s.voertuig, { color: colors.sub }]} numberOfLines={1}>{voertuig}</Text> : null}
-      {eerder ? <Text style={[s.voertuig, { color: colors.sub }]} numberOfLines={1}>{eerder}</Text> : null}
     </View>
   );
 }
@@ -33,5 +33,6 @@ const s = StyleSheet.create({
   chip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   chipTekst: { fontSize: 11, fontWeight: "700" },
   tussen: { fontSize: 12, lineHeight: 17 },
+  snelheid: { fontSize: 13, fontWeight: "700", marginLeft: "auto" },
   voertuig: { fontSize: 12, fontWeight: "600", lineHeight: 17 }
 });

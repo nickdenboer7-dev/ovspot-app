@@ -26,7 +26,7 @@ test("Shared identity and status use card geometry from other screens", () => {
   assert.match(common, /borderWidth: 1, borderRadius: 18, marginHorizontal: 14/);
   assert.match(status, /borderWidth: 1, borderRadius: 16, marginHorizontal: 14/);
   assert.match(status, /backgroundColor: colors.surface, borderColor: colors.border/);
-  assert.match(journey, /tijdlijnKaart: \{ borderWidth: 1, borderRadius: 18/);
+  assert.match(journey, /tijdlijnKaart: \{ borderTopWidth: StyleSheet.hairlineWidth/);
 });
 
 test("Footer is the same for all screens, including subpages and dark mode", () => {

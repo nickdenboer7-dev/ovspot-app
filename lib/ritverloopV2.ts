@@ -412,23 +412,3 @@ export function vorigeRitDelen(v: unknown): { lijn: string; bestemming: string; 
   if (!lijn || !vertrek) return null;
   return { lijn, bestemming, vertrek };
 }
-
-export type RitInfoRij = { label: string; waarde: string };
-
-/** Rijen voor de ritinfo-kaart; alleen gevulde gegevens, in vaste volgorde. */
-export function ritInfoRijen(inv: {
-  ritNr?: string; voertuig?: { nummer: string; snelheidKmh: number | null } | null;
-  eindNaam?: string; eindTijd?: string;
-  vorige?: { lijn: string; bestemming: string; vertrek: string } | null;
-}): RitInfoRij[] {
-  const r: RitInfoRij[] = [];
-  if (inv.ritNr) r.push({ label: "Rit", waarde: inv.ritNr });
-  if (inv.voertuig?.nummer) r.push({ label: "Voertuig", waarde: inv.voertuig.nummer });
-  if (inv.voertuig && inv.voertuig.snelheidKmh !== null) r.push({ label: "Snelheid", waarde: `${inv.voertuig.snelheidKmh} km/h` });
-  if (inv.eindNaam && inv.eindTijd) r.push({ label: "Aankomst", waarde: `${inv.eindTijd} ${inv.eindNaam}` });
-  if (inv.vorige) r.push({
-    label: "Reed eerder als",
-    waarde: `${inv.vorige.vertrek} · ${"lijn"} ${inv.vorige.lijn}${inv.vorige.bestemming ? " " + inv.vorige.bestemming : ""}`
-  });
-  return r;
-}
