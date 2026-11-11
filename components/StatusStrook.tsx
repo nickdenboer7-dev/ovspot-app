@@ -5,9 +5,9 @@ import { useApp } from "../context/AppProvider";
 import { RitStatusLabel } from "./RitStatusLabel";
 
 /** Dezelfde statusstrook op bord en ritpagina, zonder onjuiste GPS-aannames. */
-export function StatusStrook({ live, vervallen, afwijkingMin, tekst, chip, tussen, voertuig }: {
+export function StatusStrook({ live, vervallen, afwijkingMin, tekst, chip, tussen, voertuig, eerder }: {
   live: boolean; vervallen: boolean; afwijkingMin: number;
-  tekst?: string; chip?: string; tussen?: string; voertuig?: string;
+  tekst?: string; chip?: string; tussen?: string; voertuig?: string; eerder?: string;
 }) {
   const { colors, t } = useApp();
   return (
@@ -21,6 +21,7 @@ export function StatusStrook({ live, vervallen, afwijkingMin, tekst, chip, tusse
       </View>
       {tussen ? <Text style={[s.tussen, { color: colors.body }]} numberOfLines={2}>{t(tussen)}</Text> : null}
       {voertuig ? <Text style={[s.voertuig, { color: colors.sub }]} numberOfLines={1}>{voertuig}</Text> : null}
+      {eerder ? <Text style={[s.voertuig, { color: colors.sub }]} numberOfLines={1}>{eerder}</Text> : null}
     </View>
   );
 }

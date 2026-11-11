@@ -18,7 +18,7 @@ import { maakLijnFavoriet } from "../lib/favorieten";
 import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritNummerKort, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
+import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritNummerKort, vorigeRitDelen, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord } from "../lib/types";
 
 type Params = {
@@ -166,6 +166,10 @@ export default function RitverloopV2Screen() {
     voertuigInfo && voertuigInfo.snelheidKmh !== null ? `${voertuigInfo.snelheidKmh} km/h` : ""
   ].filter(Boolean);
   const voertuigTekst = voertuigDelen.length ? voertuigDelen.join(" · ") : undefined;
+  const vorige = !trein && !!rit && !rit.vervallen ? vorigeRitDelen(rit.vorige_rit) : null;
+  const eerderTekst = vorige
+    ? `${t("Reed eerder als")} ${t("lijn")} ${vorige.lijn}${vorige.bestemming ? " " + vorige.bestemming : ""} · ${vorige.vertrek}`
+    : undefined;
   const liveVoorBalk = !!rit && rit.live && !rit.vervallen &&
     haltes.some(h => h.live);
 
@@ -226,6 +230,7 @@ export default function RitverloopV2Screen() {
           bijHalteNaam ? `${t("Halteert op")} ${bijHalteNaam}` :
           rijdend ? t("Onderweg") : undefined}
         voertuig={voertuigTekst}
+        eerder={eerderTekst}
       />
       <ScrollView ref={lijstRef} style={[s.lijst, { backgroundColor: colors.background }]}
         contentContainerStyle={s.lijstInhoud}

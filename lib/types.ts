@@ -232,6 +232,8 @@ export type Rit = {
   gps_leeftijd_s?: number | null;
   /** Ritnummer (journeynummer) uit de dienstregeling, zoals reizigers het kennen. */
   rit_nummer?: string | null;
+  /** Vorige rit van hetzelfde voertuig (zelfde omloop), alleen als de server die kent. */
+  vorige_rit?: { lijn?: string; bestemming?: string; vertrek?: string; rit_nummer?: string } | null;
   haltes: RitHalte[];
   /** Geordende GTFS shape (of fysieke haltes als fallback), optioneel op oudere API's. */
   shape?: RitKaartPunt[];

@@ -238,6 +238,7 @@ export const EN: Record<string, string> = {
   "Halteert nu": "At stop now",
   "Voertuig": "Vehicle",
   "Rit": "Trip",
+  "Reed eerder als": "Previously ran as",
   "Halteert op": "Stopped at",
   "Nu hier": "Currently here",
   "Onderweg naar beginhalte": "Approaching first stop",

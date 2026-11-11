@@ -72,3 +72,13 @@ test("ritpagina zet ritnummer voor de voertuigregel", () => {
   assert.match(scherm, /ritNummerKort\(rit\.rit_nummer\)/);
   assert.match(scherm, /voertuigDelen\.join\(" · "\)/);
 });
+
+import { vorigeRitDelen } from "../lib/ritverloopV2.ts";
+test("vorige rit: geldig, ongeldig en onvolledig", () => {
+  assert.deepEqual(vorigeRitDelen({ lijn: "10", bestemming: "Busstation", vertrek: "21:28" }),
+    { lijn: "10", bestemming: "Busstation", vertrek: "21:28" });
+  assert.equal(vorigeRitDelen(null), null);
+  assert.equal(vorigeRitDelen({ lijn: "10", vertrek: "25:99" }), null);
+  assert.equal(vorigeRitDelen({ bestemming: "X", vertrek: "10:00" }), null);
+  assert.equal(vorigeRitDelen("x"), null);
+});

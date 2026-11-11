@@ -401,3 +401,14 @@ export function ritNummerKort(nummer: unknown): string {
   const s = typeof nummer === "number" ? String(nummer) : typeof nummer === "string" ? nummer.trim() : "";
   return /^\d{1,8}$/.test(s) ? s : "";
 }
+
+/** "Reed eerder als lijn 10 Busstation · 21:28"; leeg bij onvolledige of ongeldige data. */
+export function vorigeRitDelen(v: unknown): { lijn: string; bestemming: string; vertrek: string } | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const lijn = typeof o.lijn === "string" ? o.lijn.trim().slice(0, 12) : "";
+  const bestemming = typeof o.bestemming === "string" ? o.bestemming.trim().slice(0, 40) : "";
+  const vertrek = typeof o.vertrek === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(o.vertrek) ? o.vertrek : "";
+  if (!lijn || !vertrek) return null;
+  return { lijn, bestemming, vertrek };
+}
