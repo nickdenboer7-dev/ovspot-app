@@ -1,4 +1,4 @@
-import type { Instellingen, Startscherm, Thema } from "./types";
+import type { Instellingen, Startscherm, Tekstgrootte, Thema } from "./types";
 
 export const DICHTBIJ_AFSTANDEN = [250, 500, 1000, 1500, 3000] as const;
 
@@ -8,6 +8,7 @@ export const STANDAARD_INSTELLINGEN: Instellingen = {
   startscherm: "index",
   schermAanhouden: false,
   groteTekst: false,
+  tekstgrootte: "normaal",
   hoogContrast: false,
   toonVertrekpreviews: true,
   liveVoertuigen: true,
@@ -26,13 +27,17 @@ export function normaliseerInstellingen(raw: unknown): Instellingen {
   const startscherm: Startscherm = ["index","favorieten","storingen"].includes(String(s.startscherm))
     ? s.startscherm as Startscherm : "index";
   const straal = typeof s.straal === "number" || typeof s.straal === "string" ? Number(s.straal) : NaN;
+  // Oude installaties kennen alleen de schakelaar 'Grotere tekst' (aan = Groot).
+  const tekstgrootte: Tekstgrootte = ["klein","normaal","groot"].includes(String(s.tekstgrootte))
+    ? s.tekstgrootte as Tekstgrootte : s.groteTekst === true ? "groot" : "normaal";
   return {
     ...STANDAARD_INSTELLINGEN,
     ...s,
+    tekstgrootte,
     thema, startscherm,
     taalVoorkeur: ["auto","nl","en"].includes(String(s.taalVoorkeur)) ? s.taalVoorkeur! : "auto",
     schermAanhouden: typeof s.schermAanhouden === "boolean" ? s.schermAanhouden : false,
-    groteTekst: typeof s.groteTekst === "boolean" ? s.groteTekst : false,
+    groteTekst: tekstgrootte === "groot",
     hoogContrast: typeof s.hoogContrast === "boolean" ? s.hoogContrast : false,
     toonVertrekpreviews: typeof s.toonVertrekpreviews === "boolean"
       ? s.toonVertrekpreviews : STANDAARD_INSTELLINGEN.toonVertrekpreviews,

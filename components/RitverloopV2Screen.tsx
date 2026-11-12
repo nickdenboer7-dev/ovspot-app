@@ -206,7 +206,7 @@ export default function RitverloopV2Screen() {
         plat
         chip={nogNietVertrokken ? "Geen voertuig-GPS" : !trein ? gpsStatus : undefined}
         tussen={nogNietVertrokken ? undefined :
-          paar ? `${t("Tussen")} ${paar}` :
+          paar ? `${t("Onderweg tussen")} ${paar}` :
           bijHalteNaam ? `${t("Halteert op")} ${bijHalteNaam}` :
           rijdend ? t("Onderweg") : undefined}
       />

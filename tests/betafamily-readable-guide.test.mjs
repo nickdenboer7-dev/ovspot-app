@@ -53,8 +53,15 @@ test("New readability preferences are opt-in, persisted and reject malformed sto
   assert.equal(normaliseerInstellingen({ groteTekst: "true", hoogContrast: 1 }).groteTekst, false);
   assert.equal(normaliseerInstellingen({ groteTekst: "true", hoogContrast: 1 }).hoogContrast, false);
   assert.equal(normaliseerInstellingen({ thuis: null, straal: 3000, groteTekst: true }).straal, 3000);
-  for (const x of ["Grotere tekst", "Hoog contrast"]) assert.match(settings, new RegExp('titel="' + x + '"'));
-  assert.match(settings, /zetInstellingen\(\{ groteTekst \}\)/);
+  for (const x of ["Tekstgrootte", "Hoog contrast"]) assert.match(settings, new RegExp('titel="' + x + '"'));
+  assert.match(settings, /zetInstellingen\(\{ tekstgrootte: item\.key as Tekstgrootte, groteTekst: item\.key === "groot" \}\)/);
+  // Tekstgrootte: oude schakelaar blijft als Groot bewaard; Klein verkleint, Normaal laat alles zoals het is.
+  assert.equal(defaults.tekstgrootte, "normaal");
+  assert.equal(normaliseerInstellingen({ groteTekst: true }).tekstgrootte, "groot");
+  assert.equal(normaliseerInstellingen({ tekstgrootte: "klein", groteTekst: true }).groteTekst, false);
+  assert.equal(normaliseerInstellingen({ tekstgrootte: "xl" }).tekstgrootte, "normaal");
+  assert.deepEqual(vergrootLetterwaarden(20, 24, "klein"), { fontSize: 18, lineHeight: 21.6 });
+  assert.equal(vergrootLetterwaarden(14, 19, "normaal"), null);
   assert.match(settings, /zetInstellingen\(\{ hoogContrast \}\)/);
   assert.match(context, /instellingen\.hoogContrast/);
   assert.match(context, /highContrastDark : highContrastLight/);
@@ -67,7 +74,7 @@ test("Larger text affects all centrally localized Text elements but not disabled
   assert.deepEqual(vergrootLetterwaarden(20, undefined, true), { fontSize: 23.6 });
   assert.equal(vergrootLetterwaarden(undefined, undefined, true), null);
   assert.match(localized, /StyleSheet\.flatten\(style\)/);
-  assert.match(localized, /instellingen\.groteTekst/);
+  assert.match(localized, /instellingen\.tekstgrootte/);
   assert.match(localized, /style=\{vergroot \? \[style, vergroot\] : style\}/);
 });
 

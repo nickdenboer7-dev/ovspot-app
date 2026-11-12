@@ -29,7 +29,7 @@ export const Text = React.forwardRef<
 >(function LokaleTekst({ children, accessibilityLabel, style, ...props }, ref) {
   const { taal, instellingen } = useApp();
   const basis = StyleSheet.flatten(style);
-  const vergroot = vergrootLetterwaarden(basis?.fontSize, basis?.lineHeight, instellingen.groteTekst);
+  const vergroot = vergrootLetterwaarden(basis?.fontSize, basis?.lineHeight, instellingen.tekstgrootte);
   return (
     <NativeText
       {...props}

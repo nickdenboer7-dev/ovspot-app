@@ -288,6 +288,7 @@ export type FavLijn = {
 };
 
 export type Thema = "systeem" | "licht" | "donker";
+export type Tekstgrootte = "klein" | "normaal" | "groot";
 export type Filter = "alles" | "trein" | "bus";
 export type Startscherm = "index" | "favorieten" | "storingen";
 
@@ -296,7 +297,9 @@ export type Instellingen = {
   taalVoorkeur: "auto" | "nl" | "en";
   startscherm: Startscherm;
   schermAanhouden: boolean;
+  /** Afgeleid van tekstgrootte: true bij Groot. Blijft bestaan voor de lay-outkeuzes die erop leunen. */
   groteTekst: boolean;
+  tekstgrootte: Tekstgrootte;
   hoogContrast: boolean;
   toonVertrekpreviews: boolean;
   liveVoertuigen: boolean;

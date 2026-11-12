@@ -11,13 +11,13 @@ import { KorteUitleg } from "../../components/KorteUitleg";
 import { Kop } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { afstand } from "../../lib/format";
-import type { Startscherm, Thema } from "../../lib/types";
+import type { Startscherm, Tekstgrootte, Thema } from "../../lib/types";
 import { EN, type TaalVoorkeur } from "../../lib/i18n";
 import { instellingKomtOvereen, instellingenZoektermen } from "../../lib/instellingenZoeken";
 import { vergrootLetterwaarden } from "../../lib/toegankelijkheid";
 
 type Icoon = keyof typeof Ionicons.glyphMap;
-type Kiezer = "thema" | "taal" | "startscherm" | null;
+type Kiezer = "thema" | "taal" | "startscherm" | "tekst" | null;
 
 const THEMAS: { key: Thema; label: string; icoon: Icoon }[] = [
   { key: "systeem", label: "Systeem", icoon: "phone-portrait-outline" },
@@ -28,6 +28,11 @@ const TAALOPTIES: { key: TaalVoorkeur; label: string; icoon: Icoon }[] = [
   { key: "auto", label: "Automatisch", icoon: "phone-portrait-outline" },
   { key: "nl", label: "Nederlands", icoon: "language-outline" },
   { key: "en", label: "English", icoon: "language-outline" }
+];
+const TEKSTGROOTTES: { key: Tekstgrootte; label: string; icoon: Icoon }[] = [
+  { key: "klein", label: "Klein", icoon: "text-outline" },
+  { key: "normaal", label: "Normaal", icoon: "text-outline" },
+  { key: "groot", label: "Groot", icoon: "text-outline" }
 ];
 const STARTSCHERMEN: { key: Startscherm; label: string; icoon: Icoon }[] = [
   { key: "index", label: "Dichtbij", icoon: "location-outline" },
@@ -123,8 +128,8 @@ export default function Instellingen() {
     : { view: "instellingen" as const };
   const versie = Constants.nativeAppVersion || Constants.expoConfig?.version || "1.0.0";
   const otaId = Updates.updateId ? Updates.updateId.slice(0, 8) : "ingebouwd";
-  const opties = kiezer === "thema" ? THEMAS : kiezer === "taal" ? TAALOPTIES : STARTSCHERMEN;
-  const geselecteerd = kiezer === "thema" ? instellingen.thema : kiezer === "taal" ? instellingen.taalVoorkeur : instellingen.startscherm;
+  const opties = kiezer === "thema" ? THEMAS : kiezer === "taal" ? TAALOPTIES : kiezer === "tekst" ? TEKSTGROOTTES : STARTSCHERMEN;
+  const geselecteerd = kiezer === "thema" ? instellingen.thema : kiezer === "taal" ? instellingen.taalVoorkeur : kiezer === "tekst" ? instellingen.tekstgrootte : instellingen.startscherm;
 
   const termen = instellingenZoektermen(zoektekst);
   const zoekt = termen.length > 0;
@@ -133,10 +138,10 @@ export default function Instellingen() {
       <InstellingsRij key="thema" icoon="color-palette-outline" titel="Thema"
         uitleg="Donker, licht of systeem" waarde={THEMAS.find(o => o.key === instellingen.thema)?.label || "Systeem"}
         onPress={() => zetKiezer("thema")} />,
-      <InstellingsRij key="tekst" icoon="text-outline" titel="Grotere tekst"
-        uitleg="Maak de teksten in de app beter leesbaar"
-        schakel={{ value: instellingen.groteTekst,
-          onChange: groteTekst => zetInstellingen({ groteTekst }) }} />,
+      <InstellingsRij key="tekst" icoon="text-outline" titel="Tekstgrootte"
+        uitleg="Kleiner of groter lettertype in de hele app"
+        waarde={TEKSTGROOTTES.find(o => o.key === instellingen.tekstgrootte)?.label || "Normaal"}
+        onPress={() => zetKiezer("tekst")} />,
       <InstellingsRij key="contrast" icoon="contrast-outline" titel="Hoog contrast"
         uitleg="Duidelijker onderscheid tussen tekst en achtergrond"
         schakel={{ value: instellingen.hoogContrast,
@@ -277,7 +282,7 @@ export default function Instellingen() {
             accessibilityRole="button" accessibilityLabel={t("Keuzemenu sluiten")} />
           <View style={[s.modalKaart, { backgroundColor: !instellingen.hoogContrast && scheme === "dark" ? colors.surface2 : colors.surface, borderColor: colors.border }]}>
             <Text style={[s.modalTitel, { color: colors.text }]}>
-              {kiezer === "thema" ? "Kies thema" : kiezer === "taal" ? "Kies taal" : "Kies startscherm"}
+              {kiezer === "thema" ? "Kies thema" : kiezer === "taal" ? "Kies taal" : kiezer === "tekst" ? "Kies tekstgrootte" : "Kies startscherm"}
             </Text>
             {opties.map(item => {
               const actief = item.key === geselecteerd;
@@ -287,6 +292,7 @@ export default function Instellingen() {
                   onPress={() => {
                     if (kiezer === "thema") zetInstellingen({ thema: item.key as Thema });
                     else if (kiezer === "taal") zetInstellingen({ taalVoorkeur: item.key as TaalVoorkeur });
+                    else if (kiezer === "tekst") zetInstellingen({ tekstgrootte: item.key as Tekstgrootte, groteTekst: item.key === "groot" });
                     else zetInstellingen({ startscherm: item.key as Startscherm });
                     zetKiezer(null);
                   }}

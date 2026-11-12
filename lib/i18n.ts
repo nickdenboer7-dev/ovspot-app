@@ -82,7 +82,7 @@ export const EN: Record<string, string> = {
   "Taal": "Language", "Automatisch": "Automatic",
   "Nederlands": "Dutch", "Taal van je telefoon of zelf kiezen": "Use your phone's language or choose manually",
   "Kies taal": "Choose language", "Kies thema": "Choose theme",
-  "Grotere tekst": "Larger text",
+  "Grotere tekst": "Larger text", "Tekstgrootte": "Text size", "Kies tekstgrootte": "Choose text size", "Kleiner of groter lettertype in de hele app": "Smaller or larger text across the whole app", "Klein": "Small", "Normaal": "Normal", "Groot": "Large", "Onderweg tussen": "On the way between",
   "Maak de teksten in de app beter leesbaar": "Make app text easier to read",
   "Hoog contrast": "High contrast",
   "Duidelijker onderscheid tussen tekst en achtergrond": "Stronger contrast between text and background",

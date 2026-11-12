@@ -4,7 +4,7 @@ const normaliseer = (tekst: string) => tekst.toLowerCase()
 const TREFWOORDEN: Record<string, string> = {
   Thema: "nachtmodus donkere modus dark mode",
   Taal: "nederlands dutch english",
-  "Grotere tekst": "letters lettergrootte lettertype font size",
+  Tekstgrootte: "letters lettergrootte lettertype font size groter kleiner groot klein grotere tekst",
   "Hoog contrast": "zichtbaarheid visibility",
   Startscherm: "beginscherm home screen startup",
   "Scherm aanhouden": "schermtijd schermvergrendeling screen timeout sleep",

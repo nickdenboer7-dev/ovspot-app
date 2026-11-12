@@ -83,8 +83,8 @@ test("Instellingen zoeken op Nederlandse en Engelse trefwoorden en combinaties",
   const zoekt = (term, titel, ...velden) => instellingKomtOvereen(instellingenZoektermen(term), titel, ...velden);
   assert.equal(zoekt("  DÓNKER  ", "Thema"), true);
   assert.equal(zoekt("gps", "Databesparing"), true);
-  assert.equal(zoekt("letters", "Grotere tekst"), true);
-  assert.equal(zoekt("font size", "Grotere tekst"), true);
+  assert.equal(zoekt("letters", "Tekstgrootte"), true);
+  assert.equal(zoekt("font size", "Tekstgrootte"), true);
   assert.equal(zoekt("nearby radius", "Afstand voor Dichtbij", "Nearby search radius"), true);
   assert.equal(zoekt("home location", "Thuislocatie", "Home location"), true);
   assert.equal(zoekt("radius", "Zoekafstand"), true);
