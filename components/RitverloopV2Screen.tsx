@@ -225,6 +225,7 @@ export default function RitverloopV2Screen() {
         tekst={geplandeStatus}
         voertuig={voertuigTekst}
         snelheid={snelheidTekst}
+        plat
         chip={nogNietVertrokken ? "Geen voertuig-GPS" : !trein ? gpsStatus : undefined}
         tussen={nogNietVertrokken ? undefined :
           paar ? `${t("Tussen")} ${paar}` :
