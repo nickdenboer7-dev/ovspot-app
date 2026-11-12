@@ -287,13 +287,16 @@ export type FavLijn = {
   tekstkleur?: string;
 };
 
-export type Thema = "systeem" | "licht" | "donker";
+export type Thema = "systeem" | "licht" | "donker" | "schema";
 export type Tekstgrootte = "klein" | "normaal" | "groot";
 export type Filter = "alles" | "trein" | "bus";
 export type Startscherm = "index" | "favorieten" | "storingen";
 
 export type Instellingen = {
   thema: Thema;
+  /** Alleen bij thema "schema": hele uren waartussen de app donker is. */
+  donkerVan: number;
+  donkerTot: number;
   taalVoorkeur: "auto" | "nl" | "en";
   startscherm: Startscherm;
   schermAanhouden: boolean;

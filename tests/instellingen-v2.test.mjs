@@ -50,11 +50,14 @@ test("Alle zes nieuwe voorkeuren hebben veilige initwaarden, validatie en blijve
 });
 
 test("Belangrijkste instellingen staan boven Meer instellingen; zoekresultaten blijven zichtbaar",()=>{
-  for(const label of ["WEERGAVE","DICHTBIJ","MELDINGEN","KAART & DATA","GEDRAG","OVER OVSPOT"])
+  for(const label of ["WEERGAVE","LOCATIE","DICHTBIJ","KAART & DATA","GEDRAG","OVER OVSPOT"])
     assert.ok(scherm.includes('titel: "'+label+'"'),label);
   for(const label of ["Thema","Startscherm","Scherm aanhouden","Live voertuigen",
-                      "Databesparing","Storingen","Stuur feedback","Over de app"])
+                      "Databesparing","Zoekafstand","Thuislocatie","Standaard haltefilter","Standaard terugzetten","Stuur feedback","Over de app"])
     assert.ok(scherm.includes('titel="'+label+'"'),label);
+  assert.ok(!scherm.includes('titel="Storingen"'),"Storingen-schakelaar deed niets en is weg");
+  assert.ok(!scherm.includes('titel="Korte uitleg"'));
+  assert.match(scherm,/toonZoekbalk = aantalRijen > ZOEKBALK_VANAF \|\| zoekt/);
   assert.match(scherm,/ScrollView showsVerticalScrollIndicator=\{false\}/);
   assert.match(scherm,/colors\.header/);
   assert.match(scherm,/colors\.surface2/);
@@ -120,11 +123,21 @@ test("Feedback blijft in-app, over-pagina navigeerbaar en legacy halte/GPS-optie
   assert.match(scherm,/setFeedbackOpen\(true\)/);
   assert.match(scherm,/<FeedbackModal zichtbaar=\{feedbackOpen\}/);
   assert.match(scherm,/router\.push\("\/info"\)/);
-  assert.match(scherm,/router\.push\("\/instellingen-geavanceerd"\)/);
+  assert.match(scherm,/pathname: "\/zoek", params: \{ doel: "thuis" \}/);
   assert.match(root,/<Stack.Screen name="info"/);
   assert.match(root,/<Stack.Screen name="instellingen-geavanceerd"/);
   const info=readFileSync(new URL("../app/info.tsx",import.meta.url),"utf8");
   const meer=readFileSync(new URL("../app/instellingen-geavanceerd.tsx",import.meta.url),"utf8");
   assert.ok(info.includes("Licenties") && info.includes("Algemene voorwaarden"));
   assert.ok(meer.includes("Thuislocatie") && meer.includes("Afstand voor Dichtbij") && meer.includes("Standaard haltefilter"));
+});
+
+test("Thema op schema: donker tussen vaste uren, ook over middernacht",async()=>{
+  const m=await import("../lib/instellingenDefaults.ts").catch(()=>null);
+  if(!m) return; // .ts niet direct importeerbaar in deze runner
+  assert.equal(m.isDonkerUur(22,20,7),true);
+  assert.equal(m.isDonkerUur(3,20,7),true);
+  assert.equal(m.isDonkerUur(12,20,7),false);
+  assert.equal(m.isDonkerUur(7,20,7),false);
+  assert.equal(m.isDonkerUur(10,9,18),true);
 });

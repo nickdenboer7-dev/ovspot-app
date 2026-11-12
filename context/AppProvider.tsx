@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, useColorScheme } from "react-native";
 import { dark, light, highContrastDark, highContrastLight, type Palette } from "../constants/theme";
+import { isDonkerUur } from "../lib/instellingenDefaults";
 import { api } from "../lib/api";
 import { herstelFavorietOpPositie, verplaatsInFavorieten, wisselInFavorieten } from "../lib/favorieten";
 import { bewaarFavorieten, bewaarInstellingen, bewaarLijnFavorieten, leesFavorieten, leesInstellingen, leesLijnFavorieten, STANDAARD } from "../lib/storage";
@@ -73,8 +74,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const [tijdNu, zetTijdNu] = useState(() => Date.now());
+  useEffect(() => {
+    if (instellingen.thema !== "schema") return;
+    zetTijdNu(Date.now());
+    const timer = setInterval(() => zetTijdNu(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, [instellingen.thema]);
   const scheme: "light" | "dark" =
-    instellingen.thema === "donker" ? "dark" : instellingen.thema === "licht" ? "light" : systeem === "dark" ? "dark" : "light";
+    instellingen.thema === "donker" ? "dark" : instellingen.thema === "licht" ? "light"
+      : instellingen.thema === "schema"
+        ? (isDonkerUur(new Date(tijdNu).getHours(), instellingen.donkerVan, instellingen.donkerTot) ? "dark" : "light")
+        : systeem === "dark" ? "dark" : "light";
   const colors = instellingen.hoogContrast
     ? (scheme === "dark" ? highContrastDark : highContrastLight)
     : (scheme === "dark" ? dark : light);

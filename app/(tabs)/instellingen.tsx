@@ -3,26 +3,38 @@ import Constants from "expo-constants";
 import { router } from "expo-router";
 import * as Updates from "expo-updates";
 import React, { useState } from "react";
-import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
+import { Alert, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from "react-native";
 import { Text } from "../../components/LocalizedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FeedbackModal } from "../../components/FeedbackModal";
-import { KorteUitleg } from "../../components/KorteUitleg";
 import { Kop } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { afstand } from "../../lib/format";
-import type { Startscherm, Tekstgrootte, Thema } from "../../lib/types";
+import { DICHTBIJ_AFSTANDEN, STANDAARD_INSTELLINGEN } from "../../lib/instellingenDefaults";
+import type { Filter, Startscherm, Tekstgrootte, Thema } from "../../lib/types";
 import { EN, type TaalVoorkeur } from "../../lib/i18n";
 import { instellingKomtOvereen, instellingenZoektermen } from "../../lib/instellingenZoeken";
 import { vergrootLetterwaarden } from "../../lib/toegankelijkheid";
 
 type Icoon = keyof typeof Ionicons.glyphMap;
-type Kiezer = "thema" | "taal" | "startscherm" | "tekst" | null;
+type Kiezer = "thema" | "taal" | "startscherm" | "tekst" | "afstand" | "filter" | "donkerVan" | "donkerTot" | null;
+/** Zonder tijdkiezer-pakket: hele uren. Zoekbalk verschijnt pas als de lijst echt lang wordt. */
+const ZOEKBALK_VANAF = 20;
 
 const THEMAS: { key: Thema; label: string; icoon: Icoon }[] = [
   { key: "systeem", label: "Systeem", icoon: "phone-portrait-outline" },
   { key: "licht", label: "Licht", icoon: "sunny-outline" },
-  { key: "donker", label: "Donker", icoon: "moon-outline" }
+  { key: "donker", label: "Donker", icoon: "moon-outline" },
+  { key: "schema", label: "Op schema", icoon: "time-outline" }
+];
+const uurLabel = (u: number) => `${String(u).padStart(2, "0")}:00`;
+const DONKER_VAN: { key: string; label: string; icoon: Icoon }[] = [17,18,19,20,21,22,23].map(u => ({ key: String(u), label: uurLabel(u), icoon: "moon-outline" as Icoon }));
+const DONKER_TOT: { key: string; label: string; icoon: Icoon }[] = [5,6,7,8,9,10].map(u => ({ key: String(u), label: uurLabel(u), icoon: "sunny-outline" as Icoon }));
+const AFSTANDOPTIES: { key: string; label: string; icoon: Icoon }[] = DICHTBIJ_AFSTANDEN.map(m => ({ key: String(m), label: afstand(m), icoon: "locate-outline" as Icoon }));
+const FILTEROPTIES: { key: Filter; label: string; icoon: Icoon }[] = [
+  { key: "alles", label: "Alles", icoon: "apps-outline" },
+  { key: "trein", label: "Trein", icoon: "train-outline" },
+  { key: "bus", label: "Bus", icoon: "bus-outline" }
 ];
 const TAALOPTIES: { key: TaalVoorkeur; label: string; icoon: Icoon }[] = [
   { key: "auto", label: "Automatisch", icoon: "phone-portrait-outline" },
@@ -115,7 +127,6 @@ export default function Instellingen() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [zoektekst, zetZoektekst] = useState("");
   const [meerOpen, zetMeerOpen] = useState(false);
-  const [uitlegOpen, zetUitlegOpen] = useState(false);
   const feedbackContext = laatsteFeedbackContext
     && Date.now() - laatsteFeedbackContext.vastgelegdOp < 30 * 60 * 1000
     ? {
@@ -128,8 +139,23 @@ export default function Instellingen() {
     : { view: "instellingen" as const };
   const versie = Constants.nativeAppVersion || Constants.expoConfig?.version || "1.0.0";
   const otaId = Updates.updateId ? Updates.updateId.slice(0, 8) : "ingebouwd";
-  const opties = kiezer === "thema" ? THEMAS : kiezer === "taal" ? TAALOPTIES : kiezer === "tekst" ? TEKSTGROOTTES : STARTSCHERMEN;
-  const geselecteerd = kiezer === "thema" ? instellingen.thema : kiezer === "taal" ? instellingen.taalVoorkeur : kiezer === "tekst" ? instellingen.tekstgrootte : instellingen.startscherm;
+  const KIEZERS: Record<string, { titel: string; opties: { key: string; label: string; icoon: Icoon }[]; huidig: string }> = {
+    thema: { titel: "Kies thema", opties: THEMAS, huidig: instellingen.thema },
+    taal: { titel: "Kies taal", opties: TAALOPTIES, huidig: instellingen.taalVoorkeur },
+    tekst: { titel: "Kies tekstgrootte", opties: TEKSTGROOTTES, huidig: instellingen.tekstgrootte },
+    startscherm: { titel: "Kies startscherm", opties: STARTSCHERMEN, huidig: instellingen.startscherm },
+    afstand: { titel: "Zoekafstand voor Dichtbij", opties: AFSTANDOPTIES, huidig: String(instellingen.straal) },
+    filter: { titel: "Standaard haltefilter", opties: FILTEROPTIES, huidig: instellingen.filter },
+    donkerVan: { titel: "Donker vanaf", opties: DONKER_VAN, huidig: String(instellingen.donkerVan) },
+    donkerTot: { titel: "Donker tot", opties: DONKER_TOT, huidig: String(instellingen.donkerTot) }
+  };
+  const kiezerInfo = kiezer ? KIEZERS[kiezer] : null;
+  const opties = kiezerInfo?.opties ?? [];
+  const geselecteerd = kiezerInfo?.huidig;
+  const zetStandaard = () => Alert.alert(
+    t("Standaard terugzetten"), t("Alle instellingen gaan terug naar de standaard. Je thuislocatie blijft staan."),
+    [{ text: t("Annuleren"), style: "cancel" },
+     { text: t("Terugzetten"), style: "destructive", onPress: () => zetInstellingen({ ...STANDAARD_INSTELLINGEN, thuis: instellingen.thuis }) }]);
 
   const termen = instellingenZoektermen(zoektekst);
   const zoekt = termen.length > 0;
@@ -138,6 +164,14 @@ export default function Instellingen() {
       <InstellingsRij key="thema" icoon="color-palette-outline" titel="Thema"
         uitleg="Donker, licht of systeem" waarde={THEMAS.find(o => o.key === instellingen.thema)?.label || "Systeem"}
         onPress={() => zetKiezer("thema")} />,
+      ...(instellingen.thema === "schema" ? [
+        <InstellingsRij key="donkerVan" icoon="moon-outline" titel="Donker vanaf"
+          uitleg="Vanaf dit uur schakelt de app naar donker" waarde={uurLabel(instellingen.donkerVan)}
+          onPress={() => zetKiezer("donkerVan")} />,
+        <InstellingsRij key="donkerTot" icoon="sunny-outline" titel="Donker tot"
+          uitleg="Vanaf dit uur is de app weer licht" waarde={uurLabel(instellingen.donkerTot)}
+          onPress={() => zetKiezer("donkerTot")} />,
+      ] : []),
       <InstellingsRij key="tekst" icoon="text-outline" titel="Tekstgrootte"
         uitleg="Kleiner of groter lettertype in de hele app"
         waarde={TEKSTGROOTTES.find(o => o.key === instellingen.tekstgrootte)?.label || "Normaal"}
@@ -147,10 +181,20 @@ export default function Instellingen() {
         schakel={{ value: instellingen.hoogContrast,
           onChange: hoogContrast => zetInstellingen({ hoogContrast }) }} />,
     ] },
-    { titel: "DICHTBIJ", rijen: [
+    { titel: "LOCATIE", rijen: [
       <InstellingsRij key="afstand" icoon="locate-outline" titel="Zoekafstand"
         uitleg="Afstand voor Dichtbij" waarde={afstand(instellingen.straal)}
-        onPress={() => router.push({ pathname: "/instellingen-geavanceerd", params: { onderdeel: "afstand" } })} />,
+        onPress={() => zetKiezer("afstand")} />,
+      <InstellingsRij key="thuis" icoon="home-outline" titel="Thuislocatie"
+        uitleg="Wordt gebruikt wanneer locatie uitstaat"
+        waarde={instellingen.thuis ? instellingen.thuis.naam : "Niet ingesteld"}
+        onPress={() => router.push({ pathname: "/zoek", params: { doel: "thuis" } })} />,
+      <InstellingsRij key="filter" icoon="options-outline" titel="Standaard haltefilter"
+        uitleg="Zo opent het vertrekbord"
+        waarde={FILTEROPTIES.find(o => o.key === instellingen.filter)?.label || "Alles"}
+        onPress={() => zetKiezer("filter")} />,
+    ] },
+    { titel: "DICHTBIJ", rijen: [
       <InstellingsRij key="previews" icoon="time-outline" titel="Vertrektijden op haltekaarten"
         uitleg="Toon de eerste twee vertrekken"
         schakel={{ value: instellingen.toonVertrekpreviews,
@@ -159,12 +203,6 @@ export default function Instellingen() {
         uitleg="Kies welk scherm als eerste opstart"
         waarde={STARTSCHERMEN.find(o => o.key === instellingen.startscherm)?.label || "Dichtbij"}
         onPress={() => zetKiezer("startscherm")} />,
-    ] },
-    { titel: "MELDINGEN", rijen: [
-      <InstellingsRij key="storingen" icoon="notifications-outline" titel="Storingen"
-        uitleg="Pushberichten bij vertragingen op favoriete lijnen"
-        schakel={{ value: instellingen.storingenPush,
-          onChange: storingenPush => zetInstellingen({ storingenPush }) }} />,
     ] },
     { titel: "KAART & DATA", meer: true, rijen: [
       <InstellingsRij key="voertuigen" icoon="bus-outline" titel="Live voertuigen"
@@ -175,16 +213,6 @@ export default function Instellingen() {
         uitleg="Minder vaak kaartgegevens en GPS verversen"
         schakel={{ value: instellingen.databesparing,
           onChange: databesparing => zetInstellingen({ databesparing }) }} />,
-      ...(zoekt ? [
-        <InstellingsRij key="filter" icoon="options-outline" titel="Standaard haltefilter"
-          uitleg="Zo opent het vertrekbord."
-          onPress={() => router.push({ pathname: "/instellingen-geavanceerd", params: { onderdeel: "filter" } })} />,
-        <InstellingsRij key="thuis" icoon="home-outline" titel="Thuislocatie"
-          uitleg="Locatie & haltebord"
-          onPress={() => router.push({ pathname: "/instellingen-geavanceerd", params: { onderdeel: "thuis" } })} />,
-      ] : [<InstellingsRij key="locatie" icoon="options-outline" titel="Locatie & haltebord"
-        uitleg="Afstand, thuislocatie en standaardfilter"
-        onPress={() => router.push("/instellingen-geavanceerd")} />]),
     ] },
     { titel: "GEDRAG", meer: true, rijen: [
       <InstellingsRij key="taal" icoon="language-outline" titel="Taal"
@@ -197,15 +225,15 @@ export default function Instellingen() {
           onChange: schermAanhouden => zetInstellingen({ schermAanhouden }) }} />,
     ] },
     { titel: "OVER OVSPOT", meer: true, rijen: [
-      <InstellingsRij key="uitleg" icoon="help-circle-outline" titel="Korte uitleg"
-        uitleg="Uitleg over Nu, Live, vertraging, GPS en favorieten"
-        onPress={() => zetUitlegOpen(open => !open)} />,
       <InstellingsRij key="feedback" icoon="chatbubble-ellipses-outline" titel="Stuur feedback"
         uitleg="Meld een bug of geef een suggestie"
         onPress={() => setFeedbackOpen(true)} />,
       <InstellingsRij key="over" icoon="information-circle-outline" titel="Over de app"
         uitleg="Licenties en algemene voorwaarden"
         onPress={() => router.push("/info")} />,
+      <InstellingsRij key="reset" icoon="refresh-outline" titel="Standaard terugzetten"
+        uitleg="Alle instellingen terug naar de beginwaarden"
+        onPress={zetStandaard} />,
     ] },
   ];
   const zichtbaar = secties.map(({ titel, meer, rijen }) => ({
@@ -217,6 +245,8 @@ export default function Instellingen() {
         ...velden.map(veld => EN[veld] ?? veld));
     })
   })).filter(({ rijen }) => rijen.length > 0);
+  const aantalRijen = secties.reduce((n, sec) => n + sec.rijen.length, 0);
+  const toonZoekbalk = aantalRijen > ZOEKBALK_VANAF || zoekt;
   const zoeklabel = t("Zoek in instellingen");
   const toonSecties = (meer: boolean) => zichtbaar.filter(sectie => !!sectie.meer === meer)
     .map(({ titel, rijen }) => (
@@ -224,8 +254,6 @@ export default function Instellingen() {
         <Sectie titel={titel}>
           {rijen.map((rij, index) => React.cloneElement(rij, { laatste: index === rijen.length - 1 }))}
         </Sectie>
-        {uitlegOpen && rijen.some(rij => rij.key === "uitleg")
-          ? <KorteUitleg onSluit={() => zetUitlegOpen(false)} /> : null}
       </React.Fragment>
     ));
 
@@ -235,7 +263,7 @@ export default function Instellingen() {
       <ScrollView showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[s.lijst, { paddingBottom: Math.max(insets.bottom, 12) + 28 }]}>
-        <View style={[s.zoekbalk, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {toonZoekbalk ? <View style={[s.zoekbalk, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Ionicons name="search-outline" size={21} color={colors.sub} />
           <TextInput
             accessibilityLabel={zoeklabel}
@@ -253,7 +281,7 @@ export default function Instellingen() {
               <Ionicons name="close-outline" size={23} color={colors.sub} />
             </Pressable>
           ) : null}
-        </View>
+        </View> : null}
         {toonSecties(false)}
         {!zoekt ? (
           <Pressable onPress={() => zetMeerOpen(open => !open)}
@@ -282,7 +310,7 @@ export default function Instellingen() {
             accessibilityRole="button" accessibilityLabel={t("Keuzemenu sluiten")} />
           <View style={[s.modalKaart, { backgroundColor: !instellingen.hoogContrast && scheme === "dark" ? colors.surface2 : colors.surface, borderColor: colors.border }]}>
             <Text style={[s.modalTitel, { color: colors.text }]}>
-              {kiezer === "thema" ? "Kies thema" : kiezer === "taal" ? "Kies taal" : kiezer === "tekst" ? "Kies tekstgrootte" : "Kies startscherm"}
+              {kiezerInfo?.titel}
             </Text>
             {opties.map(item => {
               const actief = item.key === geselecteerd;
@@ -293,6 +321,10 @@ export default function Instellingen() {
                     if (kiezer === "thema") zetInstellingen({ thema: item.key as Thema });
                     else if (kiezer === "taal") zetInstellingen({ taalVoorkeur: item.key as TaalVoorkeur });
                     else if (kiezer === "tekst") zetInstellingen({ tekstgrootte: item.key as Tekstgrootte, groteTekst: item.key === "groot" });
+                    else if (kiezer === "afstand") zetInstellingen({ straal: Number(item.key) });
+                    else if (kiezer === "filter") zetInstellingen({ filter: item.key as Filter });
+                    else if (kiezer === "donkerVan") zetInstellingen({ donkerVan: Number(item.key) });
+                    else if (kiezer === "donkerTot") zetInstellingen({ donkerTot: Number(item.key) });
                     else zetInstellingen({ startscherm: item.key as Startscherm });
                     zetKiezer(null);
                   }}

@@ -77,8 +77,7 @@ test("A dismissible guide includes Now, Live, delays, GPS and favorites, but no 
 });
 
 test("Guide reopens inside Settings and translations cover the entire explanation", () => {
-  assert.match(settings, /titel="Korte uitleg"/);
-  assert.match(settings, /<KorteUitleg onSluit=\{\(\) => zetUitlegOpen\(false\)\}/);
+  assert.doesNotMatch(settings, /titel="Korte uitleg"/);
   const t = translateExports.vertaling;
   const cases = [
     ["Korte uitleg", "Quick guide"],
