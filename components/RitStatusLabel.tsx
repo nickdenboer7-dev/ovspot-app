@@ -10,7 +10,7 @@ export function RitStatusLabel({ live, vervallen, afwijkingMin }: RitStatusInvoe
   const st = bepaalRitStatus({ live, vervallen, afwijkingMin });
   const kleur = st.soort === "vervallen" ? colors.red
     : st.soort === "gepland" ? colors.sub
-    : st.soort === "vertraagd" ? colors.delay
+    : st.soort === "vertraagd" ? colors.red
     : st.soort === "te_vroeg" ? colors.early : colors.live;
   const tekst = taal !== "en" ? st.tekst :
     st.soort === "gepland" ? "Scheduled" :

@@ -34,8 +34,6 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
     v.spoor ? t(spoorLabel(v.modus, v.spoor)) : ""
   ].filter(Boolean).join(", ");
 
-  const afwijking = !v.vervallen && !vertrokken && statusRit.heeftLive && statusRit.afwijkingMin !== 0
-    ? (statusRit.afwijkingMin > 0 ? `+${statusRit.afwijkingMin} min` : `−${Math.abs(statusRit.afwijkingMin)} min`) : "";
   const volInhoud = (
     <View style={[s.rijVol, vertrokken && { opacity: 0.55 },
       { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 }]}>
@@ -43,7 +41,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
         <RitTijdcel
           verwacht={kloktijd} gepland={v.gepland}
           live={v.live} vervallen={v.vervallen} afwijkingMin={v.vertraging_min}
-          klein zonderAfwijking
+          klein statusKleur
         />
       </View>
       <LijnBadge klein
@@ -57,10 +55,9 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
             textDecorationLine: v.vervallen ? "line-through" : "none" }]}>
           {displayBestemming}
         </Text>
-        {spoor || v.vervallen || vertrokken || afwijking ? (
+        {spoor || v.vervallen || vertrokken ? (
           <Text style={[s.spoor, { color: colors.sub }]} numberOfLines={1}>
-            {afwijking ? <Text style={{ color: statusRit.afwijkingMin > 0 ? colors.delay : colors.early, fontWeight: "700" }}>{afwijking}</Text> : null}
-            {[afwijking ? "" : null, v.vervallen ? t("Vervalt") : vertrokken ? t("Vertrokken") : null, spoor ? t(spoor) : null]
+            {[v.vervallen ? t("Vervalt") : vertrokken ? t("Vertrokken") : null, spoor ? t(spoor) : null]
               .filter(x => x !== null).join(" · ")}
           </Text>
         ) : null}
@@ -129,7 +126,7 @@ const s = StyleSheet.create({
   rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 54, paddingVertical: 7 },
   rijCompactSmal: { gap: 6 },
   rijVol: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 46, paddingHorizontal: 14, paddingVertical: 5 },
-  tijdKolom: { width: 46, flexShrink: 0, alignItems: "flex-start" },
+  tijdKolom: { width: 64, flexShrink: 0, alignItems: "flex-start" },
   rijVolSmal: { gap: 7, paddingHorizontal: 10 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
   middenVol: { flex: 1, minWidth: 0 },

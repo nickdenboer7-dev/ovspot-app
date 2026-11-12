@@ -19,17 +19,19 @@ export type RitTijdcelProps = {
   gedimd?: boolean;
   /** Haltebord toont de afwijking op de regel onder de bestemming. */
   zonderAfwijking?: boolean;
+  /** Haltebord: tijd groen bij live op tijd, in de afwijkingskleur bij vertraging of te vroeg, anders gewoon. */
+  statusKleur?: boolean;
 };
 
 /** Exact dezelfde klok, afwijking en doorgestreepte planning voor bord en rit. */
-export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, aftel, compact, klein, gedimd, zonderAfwijking }: RitTijdcelProps) {
+export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, aftel, compact, klein, gedimd, zonderAfwijking, statusKleur }: RitTijdcelProps) {
   const { colors } = useApp();
   const status = bepaalRitStatus({ live, vervallen, afwijkingMin });
   const gewijzigd = status.heeftLive && status.afwijkingMin !== 0 && gepland && gepland !== verwacht
     && !klein;
   const getoondeTijd = !live ? gepland || verwacht : verwacht || gepland;
   const afwijkt = status.afwijkingMin;
-  const afwijkingKleur = afwijkt > 0 ? colors.delay : colors.early;
+  const afwijkingKleur = afwijkt > 0 ? colors.red : colors.early;
   return (
     <View style={[s.cel, compact ? s.compact : s.bord]}>
       {aftel && !vervallen ? (
@@ -37,7 +39,8 @@ export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, a
       ) : null}
       <View style={s.tijdRij}>
         <Text style={[s.tijd, klein && (aftel && !vervallen ? s.tijdKleinOnder : s.tijdKlein), klein && !compact && !aftel && s.tijdBord,
-          { color: vervallen ? colors.muted : gedimd || (aftel && klein) ? colors.sub : colors.text },
+          { color: vervallen ? colors.muted : gedimd || (aftel && klein) ? colors.sub
+            : statusKleur && status.heeftLive ? (afwijkt !== 0 ? afwijkingKleur : colors.live) : colors.text },
           vervallen && s.doorgestreept]}>
           {vervallen ? gepland || verwacht || "—" : getoondeTijd || "—"}
         </Text>
