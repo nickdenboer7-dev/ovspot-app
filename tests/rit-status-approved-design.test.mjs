@@ -21,8 +21,8 @@ test("Jouw halte uitsluitend bij opening vanuit bord, GPS-chip gekoppeld aan ech
 test("Ritlijst laat hele geselecteerde naam toe, andere namen compact",()=>{
  assert.match(stop,/numberOfLines=\{markeer \? undefined : 1\}>\{zichtbaarNaam\}/);
  assert.doesNotMatch(stop,/<Text style=\{s.city\}|<Text style=\{s.plaats\}|const showCity/);
- assert.match(screen,/const height = r.index === volgendeIndex && rijdend \? 58 : 44/);
- assert.match(screen,/const prevHeight = r.index - 1 === volgendeIndex && rijdend \? 58 : 44/);
+ assert.match(screen,/const height = r.index === volgendeIndex && rijdend \? 54 : 40/);
+ assert.match(screen,/const prevHeight = r.index - 1 === volgendeIndex && rijdend \? 54 : 40/);
 });
 test("Grotere tekst schaalt markering en nooit truncatie",()=>{
  assert.match(stop,/fontScale >= 1.3/);

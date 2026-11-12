@@ -16,7 +16,7 @@ test("GTFS-haltenaam wordt niet willekeurig afgeknipt: alleen plaats-prefix word
 test("Naamkolom neemt beschikbare breedte zonder 52px spoorreserve", () => {
   assert.match(stop, /labelColumn: \{ flex: 1, minWidth: 0/);
   assert.doesNotMatch(stop, /minWidth: 52|width: 210/);
-  assert.match(stop, /name: \{ fontSize: 14, fontWeight: "600" \}/);
+  assert.match(stop, /name: \{ fontSize: 13, fontWeight: "600" \}/);
 });
 
 test("Nieuwe compacte lijst reserveert geen ruimte voor een ongebruikte perronkolom", () => {
