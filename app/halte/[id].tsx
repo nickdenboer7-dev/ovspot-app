@@ -75,7 +75,7 @@ export default function Haltebord() {
   // Houd de bestaande /halte-data voor meldingen, metro/ferry en compatibiliteit.
   // Bij een station komen de vertrekregels zelf direct van /app/v2/vertrektijden.
   const poll = usePolling(`halte:${id}`, () => api.halte(id, "alles", 60),
-    instellingen.databesparing ? 45_000 : 15_000);
+    instellingen.databesparing ? 45_000 : 15_000, { bewaar: true });
   const hoofd = poll.data;
   // Ook vanaf een afzonderlijke haltepaal met naam "Station"/"Busstation"
   // dezelfde fysieke 350m-cluster openen, niet uitsluitend vanaf het treinparent.
@@ -86,10 +86,12 @@ export default function Haltebord() {
     () => isStation ? api.stationVertrektijden(id, 60) : Promise.resolve(null),
     instellingen.databesparing ? 45_000 : 15_000
   );
-  const h = useMemo(
-    () => hoofd ? voegStationVertrektijdenToe(hoofd, stationPoll.data) : null,
-    [hoofd, stationPoll.data]
-  );
+  const h = useMemo(() => {
+    const samen = hoofd ? voegStationVertrektijdenToe(hoofd, stationPoll.data) : null;
+    if (!samen || !poll.uitCache) return samen;
+    // Opgeslagen bord van de vorige keer: laten zien als dienstregeling, nooit als live.
+    return { ...samen, vertrekken: samen.vertrekken.map(v => ({ ...v, live: false })) };
+  }, [hoofd, stationPoll.data, poll.uitCache]);
   const naam = h?.naam || String(p.naam || "Halte");
   const plaats = h?.plaats || String(p.plaats || "");
   React.useEffect(() => {
@@ -429,7 +431,7 @@ export default function Haltebord() {
             <Text style={[s.lijnFilterHint, { color: colors.sub }]}>Volledige dienstregeling wordt geladen…</Text>
         ) : null}
       </ScrollView>
-      <LiveBalk live={!!h && vertrekken.some(v => v.live)}
+      <LiveBalk live={!!h && !poll.uitCache && vertrekken.some(v => v.live)}
         bijgewerktMs={h && Number.isFinite(Date.parse(h.bijgewerkt))
           ? Date.parse(h.bijgewerkt) : null} nu={nu} />
       <OnderBalk actief={van} />

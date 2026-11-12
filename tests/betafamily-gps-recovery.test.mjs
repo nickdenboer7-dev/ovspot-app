@@ -102,7 +102,7 @@ test("Short network drop retains last good departures; next success clears error
   displayed = await get();
   assert.equal(displayed[0].vertrek, "21:23");
   assert.match(polling, /catch \(e: any\) \{[\s\S]*?setFout\(e\?\.message/);
-  assert.match(polling, /dataRef\.current = d;\s*setData\(d\);\s*setFout\(null\)/);
+  assert.match(polling, /dataRef\.current = d;[\s\S]{0,80}setData\(d\);[\s\S]{0,80}setFout\(null\)/);
   assert.match(polling, /if \(s === "active"\) void run\(\)/);
   assert.match(nearby, /api\.dichtbij\(pos\.lat, pos\.lon, instellingen\.straal\)/);
 });
