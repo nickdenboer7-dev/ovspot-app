@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const stop=readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url),"utf8");
 test("Haltenaam zonder dubbel plaats-prefix, maar Jouw halte volledig leesbaar",()=>{
  assert.match(stop,/numberOfLines=\{markeer \? undefined : 1\}>\{zichtbaarNaam\}/);
- assert.match(stop,/name: \{ fontSize: 15/);
+ assert.match(stop,/name: \{ fontSize: 14/);
  assert.match(stop,/labelColumn: \{ flex: 1, minWidth: 0/);
 });
 test("Geen ongebruikte extra perronkolom en geen extra eindhaltebadges",()=>{

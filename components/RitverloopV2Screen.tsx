@@ -236,8 +236,8 @@ export default function RitverloopV2Screen() {
             onPress={() => setToonEerder(false)} />
         ) : null}
         {getoond.map(r => {
-          const height = r.index === volgendeIndex && rijdend ? 64 : 48;
-          const prevHeight = r.index - 1 === volgendeIndex && rijdend ? 64 : 48;
+          const height = r.index === volgendeIndex && rijdend ? 58 : 44;
+          const prevHeight = r.index - 1 === volgendeIndex && rijdend ? 58 : 44;
           const isJouwHalte = instapIndex >= 0 && r.index === instapIndex;
           return <RitverloopStop key={r.h.id + "-" + r.index}
             r={r} volgende={rijdend && r.index === volgendeIndex}
