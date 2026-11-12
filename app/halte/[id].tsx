@@ -8,6 +8,7 @@ import { StoringKaart } from "../../components/StoringKaart";
 import { Chips, FoutBalk, Kaart, Laden, Leeg } from "../../components/ui";
 import { VertrekRegel } from "../../components/VertrekRegel";
 import { HalteKop } from "../../components/HalteKop";
+import { compacteHalteNaam } from "../../lib/ritverloopV2";
 import { LiveBalk } from "../../components/LiveBalk";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
@@ -194,11 +195,14 @@ export default function Haltebord() {
       }
     }
   }), [meerdereModi, actieveModus, tabModi.join("|")]);
-  const titel = naam;
+  // Kop: korte haltenaam, met de plaats één keer op de regel eronder.
+  const titel = compacteHalteNaam(naam, plaats);
   const haltegroep = String(p.groep || "").trim();
-  const plaatsSub = plaats && !naam.toLowerCase().includes(plaats.toLowerCase())
-    && plaats.toLowerCase() !== haltegroep.toLowerCase() ? plaats : "";
-  const groepSub = [plaatsSub, haltegroep].filter(Boolean).join(" · ");
+  const kort = titel !== naam;
+  const plaatsSub = plaats && (kort || !naam.toLowerCase().includes(plaats.toLowerCase())) ? plaats : "";
+  const groepExtra = haltegroep && haltegroep.toLowerCase() !== plaats.toLowerCase()
+    && haltegroep.toLowerCase() !== titel.toLowerCase() ? haltegroep : "";
+  const groepSub = [plaatsSub, groepExtra].filter(Boolean).join(" · ");
   const openRit = (v: Vertrek) => {
     if (!v.rit) return;
     const fysiekeHalte = "stop_id" in v && typeof v.stop_id === "string" ? v.stop_id : "";

@@ -17,10 +17,12 @@ export type RitTijdcelProps = {
   klein?: boolean;
   /** Gepasseerde halte: tijd in gedempte kleur. */
   gedimd?: boolean;
+  /** Haltebord toont de afwijking op de regel onder de bestemming. */
+  zonderAfwijking?: boolean;
 };
 
 /** Exact dezelfde klok, afwijking en doorgestreepte planning voor bord en rit. */
-export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, aftel, compact, klein, gedimd }: RitTijdcelProps) {
+export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, aftel, compact, klein, gedimd, zonderAfwijking }: RitTijdcelProps) {
   const { colors } = useApp();
   const status = bepaalRitStatus({ live, vervallen, afwijkingMin });
   const gewijzigd = status.heeftLive && status.afwijkingMin !== 0 && gepland && gepland !== verwacht
@@ -39,7 +41,7 @@ export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, a
           vervallen && s.doorgestreept]}>
           {vervallen ? gepland || verwacht || "—" : getoondeTijd || "—"}
         </Text>
-        {afwijkt !== 0 && !vervallen ? (
+        {afwijkt !== 0 && !vervallen && !zonderAfwijking ? (
           <Text style={[s.afwijking, { color: afwijkingKleur }]}>
             {afwijkt > 0 ? `+${afwijkt}` : `−${Math.abs(afwijkt)}`}
           </Text>
