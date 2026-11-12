@@ -415,7 +415,7 @@ export default function Haltebord() {
             <Text style={[s.lijnFilterHint, { color: colors.sub }]}>Volledige dienstregeling wordt geladen…</Text>
         ) : null}
       </ScrollView>
-      <LiveBalk live={!!h && !h.verouderd && vertrekken.some(v => v.live)}
+      <LiveBalk live={!!h && vertrekken.some(v => v.live)}
         bijgewerktMs={h && Number.isFinite(Date.parse(h.bijgewerkt))
           ? Date.parse(h.bijgewerkt) : null} nu={nu} />
       <OnderBalk actief={van} />
