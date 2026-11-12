@@ -17,7 +17,7 @@ test("All five screens reuse the same themed Kop and back navigation", () => {
   }
   assert.match(common, /<Kop groot terug titel=\{titel\}/);
   assert.match(board, /<OVspotSchermKop titel="Haltebord"/);
-  assert.match(journey, /<OVspotSchermKop titel="Ritverloop"/);
+  assert.match(journey, /<RitKop/);
   assert.match(base, /colors.header, borderBottomColor: colors.border/);
   assert.doesNotMatch(common, /#0A3A7A|#FFFFFF|backgroundColor: "#0/);
 });

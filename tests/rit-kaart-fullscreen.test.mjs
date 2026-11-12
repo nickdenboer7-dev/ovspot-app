@@ -9,9 +9,9 @@ test("Kop en lijnrij hebben overzichtelijke kaart/lijstwissel", () => {
   const modern = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
   assert.match(modern,/useState<"lijst" \| "kaart">\("lijst"\)/);
   assert.match(modern,/kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
-  assert.match(modern,/onPress=\{\(\) => setWeergave\(isKaart \? "lijst" : "kaart"\)\}/);
-  assert.match(modern,/name=\{isKaart \? "list-outline" : "map-outline"\}/);
-  assert.match(modern,/icon="ellipsis-vertical"/);
+  assert.match(modern,/onKaart=\{\(\) => setWeergave\(isKaart \? "lijst" : "kaart"\)\}/);
+  assert.match(modern,/kaartIcoon=\{isKaart \? "list-outline" : "map-outline"\}/);
+  assert.match(modern,/onMeer=\{\(\) => setMenuOpen/);
 });
 
 test("Kaart is full-screen en sluit compacte haltelijst/tabbar uit", () => {

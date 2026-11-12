@@ -32,7 +32,7 @@ const rit = {
 
 test("Screen uses shared app design with unchanged 68/28 timeline and controls", () => {
   for (const re of [
-    /<OVspotSchermKop titel="Ritverloop"/,
+    /<RitKop/,
     /tijdlijnKaart: \{ borderTopWidth: StyleSheet.hairlineWidth/,
     /lijstInhoud: \{ paddingHorizontal: 0/,
     /width: 68/, /rail: \{ width: 28/, /height: 44/

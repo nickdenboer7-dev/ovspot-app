@@ -24,7 +24,7 @@ test("Operator badge Qbuzz lijn 1 is orange on board and trip; metro keeps line 
   assert.equal(lijnKleur("52","metro","GVB").bg, "#00adef");
   assert.match(badge, /const palet = lijnKleur\(lijn, modus, vervoerder, kleur, tekstkleur\)/);
   assert.match(bord, /<VertrekRegel /);
-  assert.match(rit, /<OVspotIdentiteit/);
+  assert.match(rit, /<RitKop/);
   assert.match(bar, /<LijnBadge groot/);
 });
 

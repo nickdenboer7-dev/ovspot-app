@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -7,7 +6,7 @@ import { Text } from "./LocalizedText";
 import { isTab, OnderBalk } from "./OnderBalk";
 import { LiveRitKaart } from "./LiveRitKaart";
 import { FeedbackModal } from "./FeedbackModal";
-import { OVspotSchermKop, OVspotIdentiteit } from "./OVspotSchermKop";
+import { RitKop } from "./RitKop";
 import { StatusStrook } from "./StatusStrook";
 import { LijnBadge } from "./ui";
 import { LiveBalk } from "./LiveBalk";
@@ -20,7 +19,7 @@ import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
 import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritNummerKort, vorigeRitDelen, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
-import type { LiveRitVoertuigAntwoord } from "../lib/types";
+import type { LiveRitVoertuigAntwoord, Modus } from "../lib/types";
 
 type Params = {
   trip?: string; datum?: string; voertuig?: string; van?: string; lijn?: string;
@@ -28,16 +27,6 @@ type Params = {
   instap_naam?: string; instap_plaats?: string; instap_ms?: string; richting?: string;
   kleur?: string; tekstkleur?: string;
 };
-
-function KopKnop({ icon, label, onPress }: {
-  icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void
-}) {
-  const { colors } = useApp();
-  return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
-    hitSlop={4} style={s.kopKnop}>
-    <Ionicons name={icon} size={23} color={colors.headerText} />
-  </Pressable>;
-}
 
 export default function RitverloopV2Screen() {
   const p = useLocalSearchParams<Params>();
@@ -162,11 +151,7 @@ export default function RitverloopV2Screen() {
   const voertuigInfo = voertuigRegel(rit, gps);
   const ritNr = !trein && !!rit && !rit.vervallen ? ritNummerKort(rit.rit_nummer) : "";
   const vorige = !trein && !!rit && !rit.vervallen ? vorigeRitDelen(rit.vorige_rit) : null;
-  const voertuigDelen = [
-    ritNr ? `${t("Rit")} ${ritNr}` : "",
-    voertuigInfo ? `${t("Voertuig")} ${voertuigInfo.nummer}` : ""
-  ].filter(Boolean);
-  const voertuigTekst = voertuigDelen.length ? voertuigDelen.join(" · ") : undefined;
+  const voertuigTekst = voertuigInfo ? `${t("Voertuig")} ${voertuigInfo.nummer}` : undefined;
   const snelheidTekst = voertuigInfo && voertuigInfo.snelheidKmh !== null
     ? `${voertuigInfo.snelheidKmh} km/h` : undefined;
   const liveVoorBalk = !!rit && rit.live && !rit.vervallen &&
@@ -185,13 +170,20 @@ export default function RitverloopV2Screen() {
 
   return <View style={[s.scherm, { backgroundColor: colors.background }]}>
     <View style={[s.boven, { backgroundColor: colors.header }]}>
-      <OVspotSchermKop titel="Ritverloop" favoriet={fav}
+      <RitKop
+        lijn={lijn || "OV"} modus={(rit?.modus || String(p.modus || "bus")) as Modus} vervoerder={vervoerder}
+        kleur={p.kleur ? String(p.kleur) : undefined}
+        tekstkleur={p.tekstkleur ? String(p.tekstkleur) : undefined}
+        bestemming={bestemming}
+        detail={[ritNr ? `${t("Rit")} ${ritNr}` : "", vervoerder].filter(Boolean).join(" · ") || undefined}
+        favoriet={fav}
         favorietLabel={lijnFavoriet ? (fav ? "Verwijder lijnfavoriet" : "Bewaar lijn, richting en instaphalte") : undefined}
         onFavoriet={onFavoriet}
-        meer={<KopKnop icon="ellipsis-vertical" label={t("Meer")}
-          onPress={() => setMenuOpen(v => !v)} />}
-      />
-      {menuOpen ? <View style={[s.menu, { backgroundColor: colors.surface, borderColor: colors.border, top: insets.top + 72 }]}>
+        kaartIcoon={isKaart ? "list-outline" : "map-outline"}
+        kaartLabel={isKaart ? "Bekijk haltelijst" : "Toon de live voertuigkaart"}
+        kaartAan={kaartBeschikbaar} onKaart={() => setWeergave(isKaart ? "lijst" : "kaart")}
+        onMeer={() => setMenuOpen(v => !v)} />
+      {menuOpen ? <View style={[s.menu, { backgroundColor: colors.surface, borderColor: colors.border, top: insets.top + 60 }]}>
         <Pressable style={s.menuItem} accessibilityRole="button"
           onPress={() => { setMenuOpen(false); setFeedbackOpen(true); }}>
           <Text style={[s.menuTekst, { color: colors.text }]}>{t("Feedback sturen")}</Text>
@@ -202,21 +194,6 @@ export default function RitverloopV2Screen() {
         </Pressable>
       </View> : null}
     </View>
-    <OVspotIdentiteit
-      naam={bestemming} lijn={lijn || "OV"} modus={rit?.modus || String(p.modus || "bus")}
-      vervoerder={vervoerder} kleur={p.kleur ? String(p.kleur) : undefined}
-      tekstkleur={p.tekstkleur ? String(p.tekstkleur) : undefined}
-      detail={vervoerder}
-      actie={
-        <Pressable style={s.kaartKnop} accessibilityRole="button"
-          accessibilityLabel={t(isKaart ? "Bekijk haltelijst" : "Toon de live voertuigkaart")}
-          disabled={!kaartBeschikbaar} onPress={() => setWeergave(isKaart ? "lijst" : "kaart")}>
-          <Ionicons name={isKaart ? "list-outline" : "map-outline"} size={23}
-            color={kaartBeschikbaar ? colors.accent : colors.muted} />
-        </Pressable>
-      }
-    />
-
     {!isKaart ? <>
       <StatusStrook
         live={!!volgendeRij?.live}
@@ -317,7 +294,6 @@ const s = StyleSheet.create({
   lijnInhoud: { flex: 1, minWidth: 0, gap: 2 },
   bestemming: { fontSize: 17, fontWeight: "700" },
   vervoerder: { fontSize: 12 },
-  kaartKnop: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   status: { height: 56,
     paddingHorizontal: 12, paddingVertical: 5, justifyContent: "center", gap: 3 },
   statusRegel: { height: 22, flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },

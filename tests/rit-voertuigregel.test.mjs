@@ -69,7 +69,7 @@ test("ritnummer: alleen kort en numeriek", () => {
 test("ritpagina zet ritnummer voor de voertuigregel", () => {
   const scherm = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
   assert.match(scherm, /ritNummerKort\(rit\.rit_nummer\)/);
-  assert.match(scherm, /voertuigDelen\.join\(" · "\)/);
+  assert.match(scherm, /Rit \$\{t\("Rit"\)\}|\$\{t\("Rit"\)\} \$\{ritNr\}/);
 });
 
 import { vorigeRitDelen } from "../lib/ritverloopV2.ts";

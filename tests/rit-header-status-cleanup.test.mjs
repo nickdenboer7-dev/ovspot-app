@@ -6,12 +6,13 @@ const stop=readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.
 const motion=readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url),"utf8");
 const head=readFileSync(new URL("../components/OVspotSchermKop.tsx", import.meta.url),"utf8");
 const cell=readFileSync(new URL("../components/RitTijdcel.tsx", import.meta.url),"utf8");
-test("OVspot-kop houdt favoriet en menu, kaartknop apart in de identiteitsrij",()=>{
- assert.match(screen,/<OVspotSchermKop titel="Ritverloop" favoriet=\{fav\}/);
- assert.match(head,/favoriet \? "star" : "star-outline"/);
- assert.match(screen,/icon="ellipsis-vertical"/);
- assert.match(screen,/<OVspotIdentiteit/);
- assert.match(screen,/name=\{isKaart \? "list-outline" : "map-outline"\}/);
+test("Ritkop houdt favoriet, menu en kaartknop in één compacte rij",()=>{
+ const kop=readFileSync(new URL("../components/RitKop.tsx", import.meta.url),"utf8");
+ assert.match(screen,/<RitKop/);
+ assert.match(kop,/favoriet \? "star" : "star-outline"/);
+ assert.match(kop,/name="ellipsis-vertical"/);
+ assert.match(screen,/kaartIcoon=\{isKaart \? "list-outline" : "map-outline"\}/);
+ assert.doesNotMatch(screen,/<OVspotIdentiteit/);
 });
 test("Volgende halte alleen bij rijdend GPS-voertuig, zonder extra Nu-hier-blok",()=>{
  assert.match(stop,/backgroundColor: volgende \? colors.infoBg/);
