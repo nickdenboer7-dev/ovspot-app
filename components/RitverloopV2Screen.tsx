@@ -270,7 +270,7 @@ export default function RitverloopV2Screen() {
               if (eenmaalGesprongenNaarHalte.current === uniekeSleutel) return;
               eenmaalGesprongenNaarHalte.current = uniekeSleutel;
               lijstRef.current?.scrollTo({
-                y: Math.max(0, e.nativeEvent.layout.y - 20), animated: false
+                y: Math.max(0, e.nativeEvent.layout.y - 110), animated: false
               });
             } : undefined}
             laatste={r.index === haltes.length - 1} nu={nu} t={t}
