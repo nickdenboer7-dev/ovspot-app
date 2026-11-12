@@ -1,4 +1,5 @@
 import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Text } from "./LocalizedText";
 import { useApp } from "../context/AppProvider";
@@ -13,7 +14,7 @@ import { bepaalRitStatus } from "../lib/ritStatus";
  * Eén vertrek. compact = kaartje op Dichtbij/Favorieten (badge · bestemming · status · minuten).
  * vol = haltebord (met spoor/vervoerder eronder en geplande tijd onder de minuten).
  */
-export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; nu: number; compact?: boolean; eerste?: boolean; onPress?: () => void }) {
+export function VertrekRegel({ v, nu, compact, eerste, onPress, onWekker }: { v: Vertrek; nu: number; compact?: boolean; eerste?: boolean; onPress?: () => void; onWekker?: () => void }) {
   const { colors, t, instellingen } = useApp();
   const { width, fontScale } = useWindowDimensions();
   const smalScherm = width < 380 || fontScale > 1.2 || instellingen.groteTekst;
@@ -62,6 +63,12 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
           </Text>
         ) : null}
       </View>
+      {onWekker && !vertrokken && !v.vervallen ? (
+        <Pressable onPress={onWekker} hitSlop={10} accessibilityRole="button"
+          accessibilityLabel={t("Wekker voor dit vertrek")} style={s.bel}>
+          <Ionicons name="notifications-outline" size={19} color={colors.sub} />
+        </Pressable>
+      ) : null}
     </View>
   );
 
@@ -130,6 +137,7 @@ const s = StyleSheet.create({
   rijVolSmal: { gap: 7, paddingHorizontal: 10 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
   middenVol: { flex: 1, minWidth: 0 },
+  bel: { minWidth: 36, minHeight: 36, alignItems: "center", justifyContent: "center" },
   bestemmingRij: { flexDirection: "row", alignItems: "center", gap: 8 },
   bestemming: { fontSize: 14, fontWeight: "500", lineHeight: 18 },
   spoor: { fontSize: 11, lineHeight: 14 },

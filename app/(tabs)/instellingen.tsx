@@ -14,6 +14,7 @@ import { DICHTBIJ_AFSTANDEN, STANDAARD_INSTELLINGEN } from "../../lib/instelling
 import type { Filter, Startscherm, Tekstgrootte, Thema } from "../../lib/types";
 import { EN, type TaalVoorkeur } from "../../lib/i18n";
 import { instellingKomtOvereen, instellingenZoektermen } from "../../lib/instellingenZoeken";
+import { registreerPush } from "../../lib/push";
 import { vergrootLetterwaarden } from "../../lib/toegankelijkheid";
 
 type Icoon = keyof typeof Ionicons.glyphMap;
@@ -121,7 +122,7 @@ function InstellingsRij({ icoon, titel, uitleg, waarde, onPress, schakel, laatst
 }
 
 export default function Instellingen() {
-  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext, t } = useApp();
+  const { colors, scheme, instellingen, zetInstellingen, laatsteFeedbackContext, favorietenLijnen, t } = useApp();
   const insets = useSafeAreaInsets();
   const [kiezer, zetKiezer] = useState<Kiezer>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -152,6 +153,18 @@ export default function Instellingen() {
   const kiezerInfo = kiezer ? KIEZERS[kiezer] : null;
   const opties = kiezerInfo?.opties ?? [];
   const geselecteerd = kiezerInfo?.huidig;
+  const zetMeldingen = async (aan: boolean) => {
+    try {
+      const gelukt = await registreerPush(favorietenLijnen, aan);
+      if (aan && !gelukt) {
+        Alert.alert(t("Meldingen staan uit"), t("Geef OVspot toestemming voor meldingen in de instellingen van je telefoon."));
+        return;
+      }
+      zetInstellingen({ storingenPush: aan });
+    } catch {
+      Alert.alert(t("Meldingen niet gelukt"), t("Controleer je verbinding en probeer het opnieuw."));
+    }
+  };
   const zetStandaard = () => Alert.alert(
     t("Standaard terugzetten"), t("Alle instellingen gaan terug naar de standaard. Je thuislocatie blijft staan."),
     [{ text: t("Annuleren"), style: "cancel" },
@@ -203,6 +216,11 @@ export default function Instellingen() {
         uitleg="Kies welk scherm als eerste opstart"
         waarde={STARTSCHERMEN.find(o => o.key === instellingen.startscherm)?.label || "Dichtbij"}
         onPress={() => zetKiezer("startscherm")} />,
+    ] },
+    { titel: "MELDINGEN", rijen: [
+      <InstellingsRij key="storingenPush" icoon="notifications-outline" titel="Storingen en vertraging"
+        uitleg="Pushbericht bij storing of 3+ minuten vertraging op je favoriete lijnen"
+        schakel={{ value: instellingen.storingenPush, onChange: zetMeldingen }} />,
     ] },
     { titel: "KAART & DATA", meer: true, rijen: [
       <InstellingsRij key="voertuigen" icoon="bus-outline" titel="Live voertuigen"

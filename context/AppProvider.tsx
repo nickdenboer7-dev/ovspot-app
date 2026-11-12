@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, useColorScheme } from "react-native";
 import { dark, light, highContrastDark, highContrastLight, type Palette } from "../constants/theme";
+import { registreerPush } from "../lib/push";
 import { isDonkerUur } from "../lib/instellingenDefaults";
 import { api } from "../lib/api";
 import { herstelFavorietOpPositie, verplaatsInFavorieten, wisselInFavorieten } from "../lib/favorieten";
@@ -81,6 +82,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const timer = setInterval(() => zetTijdNu(Date.now()), 60000);
     return () => clearInterval(timer);
   }, [instellingen.thema]);
+  // Houdt de favoriete lijnen op de server actueel zolang meldingen aanstaan.
+  useEffect(() => {
+    if (!klaar || !instellingen.storingenPush) return;
+    registreerPush(favorietenLijnen, true).catch(() => {});
+  }, [klaar, instellingen.storingenPush, favorietenLijnen]);
   const scheme: "light" | "dark" =
     instellingen.thema === "donker" ? "dark" : instellingen.thema === "licht" ? "light"
       : instellingen.thema === "schema"

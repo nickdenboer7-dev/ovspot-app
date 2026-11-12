@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { PanResponder, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Modal, PanResponder, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Text } from "../../components/LocalizedText";
 import { isTab, OnderBalk } from "../../components/OnderBalk";
 import { StoringKaart } from "../../components/StoringKaart";
@@ -12,6 +12,7 @@ import { compacteHalteNaam } from "../../lib/ritverloopV2";
 import { LiveBalk } from "../../components/LiveBalk";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
+import { zetWekker } from "../../lib/push";
 import { lijnBadgeHeeftRand, lijnKleur } from "../../constants/wayfinding";
 import { geldigeLijnen } from "../../lib/wayfindingV2";
 import { storingPastBijModus } from "../../lib/storingPerModus";
@@ -42,7 +43,7 @@ export default function Haltebord() {
   }>();
   const id = String(p.id || "");
   const van = isTab(p.van) ? p.van : "index";
-  const { colors, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext, t, taal } = useApp();
+  const { colors, instellingen, isFavoriet, wisselFavoriet, zetFeedbackContext, favorietenLijnen, t, taal } = useApp();
   // De opgeslagen instelling blijft een voorkeur; op haltes zonder die modus tonen we alles.
   const gevraagdeModus = ["train", "metro", "tram", "bus", "ferry"].includes(String(p.modus))
     ? String(p.modus) : null;
@@ -203,6 +204,18 @@ export default function Haltebord() {
   const groepExtra = haltegroep && haltegroep.toLowerCase() !== plaats.toLowerCase()
     && haltegroep.toLowerCase() !== titel.toLowerCase() ? haltegroep : "";
   const groepSub = [plaatsSub, groepExtra].filter(Boolean).join(" · ");
+  const [wekkerV, setWekkerV] = useState<Vertrek | null>(null);
+  const kiesWekker = async (minuten: number) => {
+    const v = wekkerV;
+    setWekkerV(null);
+    if (!v) return;
+    try {
+      await zetWekker(String(id), v, minuten, favorietenLijnen, instellingen.storingenPush);
+      Alert.alert(t("Wekker gezet"), `${t("Je krijgt een melding")} ${minuten} ${t("min voor vertrek van lijn")} ${v.lijn}.`);
+    } catch (e) {
+      Alert.alert(t("Wekker niet gezet"), e instanceof Error ? t(e.message) : "");
+    }
+  };
   const openRit = (v: Vertrek) => {
     if (!v.rit) return;
     const fysiekeHalte = "stop_id" in v && typeof v.stop_id === "string" ? v.stop_id : "";
@@ -270,7 +283,8 @@ export default function Haltebord() {
     lijst = (
       <View style={[s.vertrekLijst, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {vertrekken.map((v, i) => (
-          <VertrekRegel key={`${v.lijn}-${v.vertrek_ms}-${i}`} v={v} nu={nu} onPress={v.rit ? () => openRit(v) : undefined} />
+          <VertrekRegel key={`${v.lijn}-${v.vertrek_ms}-${i}`} v={v} nu={nu} onPress={v.rit ? () => openRit(v) : undefined}
+            onWekker={v.rit?.trip ? () => setWekkerV(v) : undefined} />
         ))}
       </View>
     );
@@ -419,11 +433,36 @@ export default function Haltebord() {
         bijgewerktMs={h && Number.isFinite(Date.parse(h.bijgewerkt))
           ? Date.parse(h.bijgewerkt) : null} nu={nu} />
       <OnderBalk actief={van} />
+      <Modal visible={wekkerV !== null} transparent animationType="fade" onRequestClose={() => setWekkerV(null)}>
+        <View style={s.wekkerAchter}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setWekkerV(null)}
+            accessibilityRole="button" accessibilityLabel={t("Keuzemenu sluiten")} />
+          <View style={[s.wekkerKaart, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.wekkerTitel, { color: colors.text }]}>{t("Wekker voor dit vertrek")}</Text>
+            <Text style={[s.wekkerUitleg, { color: colors.sub }]}>
+              {wekkerV ? `${t("Lijn")} ${wekkerV.lijn} ${t("naar")} ${wekkerV.bestemming}. ${t("Je krijgt een melding vlak voor vertrek, op basis van de live tijd.")}` : ""}
+            </Text>
+            {[3, 5, 10, 15].map(m => (
+              <Pressable key={m} onPress={() => void kiesWekker(m)} accessibilityRole="button"
+                style={[s.wekkerOptie, { borderColor: colors.border }]}>
+                <Ionicons name="notifications-outline" size={20} color={colors.accent} />
+                <Text style={[s.wekkerOptieTekst, { color: colors.text }]}>{m} {t("minuten voor vertrek")}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const s = StyleSheet.create({
+  wekkerAchter: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: 24 },
+  wekkerKaart: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 10 },
+  wekkerTitel: { fontSize: 17, fontWeight: "800" },
+  wekkerUitleg: { fontSize: 13, lineHeight: 19 },
+  wekkerOptie: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 48, borderTopWidth: StyleSheet.hairlineWidth },
+  wekkerOptieTekst: { fontSize: 15, fontWeight: "600" },
   lijnFilterBalk: { borderBottomWidth: StyleSheet.hairlineWidth },
   richtingLabel: { paddingHorizontal: 14, paddingBottom: 8, fontSize: 13, fontWeight: "700" },
   lijnFilterKop: { paddingHorizontal: 14, paddingTop: 7, flexDirection: "row",

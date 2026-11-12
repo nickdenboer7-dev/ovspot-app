@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "302706678654",
+    "project_id": "ovspot-b1348",
+    "storage_bucket": "ovspot-b1348.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:302706678654:android:20b11ed6c0ffd553a7312f",
+        "android_client_info": {
+          "package_name": "nl.ovspot.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2ePx-b2EKGWX7QEmzoQPfih0ljHHxeH0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
