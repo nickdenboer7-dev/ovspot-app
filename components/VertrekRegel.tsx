@@ -125,7 +125,7 @@ const s = StyleSheet.create({
   rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 54, paddingVertical: 7 },
   rijCompactSmal: { gap: 6 },
   rijVol: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 46, paddingHorizontal: 14, paddingVertical: 5 },
-  tijdKolom: { width: 60, flexShrink: 0 },
+  tijdKolom: { width: 60, flexShrink: 0, alignItems: "flex-start" },
   rijVolSmal: { gap: 7, paddingHorizontal: 10 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
   middenVol: { flex: 1, minWidth: 0 },
