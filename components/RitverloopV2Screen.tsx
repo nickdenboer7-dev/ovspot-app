@@ -247,9 +247,9 @@ export default function RitverloopV2Screen() {
               const uniekeSleutel = [rit?.id, rit?.datum, ref.instap_halte].join(":");
               if (eenmaalGesprongenNaarHalte.current === uniekeSleutel) return;
               eenmaalGesprongenNaarHalte.current = uniekeSleutel;
-              lijstRef.current?.scrollTo({
-                y: Math.max(0, e.nativeEvent.layout.y - 110), animated: false
-              });
+              // Alleen scrollen als jouw halte onder het eerste schermdeel valt; anders blijft de bovenkant heel.
+              const doel = e.nativeEvent.layout.y;
+              if (doel > 380) lijstRef.current?.scrollTo({ y: doel - 110, animated: false });
             } : undefined}
             laatste={r.index === haltes.length - 1} nu={nu} t={t}
             hoogte={height} vorigeHoogte={prevHeight} trein={trein}
