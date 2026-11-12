@@ -27,7 +27,7 @@ export function RitKop({ lijn, modus, vervoerder, kleur, tekstkleur, bestemming,
       </Pressable>
       <LijnBadge groot lijn={lijn} modus={modus} vervoerder={vervoerder} kleur={kleur} tekstkleur={tekstkleur} />
       <View style={s.tekst}>
-        <Text style={[s.naam, { color: colors.text }]} numberOfLines={1}>{bestemming}</Text>
+        <Text style={[s.naam, { color: colors.text }]} numberOfLines={2}>{bestemming}</Text>
         {detail ? <Text style={[s.detail, { color: colors.sub }]} numberOfLines={1}>{detail}</Text> : null}
       </View>
       <Pressable style={s.knop} accessibilityRole="button" accessibilityLabel={t(kaartLabel)}
@@ -51,6 +51,6 @@ const s = StyleSheet.create({
   kop: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 6, paddingBottom: 8, borderBottomWidth: 1 },
   knop: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
   tekst: { flex: 1, minWidth: 0, marginLeft: 4 },
-  naam: { fontSize: 18, fontWeight: "800", lineHeight: 22 },
+  naam: { fontSize: 17, fontWeight: "800", lineHeight: 20 },
   detail: { fontSize: 12, lineHeight: 16 }
 });
