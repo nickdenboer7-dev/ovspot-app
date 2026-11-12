@@ -13,7 +13,7 @@ test("Statusstrook gebruikt gedeelde status en exacte halte-afwijking",()=>{
 });
 test("Jouw halte uitsluitend bij opening vanuit bord, GPS-chip gekoppeld aan echte GPS",()=>{
  assert.match(screen,/const instapIndex = jouwHalteIndex/);
- assert.match(screen,/onLayout=\{isJouwHalte && !!ref.instap_halte \? e =>/);
+ assert.match(screen,/onLayout=\{r.index === startIndex \? e =>/);
  assert.match(screen,/chip=\{nogNietVertrokken \? "Geen voertuig-GPS" : !trein \? gpsStatus/);
  assert.match(screen,/const actueel = isGpsActueel\(gps, nu\)/);
  assert.match(screen,/\(\) => rit && actueel && !rit.vervallen/);

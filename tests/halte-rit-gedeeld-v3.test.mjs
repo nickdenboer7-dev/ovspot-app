@@ -105,7 +105,7 @@ test("Julianalaan is marked only with a board-provided stop identifier", () => {
   assert.equal(jouwHalteIndex(hs,undefined,undefined),-1);
   assert.equal(jouwHalteIndex(hs,undefined,"Leeuwarden, Julianalaan"),1);
   assert.equal(jouwHalteIndex(hs,undefined,"Andere halte"),-1);
-  assert.match(rit, /onLayout=\{isJouwHalte && !!ref.instap_halte \? e =>/);
+  assert.match(rit, /onLayout=\{r.index === startIndex \? e =>/);
   assert.match(rit, /eenmaalGesprongenNaarHalte.current === uniekeSleutel/);
   assert.match(halte, /Jouw halte/);
 });

@@ -33,8 +33,8 @@ export default function RitverloopV2Screen() {
   const van = isTab(p.van) ? p.van : "index";
   const insets = useSafeAreaInsets();
   const { t, colors, instellingen, isFavoriet, wisselFavoriet, isLijnFavoriet, wisselLijnFavoriet, zetFeedbackContext } = useApp();
-  const [toonEerder, setToonEerder] = useState(false);
-  const [toonLater, setToonLater] = useState(false);
+  const [toonEerder, setToonEerder] = useState(true);
+  const [toonLater, setToonLater] = useState(true);
   const [lijstHoogte, setLijstHoogte] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -93,6 +93,7 @@ export default function RitverloopV2Screen() {
     ref.instap_halte, ref.instap_naam
   );
   const richtIndex = instapIndex >= 0 ? instapIndex : volgendeIndex;
+  const startIndex = Math.max(0, richtIndex - 1);
   const vanaf = toonEerder || richtIndex < 1 ? 0 : richtIndex - 1;
   const aantalKomende = zichtbaarKomendeHaltes(
     lijstHoogte, richtIndex > 0, !toonEerder && richtIndex > 1);
@@ -161,7 +162,7 @@ export default function RitverloopV2Screen() {
     [rit?.stops, rit?.haltes]);
 
   useEffect(() => {
-    setToonEerder(false); setToonLater(false);
+    setToonEerder(true); setToonLater(true);
     eenmaalGesprongenNaarHalte.current = null;
   }, [rit?.id, rit?.datum]);
   useEffect(() => {
@@ -231,10 +232,6 @@ export default function RitverloopV2Screen() {
           <HalteVouwknop label={t("Toon") + " " + verborgenEerder + " " + t("eerdere haltes")}
             onPress={() => setToonEerder(true)} />
         ) : null}
-        {rit && toonEerder && richtIndex > 1 ? (
-          <HalteVouwknop label={t("Verberg eerdere haltes")} omhoog
-            onPress={() => setToonEerder(false)} />
-        ) : null}
         {getoond.map(r => {
           const height = r.index === volgendeIndex && rijdend ? 54 : 40;
           const prevHeight = r.index - 1 === volgendeIndex && rijdend ? 54 : 40;
@@ -243,13 +240,13 @@ export default function RitverloopV2Screen() {
             r={r} volgende={rijdend && r.index === volgendeIndex}
             jouwHalte={isJouwHalte}
             vertrekhalte={nogNietVertrokken && r.index === 0}
-            onLayout={isJouwHalte && !!ref.instap_halte ? e => {
+            onLayout={r.index === startIndex ? e => {
               const uniekeSleutel = [rit?.id, rit?.datum, ref.instap_halte].join(":");
               if (eenmaalGesprongenNaarHalte.current === uniekeSleutel) return;
               eenmaalGesprongenNaarHalte.current = uniekeSleutel;
-              // Alleen scrollen als jouw halte onder het eerste schermdeel valt; anders blijft de bovenkant heel.
+              // Alle haltes staan in de lijst; open bij de halte vóór jouw halte (of vóór de volgende halte).
               const doel = e.nativeEvent.layout.y;
-              if (doel > 380) lijstRef.current?.scrollTo({ y: doel - 110, animated: false });
+              if (doel > 0) lijstRef.current?.scrollTo({ y: doel, animated: false });
             } : undefined}
             laatste={r.index === haltes.length - 1} nu={nu} t={t}
             hoogte={height} vorigeHoogte={prevHeight} trein={trein}
@@ -259,10 +256,6 @@ export default function RitverloopV2Screen() {
         {rit && verborgenLater > 0 ? (
           <HalteVouwknop label={t("Toon") + " " + verborgenLater + " " + t("volgende haltes")}
             onPress={() => setToonLater(true)} />
-        ) : null}
-        {rit && toonLater && totInVoorbeeld < haltes.length ? (
-          <HalteVouwknop label={t("Verberg volgende haltes")} omhoog
-            onPress={() => setToonLater(false)} />
         ) : null}
         </View>
       </ScrollView>

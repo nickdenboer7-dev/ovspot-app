@@ -27,7 +27,7 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
     <View
       onLayout={onLayout}
       style={[s.row, { minHeight: markeer ? (groteTekst ? 100 : 82) : hoogte,
-        backgroundColor: volgende ? colors.infoBg : jouwHalte ? colors.surface2 : colors.surface,
+        backgroundColor: volgende ? colors.infoBg : jouwHalte || gepasseerd ? colors.surface2 : colors.surface,
         zIndex: fractie !== null ? 3 : 0 },
         !markeer && { height: hoogte },
         markeer && { paddingVertical: 8 },
@@ -44,7 +44,7 @@ export function RitverloopStop({ r, volgende, laatste, vorigeHoogte, hoogte, fra
         <RitTijdcel
           verwacht={verwacht} gepland={gepland}
           afwijkingMin={vertragingMin} live={r.live}
-          vervallen={h.vervalt} compact
+          vervallen={h.vervalt} compact klein gedimd={gepasseerd}
         />
       </View>
       <View style={s.rail}>
