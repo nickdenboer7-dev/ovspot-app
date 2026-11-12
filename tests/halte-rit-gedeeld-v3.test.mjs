@@ -16,7 +16,6 @@ const halte = src("components/RitverloopStop.tsx");
 const badge = src("components/ui.tsx");
 const tijdcel = src("components/RitTijdcel.tsx");
 const liveBalk = src("components/LiveBalk.tsx");
-const bar = src("components/OVspotSchermKop.tsx");
 
 test("Operator badge Qbuzz lijn 1 is orange on board and trip; metro keeps line colors", () => {
   assert.equal(lijnKleur("1","bus","Qbuzz").bg, "#ff9622");
@@ -25,7 +24,6 @@ test("Operator badge Qbuzz lijn 1 is orange on board and trip; metro keeps line 
   assert.match(badge, /const palet = lijnKleur\(lijn, modus, vervoerder, kleur, tekstkleur\)/);
   assert.match(bord, /<VertrekRegel /);
   assert.match(rit, /<RitKop/);
-  assert.match(bar, /<LijnBadge groot/);
 });
 
 test("One shared status source covers scheduled, on-time, delay, early and cancelled", () => {

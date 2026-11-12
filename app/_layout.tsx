@@ -43,7 +43,6 @@ function Navigatie() {
         <Stack.Screen name="rit" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="zoek" options={{ animation: "fade_from_bottom" }} />
         <Stack.Screen name="info" options={{ animation: "slide_from_right" }} />
-        <Stack.Screen name="instellingen-geavanceerd" options={{ animation: "slide_from_right" }} />
       </Stack>
     </ThemeProvider>
   );

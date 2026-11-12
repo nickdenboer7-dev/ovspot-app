@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 const screen=readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url),"utf8");
 const stop=readFileSync(new URL("../components/RitverloopStop.tsx", import.meta.url),"utf8");
 const motion=readFileSync(new URL("../components/RijdendVoertuig.tsx", import.meta.url),"utf8");
-const head=readFileSync(new URL("../components/OVspotSchermKop.tsx", import.meta.url),"utf8");
 const cell=readFileSync(new URL("../components/RitTijdcel.tsx", import.meta.url),"utf8");
 test("Ritkop houdt favoriet, menu en kaartknop in één compacte rij",()=>{
  const kop=readFileSync(new URL("../components/RitKop.tsx", import.meta.url),"utf8");

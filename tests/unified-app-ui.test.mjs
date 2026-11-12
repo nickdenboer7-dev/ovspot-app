@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const get = file => readFileSync(new URL("../" + file, import.meta.url), "utf8");
 const base = get("components/ui.tsx");
-const common = get("components/OVspotSchermKop.tsx");
 const status = get("components/StatusStrook.tsx");
 const bar = get("components/OnderBalk.tsx");
 const board = get("app/halte/[id].tsx");
@@ -15,15 +14,12 @@ test("All five screens reuse the same themed Kop and back navigation", () => {
                       "app/(tabs)/instellingen.tsx"]) {
     assert.match(get(path), /<Kop/);
   }
-  assert.match(common, /<Kop groot terug titel=\{titel\}/);
   assert.match(board, /<HalteKop naam=\{titel\}/);
   assert.match(journey, /<RitKop/);
   assert.match(base, /colors.header, borderBottomColor: colors.border/);
-  assert.doesNotMatch(common, /#0A3A7A|#FFFFFF|backgroundColor: "#0/);
 });
 
 test("Shared identity and status use card geometry from other screens", () => {
-  assert.match(common, /borderWidth: 1, borderRadius: 18, marginHorizontal: 14/);
   assert.match(status, /borderWidth: 1, borderRadius: 16, marginHorizontal: 14/);
   assert.match(status, /backgroundColor: colors.surface, borderColor: colors.border/);
   assert.match(journey, /tijdlijnKaart: \{ borderTopWidth: StyleSheet.hairlineWidth/);

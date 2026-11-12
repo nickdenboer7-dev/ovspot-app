@@ -125,11 +125,9 @@ test("Feedback blijft in-app, over-pagina navigeerbaar en legacy halte/GPS-optie
   assert.match(scherm,/router\.push\("\/info"\)/);
   assert.match(scherm,/pathname: "\/zoek", params: \{ doel: "thuis" \}/);
   assert.match(root,/<Stack.Screen name="info"/);
-  assert.match(root,/<Stack.Screen name="instellingen-geavanceerd"/);
+  assert.doesNotMatch(root,/instellingen-geavanceerd/);
   const info=readFileSync(new URL("../app/info.tsx",import.meta.url),"utf8");
-  const meer=readFileSync(new URL("../app/instellingen-geavanceerd.tsx",import.meta.url),"utf8");
   assert.ok(info.includes("Licenties") && info.includes("Algemene voorwaarden"));
-  assert.ok(meer.includes("Thuislocatie") && meer.includes("Afstand voor Dichtbij") && meer.includes("Standaard haltefilter"));
 });
 
 test("Thema op schema: donker tussen vaste uren, ook over middernacht",async()=>{
