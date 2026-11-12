@@ -28,6 +28,6 @@ test("Stop names remain readable in two lines next to back and favorite buttons"
   const board = readFileSync(new URL("../app/halte/[id].tsx", import.meta.url), "utf8");
   assert.match(header, /titelRegels = 1/);
   assert.match(header, /numberOfLines=\{titelRegels\} accessibilityRole="header"/);
-  assert.match(board, /<OVspotIdentiteit naam=\{titel\}/);
+  assert.match(board, /<HalteKop naam=\{titel\}/);
   assert.match(board, /detail=\{groepSub \|\| undefined\}/);
 });

@@ -13,23 +13,27 @@ export type RitTijdcelProps = {
   /** Bord toont ook de bestaande compacte tijd-tot-vertrekregel. */
   aftel?: string;
   compact?: boolean;
+  /** Haltebord: kleinere cijfers, geen derde regel met de planning. */
+  klein?: boolean;
 };
 
 /** Exact dezelfde klok, afwijking en doorgestreepte planning voor bord en rit. */
-export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, aftel, compact }: RitTijdcelProps) {
+export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, aftel, compact, klein }: RitTijdcelProps) {
   const { colors } = useApp();
   const status = bepaalRitStatus({ live, vervallen, afwijkingMin });
-  const gewijzigd = status.heeftLive && status.afwijkingMin !== 0 && gepland && gepland !== verwacht;
+  const gewijzigd = status.heeftLive && status.afwijkingMin !== 0 && gepland && gepland !== verwacht
+    && !(klein && aftel);
   const getoondeTijd = !live ? gepland || verwacht : verwacht || gepland;
   const afwijkt = status.afwijkingMin;
   const afwijkingKleur = afwijkt > 0 ? colors.delay : colors.early;
   return (
     <View style={[s.cel, compact ? s.compact : s.bord]}>
       {aftel && !vervallen ? (
-        <Text style={[s.aftel, { color: colors.text }]}>{aftel}</Text>
+        <Text style={[s.aftel, klein && s.aftelKlein, { color: colors.text }]}>{aftel}</Text>
       ) : null}
       <View style={s.tijdRij}>
-        <Text style={[s.tijd, { color: vervallen ? colors.muted : colors.text },
+        <Text style={[s.tijd, klein && (aftel && !vervallen ? s.tijdKleinOnder : s.tijdKlein),
+          { color: vervallen ? colors.muted : aftel && klein ? colors.sub : colors.text },
           vervallen && s.doorgestreept]}>
           {vervallen ? gepland || verwacht || "—" : getoondeTijd || "—"}
         </Text>
@@ -50,6 +54,9 @@ const s = StyleSheet.create({
   bord: { alignItems: "flex-end", maxWidth: 120 },
   compact: { alignItems: "flex-start" },
   aftel: { fontSize: 16, fontWeight: "800" },
+  aftelKlein: { fontSize: 13 },
+  tijdKlein: { fontSize: 13 },
+  tijdKleinOnder: { fontSize: 11, fontWeight: "600" },
   tijdRij: { flexDirection: "row", alignItems: "baseline", gap: 4, flexWrap: "nowrap" },
   tijd: { fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] },
   afwijking: { fontSize: 11, fontWeight: "800" },

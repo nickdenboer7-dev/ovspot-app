@@ -21,7 +21,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
   const statusRit = bepaalRitStatus({
     live: v.live, vervallen: v.vervallen, afwijkingMin: v.vertraging_min
   });
-  const info = [spoorLabel(v.modus, v.spoor), v.vervoerder].filter(Boolean).join(" · ");
+  const spoor = spoorLabel(v.modus, v.spoor);
   const displayBestemming = bestemmingVoorWeergave(v.lijn, v.bestemming);
   // Screen readers receive translated labels without altering operator destinations.
   const a11y = [
@@ -52,6 +52,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
       <View style={s.midden}>
         <View style={s.bestemmingRij}>
           <Text
+            numberOfLines={compact ? undefined : 1}
             style={[
               compact ? s.bestemmingCompact : s.bestemming,
               { color: v.vervallen ? colors.muted : colors.text, textDecorationLine: v.vervallen ? "line-through" : "none" }
@@ -59,16 +60,12 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
           >
             {displayBestemming}
           </Text>
+          {!compact && spoor ? (
+            <Text style={[s.spoor, { color: colors.sub }]} numberOfLines={1}>{t(spoor)}</Text>
+          ) : null}
         </View>
-        {((!compact && info) || (!vertrokken && !v.vervallen)) ? <View style={s.detailRij}>
-          {!compact && info ? (
-            <Text style={[s.info, { color: colors.sub }]} numberOfLines={1}>
-              {info}
-            </Text>
-          ) : null}
-          {!vertrokken ? (
-            <RitStatusLabel live={v.live} vervallen={v.vervallen} afwijkingMin={v.vertraging_min} />
-          ) : null}
+        {compact && !vertrokken && !v.vervallen ? <View style={s.detailRij}>
+          <RitStatusLabel live={v.live} vervallen={v.vervallen} afwijkingMin={v.vertraging_min} />
         </View> : null}
       </View>
       <View style={[s.rechts, smalScherm && s.rechtsSmal, vertrokken && s.rechtsVertrokken]}>
@@ -79,6 +76,7 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
             verwacht={kloktijd} gepland={v.gepland}
             live={v.live} vervallen={v.vervallen} afwijkingMin={v.vertraging_min}
             aftel={!v.vervallen && tijd !== kloktijd ? tijd : undefined}
+            klein={!compact}
           />
         )}
       </View>
@@ -96,13 +94,13 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
 const s = StyleSheet.create({
   rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 54, paddingVertical: 7 },
   rijCompactSmal: { gap: 6 },
-  rijVol: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 76, paddingHorizontal: 15, paddingVertical: 11 },
+  rijVol: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44, paddingHorizontal: 16, paddingVertical: 6 },
   rijVolSmal: { gap: 7, paddingHorizontal: 10 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
   bestemmingRij: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bestemming: { fontSize: 16, fontWeight: "800", flexShrink: 1, lineHeight: 21 },
+  bestemming: { fontSize: 13, fontWeight: "700", flexShrink: 1, lineHeight: 18 },
+  spoor: { fontSize: 11, flexShrink: 0 },
   bestemmingCompact: { fontSize: 15, fontWeight: "700", flexShrink: 1, lineHeight: 20 },
-  info: { fontSize: 13 },
   detailRij: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, minHeight: 18 },
   rechts: { minWidth: 76, maxWidth: 100, flexShrink: 0, alignItems: "flex-end" },
   rechtsSmal: { minWidth: 68, maxWidth: 78 },

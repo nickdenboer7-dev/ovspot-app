@@ -66,7 +66,7 @@ test("Een chip wordt opnieuw Alles bij tweede tik; na moduswissel reset selectie
 });
 
 test("Scrollbare chipbalk onder Bijgewerkt-header, kleurcontrast en toegankelijkheid",()=>{
-  const vanafHeader=bron.search(/<OVspotSchermKop/);
+  const vanafHeader=bron.search(/<HalteKop/);
   const vanafModus=bron.indexOf("{meerdereModi ? (",vanafHeader);
   const vanafLijn=bron.indexOf("{uniekeLijnen.length >= 1 ? (",vanafModus);
   assert.ok(vanafHeader>=0 && vanafModus>vanafHeader && vanafLijn>vanafModus);

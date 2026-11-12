@@ -7,8 +7,7 @@ import { isTab, OnderBalk } from "../../components/OnderBalk";
 import { StoringKaart } from "../../components/StoringKaart";
 import { Chips, FoutBalk, Kaart, Laden, Leeg } from "../../components/ui";
 import { VertrekRegel } from "../../components/VertrekRegel";
-import { OVspotSchermKop, OVspotIdentiteit } from "../../components/OVspotSchermKop";
-import { StatusStrook } from "../../components/StatusStrook";
+import { HalteKop } from "../../components/HalteKop";
 import { LiveBalk } from "../../components/LiveBalk";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
@@ -265,23 +264,17 @@ export default function Haltebord() {
     );
   else if (vertrekken.length)
     lijst = (
-      <Kaart>
+      <View style={[s.vertrekLijst, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {vertrekken.map((v, i) => (
           <VertrekRegel key={`${v.lijn}-${v.vertrek_ms}-${i}`} v={v} nu={nu} onPress={v.rit ? () => openRit(v) : undefined} />
         ))}
-      </Kaart>
+      </View>
     );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <OVspotSchermKop titel="Haltebord" favoriet={fav}
+      <HalteKop naam={titel} detail={groepSub || undefined} favoriet={fav}
         onFavoriet={() => wisselFavoriet({ id, naam, plaats })} />
-      <OVspotIdentiteit naam={titel} detail={groepSub || undefined} />
-      <StatusStrook
-        live={!!vertrekken[0]?.live}
-        vervallen={!!vertrekken[0]?.vervallen}
-        afwijkingMin={vertrekken[0]?.vertraging_min ?? 0}
-      />
       {meerdereModi ? (
         <View style={[s.chips, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
           {tabModi.length <= 3 ? (
@@ -450,6 +443,7 @@ const s = StyleSheet.create({
   lijnFilterNummer: { fontSize: 13, fontWeight: "800", maxWidth: 75 },
   chips: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth },
   inhoud: { padding: 14, gap: 13, paddingBottom: 28 },
+  vertrekLijst: { marginHorizontal: -14, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth },
   storing: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, minHeight: 46, paddingVertical: 10 },
   storingText: { flex: 1, fontSize: 15, fontWeight: "600" },
   geenVertrekken: { padding: 16, gap: 15 },

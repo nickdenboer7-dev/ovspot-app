@@ -45,7 +45,7 @@ test("One shared status source covers scheduled, on-time, delay, early and cance
   assert.match(src("components/RitStatusLabel.tsx"), /bepaalRitStatus/);
   assert.match(tijdcel, /bepaalRitStatus/);
   assert.match(rit, /<StatusStrook/);
-  assert.match(bord, /<StatusStrook/);
+  assert.doesNotMatch(bord, /<StatusStrook/);
 });
 
 test("80 seconds rounds once to +1 min; early -80 seconds rounds to -1", () => {
