@@ -24,7 +24,7 @@ export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, a
   const { colors } = useApp();
   const status = bepaalRitStatus({ live, vervallen, afwijkingMin });
   const gewijzigd = status.heeftLive && status.afwijkingMin !== 0 && gepland && gepland !== verwacht
-    && !(klein && (aftel || compact));
+    && !klein;
   const getoondeTijd = !live ? gepland || verwacht : verwacht || gepland;
   const afwijkt = status.afwijkingMin;
   const afwijkingKleur = afwijkt > 0 ? colors.delay : colors.early;
@@ -34,7 +34,7 @@ export function RitTijdcel({ verwacht, gepland, live, vervallen, afwijkingMin, a
         <Text style={[s.aftel, klein && s.aftelKlein, { color: colors.text }]}>{aftel}</Text>
       ) : null}
       <View style={s.tijdRij}>
-        <Text style={[s.tijd, klein && (aftel && !vervallen ? s.tijdKleinOnder : s.tijdKlein),
+        <Text style={[s.tijd, klein && (aftel && !vervallen ? s.tijdKleinOnder : s.tijdKlein), klein && !compact && !aftel && s.tijdBord,
           { color: vervallen ? colors.muted : gedimd || (aftel && klein) ? colors.sub : colors.text },
           vervallen && s.doorgestreept]}>
           {vervallen ? gepland || verwacht || "—" : getoondeTijd || "—"}
@@ -58,6 +58,7 @@ const s = StyleSheet.create({
   aftel: { fontSize: 16, fontWeight: "800" },
   aftelKlein: { fontSize: 13 },
   tijdKlein: { fontSize: 13 },
+  tijdBord: { fontSize: 14 },
   tijdKleinOnder: { fontSize: 11, fontWeight: "600" },
   tijdRij: { flexDirection: "row", alignItems: "baseline", gap: 4, flexWrap: "nowrap" },
   tijd: { fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] },

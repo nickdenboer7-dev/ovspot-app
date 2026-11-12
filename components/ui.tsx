@@ -9,13 +9,13 @@ import { status } from "../lib/format";
 import { lijnBadgeHeeftRand, lijnKleur } from "../constants/wayfinding";
 import type { Modus, Vertrek } from "../lib/types";
 
-export function LijnBadge({ lijn, modus, vervoerder, kleur, tekstkleur, vervallen, groot }: { lijn: string; modus: Modus; vervoerder?: string; kleur?: string; tekstkleur?: string; vervallen?: boolean; groot?: boolean }) {
+export function LijnBadge({ lijn, modus, vervoerder, kleur, tekstkleur, vervallen, groot, klein }: { lijn: string; modus: Modus; vervoerder?: string; kleur?: string; tekstkleur?: string; vervallen?: boolean; groot?: boolean; klein?: boolean }) {
   const { colors } = useApp();
   const palet = lijnKleur(lijn, modus, vervoerder, kleur, tekstkleur);
   const bg = vervallen ? colors.muted : palet.bg;
   return (
-    <View style={[s.badge, groot && s.badgeGroot, { backgroundColor: bg }, !vervallen && lijnBadgeHeeftRand(palet) && { borderColor: "#CBD5E1", borderWidth: 1 }]}>
-      <Text style={[s.badgeText, groot && s.badgeTextGroot, { color: vervallen ? colors.badgeText : palet.fg }]} numberOfLines={1}>
+    <View style={[s.badge, groot && s.badgeGroot, klein && s.badgeKlein, { backgroundColor: bg }, !vervallen && lijnBadgeHeeftRand(palet) && { borderColor: "#CBD5E1", borderWidth: 1 }]}>
+      <Text style={[s.badgeText, groot && s.badgeTextGroot, klein && s.badgeTextKlein, { color: vervallen ? colors.badgeText : palet.fg }]} numberOfLines={1}>
         {lijn}
       </Text>
     </View>
@@ -202,6 +202,8 @@ const s = StyleSheet.create({
   badgeGroot: { minWidth: 50, height: 34, borderRadius: 9 },
   badgeText: { fontSize: 14, fontWeight: "700" },
   badgeTextGroot: { fontSize: 16 },
+  badgeKlein: { minWidth: 34, height: 22, paddingHorizontal: 5, borderRadius: 5 },
+  badgeTextKlein: { fontSize: 12 },
   stip: { width: 8, height: 8, borderRadius: 4 },
   statusRij: { flexDirection: "row", alignItems: "center", gap: 5 },
   statusText: { fontSize: 14, fontWeight: "600" },

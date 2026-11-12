@@ -34,7 +34,37 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
     v.spoor ? t(spoorLabel(v.modus, v.spoor)) : ""
   ].filter(Boolean).join(", ");
 
-  const inhoud = (
+  const volInhoud = (
+    <View style={[s.rijVol, vertrokken && { opacity: 0.55 },
+      { borderBottomColor: colors.divider, borderBottomWidth: StyleSheet.hairlineWidth * 2 }]}>
+      <View style={s.tijdKolom}>
+        <RitTijdcel
+          verwacht={kloktijd} gepland={v.gepland}
+          live={v.live} vervallen={v.vervallen} afwijkingMin={v.vertraging_min}
+          klein
+        />
+      </View>
+      <LijnBadge klein
+        lijn={v.lijn} modus={v.modus} vervoerder={v.vervoerder}
+        kleur={v.kleur || v.lijn_kleur} tekstkleur={v.tekstkleur || v.lijn_tekstkleur}
+        vervallen={v.vervallen}
+      />
+      <View style={s.middenVol}>
+        <Text numberOfLines={1}
+          style={[s.bestemming, { color: v.vervallen ? colors.muted : colors.text,
+            textDecorationLine: v.vervallen ? "line-through" : "none" }]}>
+          {displayBestemming}
+        </Text>
+        {spoor || v.vervallen || vertrokken ? (
+          <Text style={[s.spoor, { color: colors.sub }]} numberOfLines={1}>
+            {[v.vervallen ? t("Vervalt") : vertrokken ? t("Vertrokken") : "", spoor ? t(spoor) : ""].filter(Boolean).join(" · ")}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+
+  const inhoud = !compact ? volInhoud : (
     <View
       style={[
         compact ? s.rijCompact : s.rijVol,
@@ -94,12 +124,14 @@ export function VertrekRegel({ v, nu, compact, eerste, onPress }: { v: Vertrek; 
 const s = StyleSheet.create({
   rijCompact: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 54, paddingVertical: 7 },
   rijCompactSmal: { gap: 6 },
-  rijVol: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44, paddingHorizontal: 16, paddingVertical: 6 },
+  rijVol: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 46, paddingHorizontal: 14, paddingVertical: 5 },
+  tijdKolom: { width: 60, flexShrink: 0 },
   rijVolSmal: { gap: 7, paddingHorizontal: 10 },
   midden: { flex: 1, minWidth: 0, gap: 2 },
+  middenVol: { flex: 1, minWidth: 0 },
   bestemmingRij: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bestemming: { fontSize: 13, fontWeight: "700", flexShrink: 1, lineHeight: 18 },
-  spoor: { fontSize: 11, flexShrink: 0 },
+  bestemming: { fontSize: 14, fontWeight: "500", lineHeight: 18 },
+  spoor: { fontSize: 11, lineHeight: 14 },
   bestemmingCompact: { fontSize: 15, fontWeight: "700", flexShrink: 1, lineHeight: 20 },
   detailRij: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, minHeight: 18 },
   rechts: { minWidth: 76, maxWidth: 100, flexShrink: 0, alignItems: "flex-end" },
