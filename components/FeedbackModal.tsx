@@ -134,6 +134,7 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
               </Pressable>
             </View>
           ) : (
+            <>
             <ScrollView keyboardShouldPersistTaps="handled"
               contentContainerStyle={s.inhoud} showsVerticalScrollIndicator={false}>
               <Text style={[s.label, { color: colors.text }]}>Waar gaat je bericht over?</Text>
@@ -191,6 +192,8 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
                 als die beschikbaar is. Geen GPS-coördinaten.
               </Text>
 
+            </ScrollView>
+            <View style={s.voet}>
               {fout ? <Text style={[s.fout, { color: colors.red }]} accessibilityRole="alert">{fout}</Text> : null}
               <Pressable
                 onPress={() => void verzenden()}
@@ -208,7 +211,8 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
                   {bezig ? "Versturen..." : "Verstuur feedback"}
                 </Text>
               </Pressable>
-            </ScrollView>
+            </View>
+            </>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -233,6 +237,7 @@ const s = StyleSheet.create({
   ondertitel: { fontSize: 13, marginTop: 4 },
   sluitKnop: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   inhoud: { paddingBottom: 8, gap: 10 },
+  voet: { paddingTop: 4 },
   label: { fontSize: 14, fontWeight: "700", marginTop: 6 },
   categorieen: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 6 },
   chip: {
