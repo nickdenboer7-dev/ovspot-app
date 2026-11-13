@@ -146,6 +146,7 @@ export const EN: Record<string, string> = {
   "Zet locatie aan om haltes dichtbij te zien, of kies een thuislocatie in Instellingen.": "Turn on location to see nearby stops, or set a home location in Settings.",
   "Open instellingen": "Open settings", "Locatie toestaan": "Allow location",
   "Vergroot de afstand in Instellingen of zoek een halte.": "Increase the search radius in Settings or search for a stop.",
+  "OVspot toont haltes in Nederland. Ben je ergens anders, zoek dan een Nederlandse halte om de app te proberen. Of vergroot de afstand in Instellingen.": "OVspot shows stops in the Netherlands. If you are elsewhere, search for a Dutch stop to try the app. Or increase the search radius in Settings.",
   "Naar instellingen": "Go to Settings",
   "Kan vertrektijden niet laden": "Unable to load departures",
   "Zoek halte, lijn of plaats": "Search for a stop, line or city",

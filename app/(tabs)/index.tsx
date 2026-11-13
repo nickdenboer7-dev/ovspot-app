@@ -223,8 +223,8 @@ export default function Dichtbij() {
       <Leeg
         icoon="bus-outline"
         titel={`Geen haltes binnen ${afstand(instellingen.straal)}`}
-        tekst="Vergroot de afstand in Instellingen of zoek een halte."
-        knop={{ label: "Naar instellingen", onPress: () => router.navigate("/instellingen") }}
+        tekst="OVspot toont haltes in Nederland. Ben je ergens anders, zoek dan een Nederlandse halte om de app te proberen. Of vergroot de afstand in Instellingen."
+        knop={{ label: "Zoek een halte", onPress: () => router.push("/zoek") }}
       />
     );
   } else if (!gegevens && poll.fout) {
