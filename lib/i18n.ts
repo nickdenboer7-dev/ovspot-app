@@ -273,7 +273,7 @@ export const EN: Record<string, string> = {
   "Feedback sturen": "Send feedback",
   "Help OVspot verbeteren": "Help improve OVspot",
   "Bedankt voor je feedback!": "Thank you for your feedback!",
-  "Je bericht is ontvangen en staat in de OVspot-feedbackinbox.": "Your report has been received by OVspot.",
+  "We lezen alles zelf en gebruiken je tip om OVspot beter te maken.": "We read everything ourselves and use your tip to make OVspot better.",
   "Waar gaat je bericht over?": "What is your feedback about?",
   "Je bericht": "Your message",
   "Wat gaat er mis of wat kan beter?": "What's not working, or what could be improved?",

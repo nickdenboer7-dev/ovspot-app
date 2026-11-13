@@ -127,9 +127,9 @@ export function FeedbackModal({ zichtbaar, onSluit, context }: Props) {
               <Ionicons name="checkmark-circle" size={46} color={colors.live} />
               <Text style={[s.geluktTitel, { color: colors.text }]}>Bedankt voor je feedback!</Text>
               <Text style={[s.uitleg, { color: colors.sub, textAlign: "center" }]}>
-                Je bericht is ontvangen en staat in de OVspot-feedbackinbox.
+                We lezen alles zelf en gebruiken je tip om OVspot beter te maken.
               </Text>
-              <Pressable onPress={sluiten} style={[s.verzendKnop, { backgroundColor: colors.accent }]}>
+              <Pressable onPress={sluiten} style={[s.verzendKnop, s.sluitKnopGroot, { backgroundColor: colors.accent }]}>
                 <Text style={[s.verzendTekst, { color: colors.onAccent }]}>Sluiten</Text>
               </Pressable>
             </View>
@@ -238,6 +238,7 @@ const s = StyleSheet.create({
   sluitKnop: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   inhoud: { paddingBottom: 8, gap: 10 },
   voet: { paddingTop: 4 },
+  sluitKnopGroot: { alignSelf: "stretch", marginHorizontal: 12 },
   label: { fontSize: 14, fontWeight: "700", marginTop: 6 },
   categorieen: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 6 },
   chip: {
