@@ -21,6 +21,13 @@
         "buildType": "app-bundle"
       },
       "channel": "production"
+    },
+    "testers": {
+      "android": {
+        "buildType": "apk"
+      },
+      "distribution": "internal",
+      "channel": "testers"
     }
   }
 }

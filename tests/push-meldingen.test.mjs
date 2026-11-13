@@ -26,3 +26,10 @@ test("Push: schakelaar in Instellingen, bel op haltebord, geen service-account-s
   assert.match(lees("app/halte/[id].tsx"),/onWekker=\{v\.rit\?\.trip/);
   for(const f of ["lib/push.ts","app.json","google-services.json"]) assert.doesNotMatch(lees(f),/BEGIN PRIVATE KEY|private_key/);
 });
+
+test("EAS: testersprofiel bouwt een APK op een eigen kanaal, los van preview",()=>{
+  const eas=JSON.parse(lees("eas.json")).build;
+  assert.equal(eas.testers.channel,"testers");
+  assert.equal(eas.testers.android.buildType,"apk");
+  assert.notEqual(eas.testers.channel,eas.preview.channel);
+});
