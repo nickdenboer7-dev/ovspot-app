@@ -5,6 +5,7 @@ import * as SystemUI from "expo-system-ui";
 import { useKeepAwake } from "expo-keep-awake";
 import React, { useEffect } from "react";
 import { AppProvider, useApp } from "../context/AppProvider";
+import { FeedbackKnop } from "../components/FeedbackKnop";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -44,6 +45,7 @@ function Navigatie() {
         <Stack.Screen name="zoek" options={{ animation: "fade_from_bottom" }} />
         <Stack.Screen name="info" options={{ animation: "slide_from_right" }} />
       </Stack>
+      <FeedbackKnop />
     </ThemeProvider>
   );
 }
