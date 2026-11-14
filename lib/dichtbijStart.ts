@@ -20,7 +20,7 @@ export function meters(a: Punt, b: Punt): number {
   return Math.sqrt(x * x + y * y) * 6_371_000;
 }
 
-const geldigPunt = (p: any): p is Punt =>
+const geldigPunt = (p: any): boolean =>
   !!p && Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180;
 
 /** Het anker bepaalt welke lijst geladen is; het verschuift pas na `drempel` meter of bij een andere bron. */
