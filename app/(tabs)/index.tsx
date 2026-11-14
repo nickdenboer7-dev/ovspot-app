@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,6 +9,8 @@ import { HalteKaart } from "../../components/HalteKaart";
 import { DichtbijSkeleton } from "../../components/DichtbijSkeleton";
 import { KorteUitleg } from "../../components/KorteUitleg";
 import { groepeerDichtbijHaltes } from "../../lib/dichtbijClusters";
+import { kiesAnker, leesBewaardeLijst, leesBewaardePositie, magOudeLijstTonen, OUD_NOG_LIVE_MS } from "../../lib/dichtbijStart";
+import type { BewaardeLijst } from "../../lib/dichtbijStart";
 import { FoutBalk, Kop, KopKnop, Leeg } from "../../components/ui";
 import { useApp } from "../../context/AppProvider";
 import { api } from "../../lib/api";
@@ -21,9 +24,11 @@ import type { Dichtbij as DichtbijData } from "../../lib/types";
 type Positie = LocatiePositie;
 type LocFout = "geweigerd" | "geweigerd-blijvend" | "uit" | "timeout" | "fout";
 
-// Een korte geheugen-cache voorkomt een leeg scherm bij terugkeer of themawisseling.
-// Alleen tonen voor exact dezelfde GPS-gebiedssleutel en straal.
-let vorigeHaltes: { key: string; data: DichtbijData; ts: number } | null = null;
+// De laatste lijst voorkomt een leeg scherm bij openen, terugkeer of een kleine verplaatsing.
+// Alleen tonen als hij recent is, van vlakbij komt en bij dezelfde afstand-instelling hoort.
+let vorigeHaltes: BewaardeLijst<DichtbijData> | null = null;
+const START_POSITIE_SLEUTEL = "ovspot_dichtbij_positie_v1";
+const START_LIJST_SLEUTEL = "ovspot_dichtbij_lijst_v1";
 
 export default function Dichtbij() {
   const { colors, instellingen, zetDichtbijIds, t, uitlegZichtbaar, sluitUitleg } = useApp();
@@ -36,6 +41,10 @@ export default function Dichtbij() {
   const locFoutRef = useRef<LocFout | null>(null);
   const laatsteAutoHerstel = useRef(0);
   const laatstePositie = useRef<Positie | null>(null);
+  // Voorlopig: we tonen de bewaarde positie van de vorige keer terwijl de GPS nog zoekt.
+  const [voorlopig, setVoorlopig] = useState(false);
+  const startGelezen = useRef(false);
+  const ankerRef = useRef<Positie | null>(null);
   const nu = useNu(10_000);
   const thuis = instellingen.thuis;
 
@@ -54,9 +63,16 @@ export default function Dichtbij() {
       if (!geldig()) return;
       laatstePositie.current = positie;
       setPos(positie);
+      setVoorlopig(false);
       locFoutRef.current = fout;
       setLocFout(fout);
-      if (!fout) laatsteLoc.current = Date.now();
+      if (!fout) {
+        laatsteLoc.current = Date.now();
+        if (positie.bron === "gps") {
+          AsyncStorage.setItem(START_POSITIE_SLEUTEL,
+            JSON.stringify({ lat: positie.lat, lon: positie.lon, t: Date.now() })).catch(() => {});
+        }
+      }
     } catch (e: any) {
       if (!geldig() || e?.message === "geannuleerd") return;
       const reden: LocFout = e instanceof LocatieTimeoutFout ? "timeout"
@@ -67,6 +83,7 @@ export default function Dichtbij() {
       const reserve = kiesLocatieFallback(laatstePositie.current, thuis);
       laatstePositie.current = reserve;
       setPos(reserve);
+      setVoorlopig(false);
     } finally {
       if (geldig()) {
         zoektRef.current = false;
@@ -76,8 +93,36 @@ export default function Dichtbij() {
   }, [thuis]);
 
   useEffect(() => {
-    void zoekLocatie();
-    return () => { locatiePoging.current += 1; };
+    let weg = false;
+    const start = () => { if (!weg) void zoekLocatie(); };
+    if (startGelezen.current) {
+      start();
+    } else {
+      // Eerst (enkele ms) de bewaarde positie en lijst van de vorige keer lezen, zodat Dichtbij
+      // direct iets toont terwijl de GPS nog zoekt. De focus-controle wacht daar even op.
+      zoektRef.current = true;
+      Promise.race([
+        AsyncStorage.multiGet([START_POSITIE_SLEUTEL, START_LIJST_SLEUTEL]),
+        new Promise<null>(klaar => setTimeout(() => klaar(null), 400))
+      ]).then(rijen => {
+        if (weg || startGelezen.current || !rijen) return;
+        const nu = Date.now();
+        const lijst = leesBewaardeLijst<DichtbijData>(rijen[1]?.[1] ?? null, nu);
+        if (lijst && !vorigeHaltes) vorigeHaltes = lijst;
+        const bewaard = leesBewaardePositie(rijen[0]?.[1] ?? null, nu);
+        if (bewaard && !laatstePositie.current) {
+          const begin: Positie = { lat: bewaard.lat, lon: bewaard.lon, bron: "gps" };
+          laatstePositie.current = begin;
+          setPos(begin);
+          setVoorlopig(true);
+        }
+      }).catch(() => {}).then(() => {
+        if (weg) return;
+        startGelezen.current = true;
+        start();
+      });
+    }
+    return () => { weg = true; locatiePoging.current += 1; };
   }, [zoekLocatie]);
 
   // Een GPS-fout mag niet blijven staan tot de gebruiker op het locatie-icoon tikt.
@@ -118,7 +163,11 @@ export default function Dichtbij() {
     }, [zoekLocatie, instellingen.databesparing])
   );
 
-  const key = pos ? `${pos.lat.toFixed(3)}:${pos.lon.toFixed(3)}:${instellingen.straal}` : "geen";
+  // De sleutel hangt aan een anker dat pas na ~100 m verschuift: GPS-ruis of een paar passen
+  // laden de lijst dus niet opnieuw. Het ophalen zelf gebruikt wel steeds de nieuwste positie.
+  ankerRef.current = kiesAnker(ankerRef.current, pos);
+  const anker = ankerRef.current;
+  const key = anker ? `${anker.lat.toFixed(3)}:${anker.lon.toFixed(3)}:${instellingen.straal}` : "geen";
   const poll = usePolling(key, () => (pos
     ? binnenLocatieTimeout(() => api.dichtbij(pos.lat, pos.lon, instellingen.straal), 12_000)
         .then(data => ({ key, data }))
@@ -126,8 +175,15 @@ export default function Dichtbij() {
     : Promise.resolve(null)), instellingen.databesparing ? 60_000 : 20_000);
   const nieuweData = poll.data?.key === key ? poll.data.data : null;
   const wisseltSleutel = poll.data !== null && poll.data.key !== key;
-  const oudeData = vorigeHaltes && vorigeHaltes.key === key && Date.now() - vorigeHaltes.ts < 90_000
+  const oudeLijst = vorigeHaltes && magOudeLijstTonen(vorigeHaltes, anker, instellingen.straal, key, Date.now())
     ? vorigeHaltes.data : null;
+  // De lijst van de vorige keer is een tussenstand. Is hij ouder dan een halve minuut, dan blijven
+  // de tijden staan maar wordt niets meer als live gemarkeerd.
+  const oudNogLive = !!vorigeHaltes && Date.now() - vorigeHaltes.ts < OUD_NOG_LIVE_MS;
+  const oudeData = useMemo(() => (!oudeLijst || oudNogLive ? oudeLijst : {
+    ...oudeLijst,
+    haltes: oudeLijst.haltes.map(h => ({ ...h, vertrekken: h.vertrekken.map(v => ({ ...v, live: false })) }))
+  }), [oudeLijst, oudNogLive]);
   const gegevens = nieuweData ?? oudeData;
   // Paginering voorkomt een limiet op de eerste 8 haltes en houdt het laden snel.
   // Bij verder scrollen worden de volgende GTFS-haltes binnen dezelfde radius opgehaald.
@@ -182,7 +238,11 @@ export default function Dichtbij() {
   }, [pos, key, instellingen.straal, heeftMeer, volgendeOffset]);
 
   useEffect(() => {
-    if (nieuweData && key !== "geen") vorigeHaltes = { key, data: nieuweData, ts: Date.now() };
+    if (nieuweData && key !== "geen" && anker) {
+      vorigeHaltes = { key, data: nieuweData, ts: Date.now(), lat: anker.lat, lon: anker.lon, straal: instellingen.straal };
+      AsyncStorage.setItem(START_LIJST_SLEUTEL, JSON.stringify(vorigeHaltes)).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, nieuweData]);
 
   useEffect(() => {
@@ -190,7 +250,8 @@ export default function Dichtbij() {
   }, [haltes, zetDichtbijIds]);
 
   const plaats = haltes.find((h) => h.plaats)?.plaats;
-  const bronTekst = pos?.bron === "standaard" ? "Standaardlocatie · Amsterdam Centraal"
+  const bronTekst = voorlopig && zoekt ? "Locatie bijwerken…"
+    : pos?.bron === "standaard" ? "Standaardlocatie · Amsterdam Centraal"
     : pos?.bron === "thuis" ? (thuis?.plaats || thuis?.naam || "Thuislocatie")
     : (plaats || "Huidige locatie");
 

@@ -148,6 +148,7 @@ export const EN: Record<string, string> = {
   "Vergroot de afstand in Instellingen of zoek een halte.": "Increase the search radius in Settings or search for a stop.",
   "OVspot toont haltes in Nederland. Ben je ergens anders, zoek dan een Nederlandse halte om de app te proberen. Of vergroot de afstand in Instellingen.": "OVspot shows stops in the Netherlands. If you are elsewhere, search for a Dutch stop to try the app. Or increase the search radius in Settings.",
   "Naar instellingen": "Go to Settings",
+  "Locatie bijwerken…": "Updating location…",
   "Kan vertrektijden niet laden": "Unable to load departures",
   "Zoek halte, lijn of plaats": "Search for a stop, line or city",
   "GPS niet beschikbaar. Haltes bij Amsterdam Centraal worden getoond; probeer je locatie opnieuw.": "GPS unavailable. Showing stops near Amsterdam Centraal; try finding your location again.",
