@@ -37,13 +37,15 @@ type Props = {
   stops?: RitKaartHalte[];
   routeColor?: string;
   onderRuimte?: number;
+  /** Eigen ondertitel (treinen: type, ritnummer, snelheid); anders "Lijn … · … sec geleden". */
+  ondertitel?: string;
   onLijst: () => void;
 };
 
 /** One GPS fix shared with the stop list; never start a second competing poll. */
 export function LiveRitKaart({
   ritId, datum, positie, lijnnummer, volgendeHalte, vertragingMin,
-  shape, stops, routeColor, onderRuimte = 18, onLijst
+  shape, stops, routeColor, onderRuimte = 18, ondertitel, onLijst
 }: Props) {
   const { colors, scheme, t } = useApp();
   const isDark = scheme === "dark";
@@ -277,7 +279,7 @@ export function LiveRitKaart({
         </Text>
         <Text style={[s.statusSub, { color: colors.sub }]} numberOfLines={2}>
           {positie
-            ? `Lijn ${lijnnummer || positie.lijnnummer} · ${positie.leeftijd_s} sec geleden`
+            ? (ondertitel || `Lijn ${lijnnummer || positie.lijnnummer} · ${positie.leeftijd_s} sec geleden`)
             : "We controleren elke 5 seconden of deze rit een live voertuig heeft."}
         </Text>
 

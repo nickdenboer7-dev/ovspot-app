@@ -89,3 +89,35 @@ test("trein: voertuigpositie wordt opgehaald en de kaart hangt van een actuele p
   assert.match(scherm, /kaartBeschikbaar = !!rit && !rit\.vervallen && \(!trein \|\| actueel\)/);
   assert.doesNotMatch(scherm, /!trein && instellingen\.liveVoertuigen/);
 });
+
+import { materieelRegel, kaartOndertitel } from "../lib/ritverloopV2.ts";
+
+test("materieelregel: type, bakken, lengte, stelnummer; korter dan gepland; niets bekend = leeg", () => {
+  assert.equal(materieelRegel({ type: "VIRM", bakken: 6, lengte_m: 161, stel: ["8740"] }), "VIRM · 6 bakken · 161 m · stel 8740");
+  assert.equal(materieelRegel({ type: "SLT", bakken: 4, lengte_m: 69, stel: ["2434"] }), "SLT · 4 bakken · 69 m · stel 2434");
+  assert.equal(materieelRegel({ type: "VIRM", bakken: 10, lengte_m: 270, stel: ["8666", "8727"], korter: true }),
+    "VIRM · 10 bakken · 270 m · stel 8666 + 8727 · korter dan gepland");
+  assert.equal(materieelRegel({ type: "VIRM", bakken: 6, lengte_m: 161, stel: ["8740"] }, "en"), "VIRM · 6 cars · 161 m · set 8740");
+  assert.equal(materieelRegel({ type: null, bakken: 1, lengte_m: null, stel: [] }), "1 bak");
+  assert.equal(materieelRegel({ stel: ["abc", "12"] }), "stel 12");          // alleen cijfers als stelnummer
+  assert.equal(materieelRegel(null), "");
+  assert.equal(materieelRegel({ type: null, bakken: null, lengte_m: null, stel: [] }), "");
+});
+
+test("kaartondertitel: trein met type en ritnummer, bus met 'Lijn', snelheid alleen als vers", () => {
+  assert.equal(kaartOndertitel({ trein: true, lijn: "IC", ritNr: "1414", snelheidKmh: 80, leeftijdS: 25 }), "Intercity 1414 · 80 km/h · 25 sec geleden");
+  assert.equal(kaartOndertitel({ trein: true, lijn: "SPR", ritNr: "5068", snelheidKmh: null, leeftijdS: 10 }), "Sprinter 5068 · 10 sec geleden");
+  assert.equal(kaartOndertitel({ trein: true, lijn: "IC", leeftijdS: 5 }), "Intercity · 5 sec geleden");
+  assert.equal(kaartOndertitel({ trein: false, lijn: "395", snelheidKmh: 38.4, leeftijdS: 12 }), "Lijn 395 · 38 km/h · 12 sec geleden");
+  assert.equal(kaartOndertitel({ trein: false, lijn: "395", snelheidKmh: 38, leeftijdS: 60 }), "Lijn 395 · 60 sec geleden");
+  assert.equal(kaartOndertitel({ trein: false, lijn: "395", snelheidKmh: 300, leeftijdS: 5 }), "Lijn 395 · 5 sec geleden");
+  assert.equal(kaartOndertitel({ trein: true, lijn: "RARE", ritNr: "1", leeftijdS: 1 }), "RARE 1 · 1 sec geleden");
+});
+
+test("ritpagina en kaart gebruiken materieelregel en ondertitel", () => {
+  const scherm = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  const kaart = readFileSync(new URL("../components/LiveRitKaart.tsx", import.meta.url), "utf8");
+  assert.match(scherm, /materieelRegel\(rit\.materieel_info, taal\)/);
+  assert.match(scherm, /ondertitel=\{actueel && gps \? kaartOndertitel\(/);
+  assert.match(kaart, /ondertitel \|\| `Lijn /);
+});

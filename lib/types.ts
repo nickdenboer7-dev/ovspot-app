@@ -230,6 +230,9 @@ export type Rit = {
   voertuig?: RitVoertuig | null;
   voertuig_info?: RitVoertuig | null;
   gps_leeftijd_s?: number | null;
+  /** Treinen: type (VIRM, SLT …), bakken, lengte en stelnummers uit NS; ontbreekt als NS niets weet. */
+  materieel_info?: { type: string | null; bakken: number | null; lengte_m: number | null;
+    stel: string[]; korter?: boolean } | null;
   /** Ritnummer (journeynummer) uit de dienstregeling, zoals reizigers het kennen. */
   rit_nummer?: string | null;
   /** Vorige rit van hetzelfde voertuig (zelfde omloop), alleen als de server die kent. */

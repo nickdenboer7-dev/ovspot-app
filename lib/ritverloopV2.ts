@@ -412,3 +412,38 @@ export function vorigeRitDelen(v: unknown): { lijn: string; bestemming: string; 
   if (!lijn || !vertrek) return null;
   return { lijn, bestemming, vertrek };
 }
+
+
+/** Treinmaterieel als een regel: "VIRM · 6 bakken · 161 m · stel 8740". Leeg als er niets bekend is. */
+export function materieelRegel(
+  m: { type?: string | null; bakken?: number | null; lengte_m?: number | null; stel?: string[] | null; korter?: boolean } | null | undefined,
+  taal: string = "nl"
+): string {
+  if (!m) return "";
+  const en = taal === "en";
+  const delen: string[] = [];
+  if (m.type) delen.push(m.type);
+  if (typeof m.bakken === "number" && m.bakken > 0)
+    delen.push(en ? `${m.bakken} ${m.bakken === 1 ? "car" : "cars"}` : `${m.bakken} ${m.bakken === 1 ? "bak" : "bakken"}`);
+  if (typeof m.lengte_m === "number" && m.lengte_m > 0) delen.push(`${Math.round(m.lengte_m)} m`);
+  const stel = (m.stel || []).filter(x => /^\d{1,6}$/.test(x));
+  if (stel.length) delen.push(`${en ? "set" : "stel"} ${stel.join(" + ")}`);
+  if (m.korter && delen.length) delen.push(en ? "shorter than planned" : "korter dan gepland");
+  return delen.join(" · ");
+}
+
+const TREIN_NAAM: Record<string, string> = { IC: "Intercity", ICD: "Intercity direct", SPR: "Sprinter", SNG: "Sprinter", SLT: "Sprinter" };
+
+/** Ondertitel op het kaartje: treinen "Intercity 1414 · 80 km/h · 25 sec geleden", anders "Lijn 395 · …". */
+export function kaartOndertitel(o: {
+  trein: boolean; lijn: string; ritNr?: string; snelheidKmh?: number | null; leeftijdS: number;
+}): string {
+  const lijn = String(o.lijn || "").trim();
+  const kop = o.trein
+    ? [TREIN_NAAM[lijn.toUpperCase()] || lijn, o.ritNr || ""].filter(Boolean).join(" ")
+    : `Lijn ${lijn}`;
+  const snelheid = typeof o.snelheidKmh === "number" && Number.isFinite(o.snelheidKmh)
+    && o.snelheidKmh >= 0 && o.snelheidKmh < 200 && o.leeftijdS >= 0 && o.leeftijdS <= 45
+    ? `${Math.round(o.snelheidKmh)} km/h` : "";
+  return [kop, snelheid, `${o.leeftijdS} sec geleden`].filter(Boolean).join(" · ");
+}

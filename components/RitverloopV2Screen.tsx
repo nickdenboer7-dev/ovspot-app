@@ -18,7 +18,7 @@ import { maakLijnFavoriet } from "../lib/favorieten";
 import { bestemmingVoorWeergave, isTrein, spoorLabel } from "../lib/format";
 import { geldigeRitPositie, markeerRitHaltes } from "../lib/liveRitKaart";
 import { useNu, usePolling } from "../lib/hooks";
-import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, projecteerGpsOpRit, ritGpsStatus, ritNummerKort, vorigeRitDelen, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
+import { bouwRitV2Haltes, compacteHalteNaam, isGpsActueel, kaartOndertitel, materieelRegel, projecteerGpsOpRit, ritGpsStatus, ritNummerKort, vorigeRitDelen, voertuigRegel, zichtbaarKomendeHaltes } from "../lib/ritverloopV2";
 import type { LiveRitVoertuigAntwoord, Modus } from "../lib/types";
 
 type Params = {
@@ -32,7 +32,7 @@ export default function RitverloopV2Screen() {
   const p = useLocalSearchParams<Params>();
   const van = isTab(p.van) ? p.van : "index";
   const insets = useSafeAreaInsets();
-  const { t, colors, instellingen, isFavoriet, wisselFavoriet, isLijnFavoriet, wisselLijnFavoriet, zetFeedbackContext } = useApp();
+  const { t, taal, colors, instellingen, isFavoriet, wisselFavoriet, isLijnFavoriet, wisselLijnFavoriet, zetFeedbackContext } = useApp();
   const [toonEerder, setToonEerder] = useState(true);
   const [toonLater, setToonLater] = useState(true);
   const [lijstHoogte, setLijstHoogte] = useState(0);
@@ -153,7 +153,8 @@ export default function RitverloopV2Screen() {
   const voertuigInfo = voertuigRegel(rit, gps);
   const ritNr = !trein && !!rit && !rit.vervallen ? ritNummerKort(rit.rit_nummer) : "";
   const vorige = !trein && !!rit && !rit.vervallen ? vorigeRitDelen(rit.vorige_rit) : null;
-  const voertuigTekst = voertuigInfo ? `${t("Voertuig")} ${voertuigInfo.nummer}` : undefined;
+  const materieelTekst = trein && !!rit && !rit.vervallen ? materieelRegel(rit.materieel_info, taal) : "";
+  const voertuigTekst = materieelTekst || (voertuigInfo ? `${t("Voertuig")} ${voertuigInfo.nummer}` : undefined);
   const snelheidTekst = voertuigInfo && voertuigInfo.snelheidKmh !== null
     ? `${voertuigInfo.snelheidKmh} km/h` : undefined;
   const liveVoorBalk = !!rit && rit.live && !rit.vervallen &&
@@ -265,6 +266,8 @@ export default function RitverloopV2Screen() {
     </> : rit ? <LiveRitKaart
       key={rit.id + ":" + rit.datum} ritId={rit.id} datum={rit.datum}
       positie={actueel ? gps : null}
+      ondertitel={actueel && gps ? kaartOndertitel({ trein, lijn: rit.lijn, ritNr: ritNummerKort(rit.rit_nummer),
+        snelheidKmh: voertuigInfo?.snelheidKmh ?? null, leeftijdS: gps.leeftijd_s }) : undefined}
       lijnnummer={rit.lijn} volgendeHalte={rit.nu_hier?.volgende_naam || bestemming}
       vertragingMin={rit.vertraging_min} shape={rit.shape} stops={kaartHaltes}
       routeColor={rit.route_color} onderRuimte={insets.bottom + 12}
