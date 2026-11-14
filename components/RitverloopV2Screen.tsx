@@ -58,11 +58,9 @@ export default function RitverloopV2Screen() {
   );
   const rit = poll.data;
   const trein = isTrein(rit?.modus || String(p.modus || ""));
-  const kaartBeschikbaar = !!rit && !trein && !rit.vervallen;
-  const isKaart = weergave === "kaart" && kaartBeschikbaar;
   const gpsPoll = usePolling<LiveRitVoertuigAntwoord | null>(
     "ritV2gps:" + rit?.id + ":" + rit?.datum,
-    () => rit && rit.id && rit.datum && !trein && instellingen.liveVoertuigen
+    () => rit && rit.id && rit.datum && !rit.vervallen && instellingen.liveVoertuigen
       ? api.liveRitVoertuig(rit.id, rit.datum) : Promise.resolve(null),
     instellingen.databesparing ? 15000 : 5000
   );
@@ -70,10 +68,13 @@ export default function RitverloopV2Screen() {
   // A transient request failure is not a stale GPS fix: evaluate the source timestamp.
   // Keep one vehicle request and one cached fix when switching map <-> stop list.
   const actueel = isGpsActueel(gps, nu);
+  // Treinen hebben alleen een kaart als NS op dit moment een positie geeft.
+  const kaartBeschikbaar = !!rit && !rit.vervallen && (!trein || actueel);
+  const isKaart = weergave === "kaart" && kaartBeschikbaar;
   const segment = useMemo(
-    () => rit && actueel && !rit.vervallen && !trein
+    () => rit && actueel && !rit.vervallen
       ? projecteerGpsOpRit(rit, gps) : null,
-    [rit, actueel, gps?.timestamp, gps?.lat, gps?.lon, trein]
+    [rit, actueel, gps?.timestamp, gps?.lat, gps?.lon]
   );
   const gpsStatus = ritGpsStatus(gps, nu, !!segment, {
     trein, enabled: instellingen.liveVoertuigen, laden: gpsPoll.laden

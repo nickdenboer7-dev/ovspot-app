@@ -40,8 +40,10 @@ test("terugval op live-GPS-nummer, anders niets", () => {
   assert.equal(voertuigRegel(bus({ nummer: "" }), { voertuignummer: "" }), null);
 });
 
-test("geen voertuigregel voor trein, vervallen rit of ontbrekende rit", () => {
-  assert.equal(voertuigRegel(bus({ nummer: "1" }, { modus: "train" }), null), null);
+test("treinregel alleen met materieelnummer; geen regel voor vervallen of ontbrekende rit", () => {
+  assert.deepEqual(voertuigRegel(bus({ nummer: "8666 + 8727", leeftijd_s: 5, snelheid_kmh: 120 }, { modus: "train" }), null),
+    { nummer: "8666 + 8727", snelheidKmh: 120 });
+  assert.equal(voertuigRegel(bus(null, { modus: "train" }), null), null);
   assert.equal(voertuigRegel(bus({ nummer: "1" }, { vervallen: true }), null), null);
   assert.equal(voertuigRegel(null, null), null);
   assert.equal(voertuigRegel(undefined, null), null);
@@ -80,4 +82,10 @@ test("vorige rit: geldig, ongeldig en onvolledig", () => {
   assert.equal(vorigeRitDelen({ lijn: "10", vertrek: "25:99" }), null);
   assert.equal(vorigeRitDelen({ bestemming: "X", vertrek: "10:00" }), null);
   assert.equal(vorigeRitDelen("x"), null);
+});
+
+test("trein: voertuigpositie wordt opgehaald en de kaart hangt van een actuele positie af", () => {
+  const scherm = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
+  assert.match(scherm, /kaartBeschikbaar = !!rit && !rit\.vervallen && \(!trein \|\| actueel\)/);
+  assert.doesNotMatch(scherm, /!trein && instellingen\.liveVoertuigen/);
 });

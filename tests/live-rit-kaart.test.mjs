@@ -58,7 +58,7 @@ test("Native Google Maps direct zonder versiecheck, stille fallback of OSM-tegel
 test("Ritverloop heeft een keuzescherm voor de volledige kaart, zonder inline kaart", () => {
   const app = readFileSync(new URL("../components/RitverloopV2Screen.tsx", import.meta.url), "utf8");
   assert.match(app,/useState<"lijst" \| "kaart">\("lijst"\)/);
-  assert.match(app,/kaartBeschikbaar = !!rit && !trein && !rit\.vervallen/);
+  assert.match(app,/kaartBeschikbaar = !!rit && !rit\.vervallen && \(!trein \|\| actueel\)/);
   assert.match(app,/setWeergave\(isKaart \? "lijst" : "kaart"\)/);
   assert.match(app,/<LiveRitKaart/);
   assert.match(app, /<OnderBalk actief=\{van\} \/>/);

@@ -384,7 +384,7 @@ export function voertuigRegel(
   nuMs?: number
 ): { nummer: string; snelheidKmh: number | null } | null {
   void nuMs;
-  if (!rit || rit.vervallen || rit.modus === "train") return null;
+  if (!rit || rit.vervallen) return null;
   const info = rit.voertuig_info ?? rit.voertuig ?? null;
   const nummer = voertuigNummerKort(info?.nummer) || voertuigNummerKort(gps?.voertuignummer);
   if (!nummer) return null;
